@@ -16,19 +16,22 @@ public class GenerateController {
     @Autowired
     GenerateService generateService;
 
-    @PostMapping("/generate")
+    @PostMapping("/v2/generate")
     @ResponseBody
     public String generate(@RequestBody RequestDTO dto) {
         return generateService.request(dto);
     }
 
-    @PostMapping("/test/generate")
+    @PostMapping("/generate")
     @ResponseBody
     public String generateTest(@RequestBody String dto) throws Exception {
         log.info(dto);
-        JSONObject json = new JSONObject(generateService.requestTest(new JSONObject(dto)));
-        log.info(json.toString());
-        return json.toString();
+        JSONObject json = new JSONObject(dto);
+        json.put("model","qwen2.5:7b");
+        json.put("stream",false);
+        JSONObject rtn = new JSONObject(generateService.requestTest(json));
+        log.info(rtn.toString());
+        return rtn.toString();
     }
 
     @RequestMapping("/dialog")

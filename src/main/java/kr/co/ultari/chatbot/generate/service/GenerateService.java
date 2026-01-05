@@ -12,7 +12,7 @@ import org.springframework.stereotype.Service;
 public class GenerateService {
 
     String aiUrl = "http://:8000/v1/chat/completions";
-    String testUrl = "http://localhost:11434/api/generate";
+    String testUrl = "http://10.0.0.91:11434/api/generate";
 
     @Autowired
     HttpClient httpClient;

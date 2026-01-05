@@ -9,29 +9,28 @@
     <script type="text/javascript">
         function confirm(){
             var msg = $("#write").val().trim();
-            var m = "qwen2.5:7b";
 
             const data = {
-                prompt: msg,
-                model: m,
-                stream: false
+                prompt: msg
             };
 
             $.ajax({
-                url: '/chatbot/test/generate',
+                url: '/chatbot/generate',
                 type: 'POST',
                 contentType: "application/json; charset=UTF-8",
                 data: JSON.stringify(data),
+                dataType: "json",
                 success: function (d) {
-                    console.log(d);
-                    $("#area").text(d);
+                    console.log(d.response);
+                    $("#area").append("<pre><code><xmp>"+d.response+"</xmp></code></pre>");
                 }
             });
         }
 </script>
 </head>
 <body>
-    <div id="area"></div>
+    <div id="area">
+    </div>
     <div>
         <label>
             <textarea id="write"></textarea>
