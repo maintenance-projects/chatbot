@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>DIALOG</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <script  src="http://code.jquery.com/jquery-latest.min.js"></script>
+    <script type="text/javascript">
+        function confirm(){
+            var msg = $("#write").val().trim();
+            var m = "qwen2.5:7b";
+
+            const data = {
+                prompt: msg,
+                model: m,
+                stream: false
+            };
+
+            $.ajax({
+                url: '/chatbot/test/generate',
+                type: 'POST',
+                contentType: "application/json; charset=UTF-8",
+                data: JSON.stringify(data),
+                success: function (d) {
+                    console.log(d);
+                    $("#area").text(d);
+                }
+            });
+        }
+</script>
+</head>
+<body>
+    <div id="area"></div>
+    <div>
+        <label>
+            <textarea id="write"></textarea>
+        </label>
+        <button type="button" onclick="javascript:confirm();">등록</button>
+    </div>
+</body>
+</html>
