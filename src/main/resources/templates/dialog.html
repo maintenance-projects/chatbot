@@ -11,18 +11,19 @@
             var msg = $("#write").val().trim();
 
             const data = {
-                prompt: msg
+                sessionId : "ultari01",
+                message : msg
             };
 
             $.ajax({
-                url: '/chatbot/generate',
-                type: 'POST',
+                url: "/api/chat",
+                type: "POST",
                 contentType: "application/json; charset=UTF-8",
                 data: JSON.stringify(data),
                 dataType: "json",
                 success: function (d) {
-                    console.log(d.response);
-                    $("#area").append("<pre><code><xmp>"+d.response+"</xmp></code></pre>");
+                    console.log(d.answer);
+                    $("#area").append(d.answer);
                 }
             });
         }

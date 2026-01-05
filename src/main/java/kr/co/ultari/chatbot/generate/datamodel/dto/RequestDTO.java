@@ -11,9 +11,6 @@ import java.util.List;
 @Builder
 @AllArgsConstructor
 public class RequestDTO {
-    private String model;
-    private List<Message> messages;
-    private float temperature;
-    private Integer max_tokens;
-    private boolean stream;
+    private String sessionId;
+    private String message;
 }
