@@ -10,6 +10,7 @@ import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 @Slf4j
@@ -32,15 +33,15 @@ public class HttpClient {
         conn.setRequestMethod("POST");
         conn.setDoOutput(true);
         conn.setRequestProperty("User-Agent", USER_AGENT);
-        conn.setRequestProperty("Content-Type", "application/json");
+        conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
         conn.setConnectTimeout(5000);
 
-        try (BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(conn.getOutputStream()))) {
+        try (BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(conn.getOutputStream(), StandardCharsets.UTF_8))) {
             bw.write(json.toString());
             bw.flush();
         }
 
-        BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream()));
+        BufferedReader in = new BufferedReader(new InputStreamReader(conn.getInputStream(), StandardCharsets.UTF_8));
         String line;
         StringBuilder sb = new StringBuilder();
         while ((line = in.readLine()) != null) {
