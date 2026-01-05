@@ -15,4 +15,8 @@ public class ChatSessionStore {
     public List<Message> getMessages(String sessionId) {
         return sessions.computeIfAbsent(sessionId, id -> new ArrayList<>());
     }
+
+    public void setMessages(String sessionId, List<Message> messages) {
+        sessions.put(sessionId, messages);
+    }
 }
