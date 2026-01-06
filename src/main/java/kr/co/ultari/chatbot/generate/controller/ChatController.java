@@ -7,10 +7,9 @@ import kr.co.ultari.chatbot.generate.datamodel.vo.Message;
 import kr.co.ultari.chatbot.generate.service.AIChatService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.util.StringUtils;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
 
@@ -37,7 +36,7 @@ public class ChatController {
         if (messages.isEmpty()) {
             messages.add(new Message(
                     "system",
-                    "너는 한국어로만 답변하는 친절한 AI 챗봇이다. 제발 한국어로만 대답하고 중국만 좀 그만해줘."
+                    "너는 한국어로만 답변하는 친절한 AI 챗봇이다. 제발 한국어로만 대답하고 중국는 좀 그만해줘."
             ));
         }
 
@@ -69,5 +68,23 @@ public class ChatController {
 
         log.info(messages.toString());
         return ResponseEntity.ok(new ResponseDTO(reply));
+    }
+
+    @PostMapping("/upload")
+    public ResponseEntity<?> summarizeFile(@RequestParam("file") MultipartFile file, @RequestParam("sessionId") String sessionId) throws Exception {
+        log.info(file.getOriginalFilename());
+        ResponseDTO responseDTO = null;
+        String fileName = file.getOriginalFilename();
+        String ext = fileName.substring(fileName.lastIndexOf(".")+1);
+        if(!ext.equalsIgnoreCase("docx")) {
+            return ResponseEntity.ok(new ResponseDTO("워드 파일(docx)이 아닙니다."));
+        }
+        String text = aiService.extractTextFromWord(file);
+        log.info(text);
+
+        if(StringUtils.hasText(text)) responseDTO = new ResponseDTO(aiService.summarizeRequest(text));
+        else responseDTO = new ResponseDTO("문서를 읽을 수 없습니다.");
+
+        return ResponseEntity.ok(responseDTO);
     }
 }

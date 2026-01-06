@@ -2,9 +2,12 @@ package kr.co.ultari.chatbot.generate.service;
 
 import kr.co.ultari.chatbot.generate.datamodel.vo.Message;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.poi.xwpf.usermodel.XWPFDocument;
+import org.apache.poi.xwpf.usermodel.XWPFParagraph;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;
 import java.net.HttpURLConnection;
@@ -17,7 +20,9 @@ import java.util.List;
 public class AIChatService {
 
     private static final String AI_API_URL = "http://10.0.0.91:11434/v1/chat/completions";
+    //private static final String AI_API_URL = "https://pok-chromospheric-rumblingly.ngrok-free.dev/v1/chat/completions";
     private static final String MODEL = "qwen2.5:7b";
+    //private static final String MODEL = "QuantTrio/Qwen3-30B-A3B-Thinking-2507-AWQ";
 
     public String callAi(List<Message> messages) throws Exception {
 
@@ -106,5 +111,41 @@ public class AIChatService {
             return null;
         }
         return content.replaceAll("(?s)<think>.*?</think>", "").trim();
+    }
+
+    public String extractTextFromWord(MultipartFile file) throws Exception {
+        try (XWPFDocument document =
+                     new XWPFDocument(file.getInputStream())) {
+
+            StringBuilder sb = new StringBuilder();
+
+            for (XWPFParagraph p : document.getParagraphs()) {
+                sb.append(p.getText()).append("\n");
+            }
+
+            return sb.toString();
+        }
+    }
+
+    public String summarizeRequest(String text) throws Exception {
+        JSONObject body = new JSONObject();
+        body.put("model", MODEL);
+
+        JSONArray messages = new JSONArray();
+
+        messages.put(new JSONObject()
+                .put("role", "system")
+                .put("content", "다음 문서를 핵심 위주로 요약해라.")
+        );
+
+        messages.put(new JSONObject()
+                .put("role", "user")
+                .put("content", text)
+        );
+
+        body.put("messages", messages);
+        body.put("temperature", 0.3);
+
+        return request(body);
     }
 }
