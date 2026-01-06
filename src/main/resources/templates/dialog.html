@@ -29,7 +29,31 @@
                             </div>
                         </div>
                     </div>
+
+                    <div class="cb-header__right">
+                        <button class="cb-iconbtn" id="cbSearchBtn" type="button" aria-label="검색" aria-expanded="false">
+                            <img src="/img/ic-search.png" alt="" />
+                        </button>
+                    </div>
                 </header>
+
+                <div class="cb-searchbar" id="cbSearchBar" aria-hidden="true">
+                    <div class="cb-searchbar__inner">
+                        <input class="cb-searchbar__input" id="cbSearchInput" type="text" placeholder="대화에서 검색"
+                            autocomplete="off" />
+                        <div class="cb-searchbar__meta" id="cbSearchMeta">0 / 0</div>
+                        <button class="cb-searchbar__nav" id="cbSearchPrev" type="button" aria-label="이전">
+                            <img src="/img/ic-up.png" alt="이전" />
+                        </button>
+                        <button class="cb-searchbar__nav" id="cbSearchNext" type="button" aria-label="다음">
+                            <img src="/img/ic-down.png" alt="다음" />
+                        </button>
+                        <button class="cb-searchbar__close" id="cbSearchClose" type="button" aria-label="닫기">
+                            <img src="/img/ic-close.png" alt="닫기" />
+                        </button>
+                    </div>
+                </div>
+
 
                 <section class="cb-body" id="cbBody">
                     <div class="cb-divider"><span>오늘</span></div>
