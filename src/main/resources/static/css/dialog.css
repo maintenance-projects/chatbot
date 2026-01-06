@@ -161,7 +161,7 @@ body {
 }
 
 .cb-bubble__text {
-    font-size: 14px;
+    font-size: 12px;
     line-height: 1.45;
     word-break: break-word;
 }
@@ -409,9 +409,19 @@ html.is-dragover::before {
     font-weight: 700;
 }
 
+.cb-searchbar__inner>button {
+    opacity: 0.5 !important;
+}
+
 .cb-mark {
     background: rgb(255 215 0 / 85%);
     padding: 0 2px;
+}
+
+.txtStyle {
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-wrap: anywhere;
 }
 
 @keyframes cbDot {

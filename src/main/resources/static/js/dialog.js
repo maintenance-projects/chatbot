@@ -48,19 +48,46 @@ document.addEventListener("DOMContentLoaded", () => {
         if (isSearchOpen() && searchInput && searchInput.value.trim()) rebuildHighlights(searchInput.value);
     }
 
-    function addBotMessage(text) {
+    function normalizeBubbleText(text) {
+        let s = String(text ?? "");
+        s = s.replace(/\r\n/g, "\n");
+        s = s.replace(/^[ \t]*\n+/, "");
+        return s;
+    }
+
+
+    function addBotMessage(text, type) {
         const now = formatTime(new Date());
-        const html = `
-      <div class="cb-msg cb-msg--bot">
-        <div class="cb-avatar">
-          <img class="cb-avatar__img" src="/img/ic-chatbot.png" alt="챗봇" />
-        </div>
-        <div class="cb-bubble">
-          <div class="cb-bubble__text">${escapeHtml(text)}</div>
-          <div class="cb-meta">${now}</div>
-        </div>
-      </div>
-    `;
+        const clean = normalizeBubbleText(text);
+
+        let html = '';
+
+        if (type === "file") {
+            html = `
+                <div class="cb-msg cb-msg--bot">
+                    <div class="cb-avatar">
+                    <img class="cb-avatar__img" src="/img/ic-chatbot.png" alt="챗봇" />
+                    </div>
+                    <div class="cb-bubble">
+                    <div class="cb-bubble__text txtStyle">${escapeHtml(clean)}</div>
+                    <div class="cb-meta">${now}</div>
+                    </div>
+                </div>
+            `;
+        } else {
+            html = `
+                <div class="cb-msg cb-msg--bot">
+                    <div class="cb-avatar">
+                    <img class="cb-avatar__img" src="/img/ic-chatbot.png" alt="챗봇" />
+                    </div>
+                    <div class="cb-bubble">
+                    <div class="cb-bubble__text">${escapeHtml(clean)}</div>
+                    <div class="cb-meta">${now}</div>
+                    </div>
+                </div>
+            `;
+        }
+
         body.insertAdjacentHTML("beforeend", html);
         scrollToBottom();
         if (isSearchOpen() && searchInput && searchInput.value.trim()) rebuildHighlights(searchInput.value);
@@ -117,7 +144,7 @@ document.addEventListener("DOMContentLoaded", () => {
             success: function (d) {
                 removeBotLoading();
                 const answer = (d && (d.answer ?? d.response ?? d.message)) ? String(d.answer ?? d.response ?? d.message) : "";
-                addBotMessage(answer || "응답을 받았지만 표시할 내용이 없습니다.");
+                addBotMessage(answer || "응답을 받았지만 표시할 내용이 없습니다.", "chat");
             },
             error: function (xhr) {
                 removeBotLoading();
@@ -127,7 +154,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     if (json && (json.message || json.error)) text = String(json.message || json.error);
                     else if (xhr.responseText) text = String(xhr.responseText);
                 } catch (e) { }
-                addBotMessage(text);
+                addBotMessage(text, "chat");
             },
             complete: function () {
                 removeBotLoading();
@@ -190,7 +217,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         if (!isAllowedFile(file)) {
-            addBotMessage("업로드할 수 없는 파일 형식입니다. (가능: PDF, 한글(HWP/HWPX), 엑셀(XLS/XLSX/CSV), PPT(PPT/PPTX), 워드(DOC/DOCX), TXT)");
+            addBotMessage("업로드할 수 없는 파일 형식입니다. (가능: PDF, 한글(HWP/HWPX), 엑셀(XLS/XLSX/CSV), PPT(PPT/PPTX), 워드(DOC/DOCX), TXT)", "chat");
             if (typeof onDone === "function") onDone();
             return;
         }
@@ -215,7 +242,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const msg = (d && (d.message ?? d.answer ?? d.response))
                     ? String(d.message ?? d.answer ?? d.response)
                     : "파일 업로드 완료";
-                addBotMessage(msg);
+                addBotMessage(msg, "file");
             },
             error: function (xhr) {
                 removeBotLoading();
@@ -223,7 +250,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 try {
                     if (xhr.responseText) text = String(xhr.responseText);
                 } catch (e) { }
-                addBotMessage(text);
+                addBotMessage(text, "chat");
             },
             complete: function () {
                 removeBotLoading();
@@ -243,7 +270,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (blocked.length > 0) {
             const names = blocked.map((f) => f.name).join(", ");
-            addBotMessage(`업로드 불가 파일이 제외되었습니다: ${names}`);
+            addBotMessage(`업로드 불가 파일이 제외되었습니다: ${names}`, "chat");
         }
 
         if (allowed.length === 0) return;
@@ -265,14 +292,24 @@ document.addEventListener("DOMContentLoaded", () => {
         });
 
         function isFileDrag(e) {
-            const types = e.dataTransfer?.types;
+            const dt = e.dataTransfer;
+            if (!dt) return false;
+
+            if (dt.items && dt.items.length) {
+                return Array.from(dt.items).some((it) => it && it.kind === "file");
+            }
+
+            const types = dt.types;
             if (!types) return false;
-            return Array.from(types).includes("Files");
+            const arr = Array.from(types);
+            return arr.includes("Files") || arr.includes("application/x-moz-file");
         }
 
         function setDropEffect(e) {
             if (!e.dataTransfer) return;
-            e.dataTransfer.dropEffect = "move";
+            try {
+                e.dataTransfer.dropEffect = "copy";
+            } catch (_) { }
         }
 
         let dragCounter = 0;
@@ -285,6 +322,7 @@ document.addEventListener("DOMContentLoaded", () => {
             "dragenter",
             (e) => {
                 if (!isFileDrag(e)) return;
+                e.preventDefault();
                 dragCounter++;
                 setDropEffect(e);
                 setDragUI(true);
@@ -320,9 +358,11 @@ document.addEventListener("DOMContentLoaded", () => {
             (e) => {
                 if (!isFileDrag(e)) return;
                 e.preventDefault();
+                e.stopPropagation();
                 dragCounter = 0;
                 setDragUI(false);
-                uploadFiles(e.dataTransfer.files);
+                const files = e.dataTransfer && e.dataTransfer.files ? e.dataTransfer.files : null;
+                if (files && files.length) uploadFiles(files);
             },
             true
         );
