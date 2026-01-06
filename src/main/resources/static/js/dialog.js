@@ -52,7 +52,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const html = `
       <div class="cb-msg cb-msg--bot">
         <div class="cb-avatar">
-            <img class="cb-avatar__img" src="/img/ic-chatbot.png" alt="챗봇" />
+          <img class="cb-avatar__img" src="/img/ic-chatbot.png" alt="챗봇" />
         </div>
         <div class="cb-bubble">
           <div class="cb-bubble__text">${escapeHtml(text)}</div>
@@ -69,7 +69,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const html = `
       <div class="cb-msg cb-msg--bot cb-msg--loading" id="cbLoadingBubble">
         <div class="cb-avatar">
-            <img class="cb-avatar__img" src="/img/ic-chatbot.png" alt="챗봇" />
+          <img class="cb-avatar__img" src="/img/ic-chatbot.png" alt="챗봇" />
         </div>
         <div class="cb-bubble">
           <div class="cb-bubble__text">
@@ -159,24 +159,216 @@ document.addEventListener("DOMContentLoaded", () => {
     const actionPrint = document.getElementById("cbActionPrint");
     const fileInput = document.getElementById("cbFileInput");
 
+    if (fileInput) {
+        fileInput.setAttribute(
+            "accept",
+            ".pdf,.hwp,.hwpx,.xls,.xlsx,.ppt,.pptx,.csv,.doc,.docx,.txt"
+        );
+    }
+
+    const allowedExt = new Set([
+        "pdf",
+        "hwp",
+        "hwpx",
+        "xls",
+        "xlsx",
+        "ppt",
+        "pptx",
+        "csv",
+        "doc",
+        "docx",
+        "txt"
+    ]);
+
+    const allowedMime = new Set([
+        "application/pdf",
+        "application/haansofthwp",
+        "application/x-hwp",
+        "application/vnd.hancom.hwp",
+        "application/vnd.hancom.hwpx",
+        "application/vnd.ms-excel",
+        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        "application/vnd.ms-powerpoint",
+        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+        "text/csv",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+        "text/plain"
+    ]);
+
+    function getExt(name) {
+        const n = (name || "").toLowerCase().trim();
+        const i = n.lastIndexOf(".");
+        if (i < 0) return "";
+        return n.slice(i + 1);
+    }
+
+    function isAllowedFile(file) {
+        if (!file) return false;
+
+        const ext = getExt(file.name);
+        if (!allowedExt.has(ext)) return false;
+
+        if (file.type && allowedMime.size > 0) {
+            if (!allowedMime.has(file.type)) {
+                const mimeOkByExt = ext === "hwp" || ext === "hwpx";
+                if (!mimeOkByExt) return false;
+            }
+        }
+
+        return true;
+    }
+
+    function uploadFile(file, onDone) {
+        if (!file) {
+            if (typeof onDone === "function") onDone();
+            return;
+        }
+
+        if (!isAllowedFile(file)) {
+            addBotMessage("업로드할 수 없는 파일 형식입니다. (가능: PDF, 한글(HWP/HWPX), 엑셀(XLS/XLSX/CSV), PPT(PPT/PPTX), 워드(DOC/DOCX), TXT)");
+            if (typeof onDone === "function") onDone();
+            return;
+        }
+
+        addUserMessage(`첨부파일 선택: ${file.name}`);
+
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("sessionId", sessionId);
+
+        addBotLoading();
+        setSending(true);
+
+        $.ajax({
+            url: "/api/chat/upload",
+            type: "POST",
+            data: formData,
+            processData: false,
+            contentType: false,
+            success: function (d) {
+                removeBotLoading();
+                const msg = (d && (d.message ?? d.answer ?? d.response))
+                    ? String(d.message ?? d.answer ?? d.response)
+                    : "파일 업로드 완료";
+                addBotMessage(msg);
+            },
+            error: function (xhr) {
+                removeBotLoading();
+                let text = "파일 업로드 중 오류가 발생했습니다.";
+                try {
+                    if (xhr.responseText) text = String(xhr.responseText);
+                } catch (e) { }
+                addBotMessage(text);
+            },
+            complete: function () {
+                removeBotLoading();
+                setSending(false);
+                input.focus();
+                if (typeof onDone === "function") onDone();
+            }
+        });
+    }
+
+    function uploadFiles(fileList) {
+        const all = Array.from(fileList || []);
+        if (all.length === 0) return;
+
+        const allowed = all.filter(isAllowedFile);
+        const blocked = all.filter((f) => !isAllowedFile(f));
+
+        if (blocked.length > 0) {
+            const names = blocked.map((f) => f.name).join(", ");
+            addBotMessage(`해당 파일의 확장자는 업로드가 불가합니다.`);
+        }
+
+        if (allowed.length === 0) return;
+
+        let idx = 0;
+        const next = () => {
+            if (idx >= allowed.length) return;
+            const f = allowed[idx++];
+            uploadFile(f, next);
+        };
+        next();
+    }
+
+    if (fileInput) {
+        fileInput.addEventListener("change", () => {
+            if (!fileInput.files || fileInput.files.length === 0) return;
+            uploadFiles(fileInput.files);
+            fileInput.value = "";
+        });
+
+        function isFileDrag(e) {
+            const types = e.dataTransfer?.types;
+            if (!types) return false;
+            return Array.from(types).includes("Files");
+        }
+
+        function setDropEffect(e) {
+            if (!e.dataTransfer) return;
+            e.dataTransfer.dropEffect = "copy";
+        }
+
+        let dragCounter = 0;
+
+        function setDragUI(on) {
+            document.documentElement.classList.toggle("is-dragover", on);
+        }
+
+        document.addEventListener("dragenter", (e) => {
+            if (!isFileDrag(e)) return;
+            dragCounter++;
+            setDropEffect(e);
+            setDragUI(true);
+        }, true);
+
+        document.addEventListener("dragleave", (e) => {
+            if (!isFileDrag(e)) return;
+            dragCounter--;
+            if (dragCounter <= 0) {
+                dragCounter = 0;
+                setDragUI(false);
+            }
+        }, true);
+
+        document.addEventListener("dragover", (e) => {
+            if (!isFileDrag(e)) return;
+            e.preventDefault();
+            setDropEffect(e);
+        }, true);
+
+        document.addEventListener("drop", (e) => {
+            if (!isFileDrag(e)) return;
+            e.preventDefault();
+            dragCounter = 0;
+            setDragUI(false);
+            uploadFiles(e.dataTransfer.files);
+        }, true);
+    }
+
+    function openPop() {
+        if (!pop || !plusBtn) return;
+        pop.classList.add("is-open");
+        pop.setAttribute("aria-hidden", "false");
+        plusBtn.setAttribute("aria-expanded", "true");
+    }
+
+    function closePop() {
+        if (!pop || !plusBtn) return;
+        pop.classList.remove("is-open");
+        pop.setAttribute("aria-hidden", "true");
+        plusBtn.setAttribute("aria-expanded", "false");
+    }
+
+    function togglePop() {
+        if (!pop) return;
+        if (pop.classList.contains("is-open")) closePop();
+        else openPop();
+    }
+
     if (plusBtn && pop) {
-        function openPop() {
-            pop.classList.add("is-open");
-            pop.setAttribute("aria-hidden", "false");
-            plusBtn.setAttribute("aria-expanded", "true");
-        }
-
-        function closePop() {
-            pop.classList.remove("is-open");
-            pop.setAttribute("aria-hidden", "true");
-            plusBtn.setAttribute("aria-expanded", "false");
-        }
-
-        function togglePop() {
-            if (pop.classList.contains("is-open")) closePop();
-            else openPop();
-        }
-
         plusBtn.addEventListener("click", (e) => {
             e.stopPropagation();
             togglePop();
@@ -191,92 +383,51 @@ document.addEventListener("DOMContentLoaded", () => {
         document.addEventListener("keydown", (e) => {
             if (e.key === "Escape") closePop();
         });
+    }
 
-        if (actionUpload && fileInput) {
-            actionUpload.addEventListener("click", () => {
-                closePop();
-                fileInput.click();
-            });
+    if (actionUpload && fileInput) {
+        actionUpload.addEventListener("click", () => {
+            if (pop && pop.classList.contains("is-open")) closePop();
+            fileInput.click();
+        });
+    }
 
-            fileInput.addEventListener("change", () => {
-                const file = fileInput.files && fileInput.files[0];
-                if (!file) return;
+    if (actionPrint) {
+        actionPrint.addEventListener("click", () => {
+            if (pop && pop.classList.contains("is-open")) closePop();
+            const chatHtml = body.innerHTML;
+            const w = window.open("", "_blank", "width=900,height=700");
+            if (!w) return;
 
-                addUserMessage(`첨부파일 선택: ${file.name}`);
-
-                const formData = new FormData();
-                formData.append("file", file);
-                formData.append("sessionId", sessionId);
-
-                addBotLoading();
-                setSending(true);
-
-                $.ajax({
-                    url: "/api/chat/upload",
-                    type: "POST",
-                    data: formData,
-                    processData: false,
-                    contentType: false,
-                    success: function (d) {
-                        removeBotLoading();
-                        const msg = (d && (d.message ?? d.answer ?? d.response)) ? String(d.message ?? d.answer ?? d.response) : "파일 업로드 완료";
-                        addBotMessage(msg);
-                    },
-                    error: function (xhr) {
-                        removeBotLoading();
-                        let text = "파일 업로드 중 오류가 발생했습니다.";
-                        try {
-                            if (xhr.responseText) text = String(xhr.responseText);
-                        } catch (e) { }
-                        addBotMessage(text);
-                    },
-                    complete: function () {
-                        removeBotLoading();
-                        setSending(false);
-                        fileInput.value = "";
-                        input.focus();
-                    }
-                });
-            });
-        }
-
-        if (actionPrint) {
-            actionPrint.addEventListener("click", () => {
-                closePop();
-                const chatHtml = body.innerHTML;
-                const w = window.open("", "_blank", "width=900,height=700");
-                if (!w) return;
-
-                w.document.open();
-                w.document.write(`
-<!DOCTYPE html>
-<html>
-<head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Chat Print</title>
-<style>
-body{ font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 24px; background:#fff; color:#111; }
-.wrap{ max-width: 720px; margin: 0 auto; }
-.cb-divider{ text-align:center; margin: 12px 0; color:#666; font-size:12px; }
-.cb-msg{ display:flex; gap:10px; margin:10px 0; }
-.cb-msg--user{ justify-content:flex-end; }
-.cb-avatar{ width:34px; height:34px; display:grid; place-items:center; border:1px solid #ddd; border-radius:12px; }
-.cb-bubble{ max-width:74%; border:1px solid #ddd; border-radius:16px; padding:10px 12px; background:#f3f4f6; }
-.cb-msg--user .cb-bubble{ background:#2f3a4f; color:#fff; border-color:#2f3a4f; }
-.cb-bubble__text{ font-size:14px; line-height:1.45; white-space:pre-wrap; word-break:break-word; }
-.cb-meta{ margin-top:6px; font-size:11px; opacity:.7; }
-.cb-chips,.cb-msg--loading{ display:none !important; }
-</style>
-</head>
-<body>
-<div class="wrap">${chatHtml}</div>
-<script>window.onload=()=>{window.focus();window.print();};</script>
-</body>
-</html>
-        `);
-                w.document.close();
-            });
-        }
+            w.document.open();
+            w.document.write(`
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <title>Chat Print</title>
+          <style>
+            body{ font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 24px; background:#fff; color:#111; }
+            .wrap{ max-width: 720px; margin: 0 auto; }
+            .cb-divider{ text-align:center; margin: 12px 0; color:#666; font-size:12px; }
+            .cb-msg{ display:flex; gap:10px; margin:10px 0; }
+            .cb-msg--user{ justify-content:flex-end; }
+            .cb-avatar{ width:34px; height:34px; display:grid; place-items:center; border:1px solid #ddd; border-radius:12px; }
+            .cb-bubble{ max-width:74%; border:1px solid #ddd; border-radius:16px; padding:10px 12px; background:#f3f4f6; }
+            .cb-msg--user .cb-bubble{ background:#2f3a4f; color:#fff; border-color:#2f3a4f; }
+            .cb-bubble__text{ font-size:14px; line-height:1.45; white-space:pre-wrap; word-break:break-word; }
+            .cb-meta{ margin-top:6px; font-size:11px; opacity:.7; }
+            .cb-chips,.cb-msg--loading{ display:none !important; }
+          </style>
+        </head>
+        <body>
+          <div class="wrap">${chatHtml}</div>
+          <script>window.onload=()=>{window.focus();window.print();};</script>
+        </body>
+        </html>
+      `);
+            w.document.close();
+        });
     }
 });
