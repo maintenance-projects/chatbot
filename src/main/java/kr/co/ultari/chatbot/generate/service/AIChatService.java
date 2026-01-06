@@ -1,11 +1,20 @@
 package kr.co.ultari.chatbot.generate.service;
 
 import kr.co.ultari.chatbot.generate.datamodel.vo.Message;
+import kr.dogfoot.hwplib.object.HWPFile;
+import kr.dogfoot.hwplib.reader.HWPReader;
+import kr.dogfoot.hwplib.tool.textextractor.TextExtractMethod;
+import kr.dogfoot.hwplib.tool.textextractor.TextExtractor;
+import kr.dogfoot.hwpxlib.object.HWPXFile;
+import kr.dogfoot.hwpxlib.reader.HWPXReader;
+import kr.dogfoot.hwpxlib.tool.textextractor.TextMarks;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.poi.xwpf.usermodel.XWPFDocument;
-import org.apache.poi.xwpf.usermodel.XWPFParagraph;
+import org.apache.pdfbox.pdmodel.PDDocument;
+import org.apache.pdfbox.text.PDFTextStripper;
+import org.apache.poi.xwpf.usermodel.*;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
@@ -13,6 +22,7 @@ import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Paths;
 import java.util.List;
 
 @Slf4j
@@ -20,9 +30,12 @@ import java.util.List;
 public class AIChatService {
 
     private static final String AI_API_URL = "http://10.0.0.91:11434/v1/chat/completions";
-    //private static final String AI_API_URL = "https://pok-chromospheric-rumblingly.ngrok-free.dev/v1/chat/completions";
     private static final String MODEL = "qwen2.5:7b";
+    //private static final String AI_API_URL = "https://pok-chromospheric-rumblingly.ngrok-free.dev/v1/chat/completions";
     //private static final String MODEL = "QuantTrio/Qwen3-30B-A3B-Thinking-2507-AWQ";
+
+    @Value("${ultari.ai.hwp-temp.path:D:\\projects\\chatbot\\tmp}")
+    String hwpTempPath;
 
     public String callAi(List<Message> messages) throws Exception {
 
@@ -113,20 +126,6 @@ public class AIChatService {
         return content.replaceAll("(?s)<think>.*?</think>", "").trim();
     }
 
-    public String extractTextFromWord(MultipartFile file) throws Exception {
-        try (XWPFDocument document =
-                     new XWPFDocument(file.getInputStream())) {
-
-            StringBuilder sb = new StringBuilder();
-
-            for (XWPFParagraph p : document.getParagraphs()) {
-                sb.append(p.getText()).append("\n");
-            }
-
-            return sb.toString();
-        }
-    }
-
     public String summarizeRequest(String text) throws Exception {
         JSONObject body = new JSONObject();
         body.put("model", MODEL);
@@ -147,5 +146,88 @@ public class AIChatService {
         body.put("temperature", 0.3);
 
         return request(body);
+    }
+
+    public String extractTextFromDocx2(MultipartFile file) throws Exception {
+        XWPFDocument doc = new XWPFDocument(file.getInputStream());
+        StringBuilder sb = new StringBuilder();
+
+        for (IBodyElement element : doc.getBodyElements()) {
+
+            if (element instanceof XWPFParagraph) {
+                XWPFParagraph p = (XWPFParagraph) element;
+                sb.append(p.getText()).append("\n");
+
+            } else if (element instanceof XWPFTable) {
+                XWPFTable table = (XWPFTable) element;
+
+                sb.append("[표]\n");
+                for (XWPFTableRow row : table.getRows()) {
+                    sb.append("| ");
+                    for (XWPFTableCell cell : row.getTableCells()) {
+                        sb.append(cell.getText().replace("\n", " ")).append(" | ");
+                    }
+                    sb.append("\n");
+                }
+                sb.append("\n");
+            }
+        }
+        log.info(sb.toString());
+        return sb.toString();
+    }
+
+    public String extractTextFromDocx(MultipartFile file) throws Exception {
+        try (XWPFDocument document =
+                     new XWPFDocument(file.getInputStream())) {
+
+            StringBuilder sb = new StringBuilder();
+
+            for (XWPFParagraph p : document.getParagraphs()) {
+                sb.append(p.getText()).append("\n");
+            }
+
+            log.info(sb.toString());
+            return sb.toString();
+        }
+    }
+
+    public String extractTextFromHwp(MultipartFile file) throws Exception {
+        String text = "";
+        File f = new File(Paths.get(hwpTempPath+File.separator+file.getOriginalFilename()).toString());
+        file.transferTo(f);
+        log.info(f.getPath());
+        if(f.exists()) {
+            log.info("exists");
+            HWPFile hwpFile = HWPReader.fromFile(hwpTempPath + File.separator + file.getOriginalFilename());
+            text = TextExtractor.extract(hwpFile, TextExtractMethod.InsertControlTextBetweenParagraphText);
+            f.delete();
+        }
+        log.info(text);
+        return text;
+    }
+
+    public String extractTextFromHwpx(MultipartFile file) throws Exception {
+        String text = "";
+        File f = new File(Paths.get(hwpTempPath+File.separator+file.getOriginalFilename()).toString());
+        file.transferTo(f);
+        if(f.exists()) {
+            HWPXFile hwpxFile = HWPXReader.fromFilepath(hwpTempPath + File.separator + file.getOriginalFilename());
+            text = kr.dogfoot.hwpxlib.tool.textextractor.TextExtractor.extract(hwpxFile, kr.dogfoot.hwpxlib.tool.textextractor.TextExtractMethod.InsertControlTextBetweenParagraphText,true,new TextMarks());
+            f.delete();
+        }
+        log.info(text);
+        return text;
+    }
+
+    public String extractTextFromPdf(MultipartFile file) throws IOException {
+        File f = new File(Paths.get(hwpTempPath+File.separator+file.getOriginalFilename()).toString());
+        file.transferTo(f);
+
+        try (PDDocument document = PDDocument.load(f)) {
+            PDFTextStripper stripper = new PDFTextStripper();
+            String text = stripper.getText(document);
+            f.delete();
+            return text;
+        }
     }
 }

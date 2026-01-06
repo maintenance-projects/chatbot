@@ -11,6 +11,8 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
+import java.io.IOException;
 import java.util.List;
 
 @Slf4j
@@ -76,15 +78,35 @@ public class ChatController {
         ResponseDTO responseDTO = null;
         String fileName = file.getOriginalFilename();
         String ext = fileName.substring(fileName.lastIndexOf(".")+1);
-        if(!ext.equalsIgnoreCase("docx")) {
-            return ResponseEntity.ok(new ResponseDTO("워드 파일(docx)이 아닙니다."));
+        if(!ext.equalsIgnoreCase("docx") && !ext.equalsIgnoreCase("hwp")  && !ext.equalsIgnoreCase("hwpx") && !ext.equalsIgnoreCase("pdf")) {
+            return ResponseEntity.ok(new ResponseDTO("요약이 불가능한 파일입니다."));
         }
-        String text = aiService.extractTextFromWord(file);
-        log.info(text);
+        String text = "";
+        if(ext.equalsIgnoreCase("docx"))
+            text = aiService.extractTextFromDocx2(file);
+        else if(ext.equalsIgnoreCase("hwp")) {
+            text = aiService.extractTextFromHwp(file);
+        } else if (ext.equalsIgnoreCase("hwpx")) {
+            text = aiService.extractTextFromHwpx(file);
+        } else if (ext.equalsIgnoreCase("pdf")) {
+            text = aiService.extractTextFromPdf(file);
+        }
 
-        if(StringUtils.hasText(text)) responseDTO = new ResponseDTO(aiService.summarizeRequest(text));
+        if(StringUtils.hasText(text)) {
+            List<Message> messages = sessionStore.getMessages(sessionId);
+            String summaryText = aiService.summarizeRequest(text);
+            responseDTO = new ResponseDTO(summaryText);
+            messages.add(new Message("assistant", summaryText));
+            sessionStore.setMessages(sessionId, messages);
+        }
         else responseDTO = new ResponseDTO("문서를 읽을 수 없습니다.");
 
         return ResponseEntity.ok(responseDTO);
+    }
+
+    public File multipartFileToFile(MultipartFile multipartFile) throws IOException {
+        File file = new File(multipartFile.getOriginalFilename());
+        multipartFile.transferTo(file);
+        return file;
     }
 }
