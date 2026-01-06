@@ -45,6 +45,7 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
         body.insertAdjacentHTML("beforeend", html);
         scrollToBottom();
+        if (isSearchOpen() && searchInput && searchInput.value.trim()) rebuildHighlights(searchInput.value);
     }
 
     function addBotMessage(text) {
@@ -62,6 +63,7 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
         body.insertAdjacentHTML("beforeend", html);
         scrollToBottom();
+        if (isSearchOpen() && searchInput && searchInput.value.trim()) rebuildHighlights(searchInput.value);
     }
 
     function addBotLoading() {
@@ -160,41 +162,11 @@ document.addEventListener("DOMContentLoaded", () => {
     const fileInput = document.getElementById("cbFileInput");
 
     if (fileInput) {
-        fileInput.setAttribute(
-            "accept",
-            ".pdf,.hwp,.hwpx,.xls,.xlsx,.ppt,.pptx,.csv,.doc,.docx,.txt"
-        );
+        fileInput.setAttribute("accept", ".pdf,.hwp,.hwpx,.xls,.xlsx,.ppt,.pptx,.csv,.doc,.docx,.txt");
     }
 
-    const allowedExt = new Set([
-        "pdf",
-        "hwp",
-        "hwpx",
-        "xls",
-        "xlsx",
-        "ppt",
-        "pptx",
-        "csv",
-        "doc",
-        "docx",
-        "txt"
-    ]);
-
-    const allowedMime = new Set([
-        "application/pdf",
-        "application/haansofthwp",
-        "application/x-hwp",
-        "application/vnd.hancom.hwp",
-        "application/vnd.hancom.hwpx",
-        "application/vnd.ms-excel",
-        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
-        "application/vnd.ms-powerpoint",
-        "application/vnd.openxmlformats-officedocument.presentationml.presentation",
-        "text/csv",
-        "application/msword",
-        "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-        "text/plain"
-    ]);
+    const allowedExt = new Set(["pdf", "hwp", "hwpx", "xls", "xlsx", "ppt", "pptx", "csv", "doc", "docx", "txt"]);
+    const blockedExt = new Set(["png", "jpg", "jpeg", "gif", "webp", "bmp", "heic", "svg"]);
 
     function getExt(name) {
         const n = (name || "").toLowerCase().trim();
@@ -205,18 +177,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function isAllowedFile(file) {
         if (!file) return false;
-
         const ext = getExt(file.name);
-        if (!allowedExt.has(ext)) return false;
-
-        if (file.type && allowedMime.size > 0) {
-            if (!allowedMime.has(file.type)) {
-                const mimeOkByExt = ext === "hwp" || ext === "hwpx";
-                if (!mimeOkByExt) return false;
-            }
-        }
-
-        return true;
+        if (!ext) return false;
+        if (blockedExt.has(ext)) return false;
+        return allowedExt.has(ext);
     }
 
     function uploadFile(file, onDone) {
@@ -279,7 +243,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (blocked.length > 0) {
             const names = blocked.map((f) => f.name).join(", ");
-            addBotMessage(`해당 파일의 확장자는 업로드가 불가합니다.`);
+            addBotMessage(`업로드 불가 파일이 제외되었습니다: ${names}`);
         }
 
         if (allowed.length === 0) return;
@@ -308,7 +272,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         function setDropEffect(e) {
             if (!e.dataTransfer) return;
-            e.dataTransfer.dropEffect = "copy";
+            e.dataTransfer.dropEffect = "move";
         }
 
         let dragCounter = 0;
@@ -317,35 +281,51 @@ document.addEventListener("DOMContentLoaded", () => {
             document.documentElement.classList.toggle("is-dragover", on);
         }
 
-        document.addEventListener("dragenter", (e) => {
-            if (!isFileDrag(e)) return;
-            dragCounter++;
-            setDropEffect(e);
-            setDragUI(true);
-        }, true);
+        document.addEventListener(
+            "dragenter",
+            (e) => {
+                if (!isFileDrag(e)) return;
+                dragCounter++;
+                setDropEffect(e);
+                setDragUI(true);
+            },
+            true
+        );
 
-        document.addEventListener("dragleave", (e) => {
-            if (!isFileDrag(e)) return;
-            dragCounter--;
-            if (dragCounter <= 0) {
+        document.addEventListener(
+            "dragleave",
+            (e) => {
+                if (!isFileDrag(e)) return;
+                dragCounter--;
+                if (dragCounter <= 0) {
+                    dragCounter = 0;
+                    setDragUI(false);
+                }
+            },
+            true
+        );
+
+        document.addEventListener(
+            "dragover",
+            (e) => {
+                if (!isFileDrag(e)) return;
+                e.preventDefault();
+                setDropEffect(e);
+            },
+            true
+        );
+
+        document.addEventListener(
+            "drop",
+            (e) => {
+                if (!isFileDrag(e)) return;
+                e.preventDefault();
                 dragCounter = 0;
                 setDragUI(false);
-            }
-        }, true);
-
-        document.addEventListener("dragover", (e) => {
-            if (!isFileDrag(e)) return;
-            e.preventDefault();
-            setDropEffect(e);
-        }, true);
-
-        document.addEventListener("drop", (e) => {
-            if (!isFileDrag(e)) return;
-            e.preventDefault();
-            dragCounter = 0;
-            setDragUI(false);
-            uploadFiles(e.dataTransfer.files);
-        }, true);
+                uploadFiles(e.dataTransfer.files);
+            },
+            true
+        );
     }
 
     function openPop() {
@@ -387,14 +367,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (actionUpload && fileInput) {
         actionUpload.addEventListener("click", () => {
-            if (pop && pop.classList.contains("is-open")) closePop();
+            closePop();
             fileInput.click();
         });
     }
 
     if (actionPrint) {
         actionPrint.addEventListener("click", () => {
-            if (pop && pop.classList.contains("is-open")) closePop();
+            closePop();
             const chatHtml = body.innerHTML;
             const w = window.open("", "_blank", "width=900,height=700");
             if (!w) return;
@@ -428,6 +408,150 @@ document.addEventListener("DOMContentLoaded", () => {
         </html>
       `);
             w.document.close();
+        });
+    }
+
+    const searchBtn = document.getElementById("cbSearchBtn");
+    const searchBar = document.getElementById("cbSearchBar");
+    const searchInput = document.getElementById("cbSearchInput");
+    const searchMeta = document.getElementById("cbSearchMeta");
+    const searchPrev = document.getElementById("cbSearchPrev");
+    const searchNext = document.getElementById("cbSearchNext");
+    const searchClose = document.getElementById("cbSearchClose");
+
+    let searchHits = [];
+    let searchIndex = -1;
+
+    function isSearchOpen() {
+        return !!(searchBar && searchBar.classList.contains("is-open"));
+    }
+
+    function escapeRegExp(s) {
+        return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    }
+
+    function setSearchUI(open) {
+        if (!searchBtn || !searchBar) return;
+        searchBar.classList.toggle("is-open", open);
+        searchBar.setAttribute("aria-hidden", open ? "false" : "true");
+        searchBtn.setAttribute("aria-expanded", open ? "true" : "false");
+        if (open && searchInput) searchInput.focus();
+    }
+
+    function clearHighlights() {
+        body.querySelectorAll(".cb-hit").forEach((el) => el.classList.remove("cb-hit"));
+        body.querySelectorAll(".cb-bubble__text").forEach((el) => {
+            const raw = el.getAttribute("data-raw");
+            if (raw != null) el.innerHTML = raw;
+        });
+    }
+
+    function rebuildHighlights(keyword) {
+        clearHighlights();
+        searchHits = [];
+        searchIndex = -1;
+
+        const k = (keyword || "").trim();
+        if (!k) {
+            if (searchMeta) searchMeta.textContent = "0 / 0";
+            return;
+        }
+
+        const safe = escapeRegExp(k);
+        const re = new RegExp(safe, "gi");
+
+        const texts = Array.from(body.querySelectorAll(".cb-bubble__text"));
+
+        for (const el of texts) {
+            if (!el.getAttribute("data-raw")) el.setAttribute("data-raw", el.innerHTML);
+
+            const plain = el.textContent || "";
+            re.lastIndex = 0;
+            if (!re.test(plain)) continue;
+
+            const raw = el.getAttribute("data-raw") || el.innerHTML;
+            re.lastIndex = 0;
+            el.innerHTML = raw.replace(re, (m) => `<mark class="cb-mark">${m}</mark>`);
+
+            const msg = el.closest(".cb-msg");
+            if (msg) searchHits.push(msg);
+        }
+
+        if (searchHits.length === 0) {
+            if (searchMeta) searchMeta.textContent = "0 / 0";
+            return;
+        }
+
+        searchIndex = 0;
+        focusHit(0);
+    }
+
+    function focusHit(idx) {
+        if (!searchHits.length || idx < 0 || idx >= searchHits.length) return;
+
+        body.querySelectorAll(".cb-hit").forEach((el) => el.classList.remove("cb-hit"));
+
+        const target = searchHits[idx];
+        target.classList.add("cb-hit");
+
+        const bodyRect = body.getBoundingClientRect();
+        const msgRect = target.getBoundingClientRect();
+        const delta = msgRect.top - bodyRect.top;
+
+        body.scrollTo({ top: Math.max(0, body.scrollTop + delta - 40), behavior: "smooth" });
+
+        if (searchMeta) searchMeta.textContent = `${idx + 1} / ${searchHits.length}`;
+    }
+
+    function moveHit(dir) {
+        if (!searchHits.length) return;
+        searchIndex = (searchIndex + dir + searchHits.length) % searchHits.length;
+        focusHit(searchIndex);
+    }
+
+    if (searchBtn && searchBar) {
+        searchBtn.addEventListener("click", () => {
+            const open = !searchBar.classList.contains("is-open");
+            setSearchUI(open);
+            if (!open) {
+                clearHighlights();
+                if (searchInput) searchInput.value = "";
+                if (searchMeta) searchMeta.textContent = "0 / 0";
+            } else {
+                if (searchInput && searchInput.value.trim()) rebuildHighlights(searchInput.value);
+            }
+        });
+    }
+
+    if (searchClose) {
+        searchClose.addEventListener("click", () => {
+            setSearchUI(false);
+            clearHighlights();
+            if (searchInput) searchInput.value = "";
+            if (searchMeta) searchMeta.textContent = "0 / 0";
+        });
+    }
+
+    if (searchPrev) searchPrev.addEventListener("click", () => moveHit(-1));
+    if (searchNext) searchNext.addEventListener("click", () => moveHit(1));
+
+    if (searchInput) {
+        let t = null;
+
+        searchInput.addEventListener("input", () => {
+            window.clearTimeout(t);
+            t = window.setTimeout(() => rebuildHighlights(searchInput.value), 120);
+        });
+
+        searchInput.addEventListener("keydown", (e) => {
+            if (e.key === "Enter") {
+                e.preventDefault();
+                moveHit(e.shiftKey ? -1 : 1);
+            } else if (e.key === "Escape") {
+                e.preventDefault();
+                if (searchClose) searchClose.click();
+                else setSearchUI(false);
+            }
         });
     }
 });
