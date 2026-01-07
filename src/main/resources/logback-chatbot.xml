@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration scan="true" scanPeriod="5 seconds">
+
+    <!-- Spring properties -->
+    <springProperty scope="context" name="APP_NAME"
+                    source="spring.application.name" defaultValue="chatbot"/>
+
+    <springProperty scope="context" name="LOG_PATH"
+                    source="logging.file.path" defaultValue="./logs"/>
+
+    <springProperty scope="context" name="ROOT_LEVEL"
+                    source="logging.level.root" defaultValue="INFO"/>
+
+    <!-- 공통 로그 패턴 -->
+    <property name="LOG_PATTERN"
+              value="%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"/>
+
+    <!-- 콘솔 Appender -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>${LOG_PATTERN}</pattern>
+        </encoder>
+    </appender>
+
+    <!-- 파일 Appender -->
+    <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
+        <file>${LOG_PATH}/${APP_NAME}.log</file>
+
+        <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
+            <fileNamePattern>${LOG_PATH}/${APP_NAME}.%d{yyyy-MM-dd}.log</fileNamePattern>
+            <maxHistory>30</maxHistory>
+        </rollingPolicy>
+
+        <encoder>
+            <pattern>${LOG_PATTERN}</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Root Logger -->
+    <root level="${ROOT_LEVEL}">
+        <appender-ref ref="CONSOLE"/>
+        <!--<appender-ref ref="FILE"/>-->
+    </root>
+    <logger name="org.springframework" level="WARN"/>
+    <logger name="org.hibernate.SQL" level="WARN"/>
+    <logger name="kr.co.ultari" level="DEBUG"/>
+
+</configuration>

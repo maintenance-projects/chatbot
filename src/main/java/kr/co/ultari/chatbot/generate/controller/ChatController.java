@@ -30,7 +30,7 @@ public class ChatController {
 
     @PostMapping
     public ResponseEntity<?> chat(@RequestBody RequestDTO req) throws Exception {
-        log.info("{}",req.toString());
+        log.debug("{}",req.toString());
 
         List<Message> messages = sessionStore.getMessages(req.getSessionId());
 
@@ -38,7 +38,7 @@ public class ChatController {
         if (messages.isEmpty()) {
             messages.add(new Message(
                     "system",
-                    "너는 한국어로만 답변하는 친절한 AI 챗봇이다. 제발 한국어로만 대답하고 중국는 좀 그만해줘."
+                    "너는 한국어로만 답변하는 친절한 AI 챗봇이다. 제발 한국어로만 대답하고 중국어는 좀 그만해줘."
             ));
         }
 
@@ -46,16 +46,16 @@ public class ChatController {
         int userCount = (int) messages.stream()
                 .filter(m -> "user".equals(m.getRole()))
                 .count();
-        log.info("messages.'user'.size()={}",userCount);
+        log.debug("messages.'user'.size()={}",userCount);
         if(userCount > 20) {
             String summaryMessage = aiService.summarize(messages);
-            log.info(summaryMessage);
+            log.debug(summaryMessage);
 
             messages.removeIf(msg -> !"system".equals(msg.getRole()));
             //messages.clear();
 
             messages.add(new Message("system", "이전 대화 요약:"+summaryMessage));
-            log.info(messages.toString());
+            log.debug(messages.toString());
             sessionStore.setMessages(req.getSessionId(), messages);
         }
 
@@ -68,13 +68,13 @@ public class ChatController {
         // AI 응답 저장
         messages.add(new Message("assistant", reply));
 
-        log.info(messages.toString());
+        log.debug(messages.toString());
         return ResponseEntity.ok(new ResponseDTO(reply));
     }
 
     @PostMapping("/upload")
     public ResponseEntity<?> summarizeFile(@RequestParam("file") MultipartFile file, @RequestParam("sessionId") String sessionId) throws Exception {
-        log.info(file.getOriginalFilename());
+        log.debug(file.getOriginalFilename());
         ResponseDTO responseDTO = null;
         String fileName = file.getOriginalFilename();
         String ext = fileName.substring(fileName.lastIndexOf(".")+1);

@@ -24,18 +24,20 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.UUID;
 
 @Slf4j
 @Service
 public class AIChatService {
 
-    private static final String AI_API_URL = "http://10.0.0.91:11434/v1/chat/completions";
-    private static final String MODEL = "qwen2.5:7b";
-    //private static final String AI_API_URL = "https://pok-chromospheric-rumblingly.ngrok-free.dev/v1/chat/completions";
-    //private static final String MODEL = "QuantTrio/Qwen3-30B-A3B-Thinking-2507-AWQ";
+    @Value("${ultari.ai.url:}")
+    private String AI_API_URL;
 
-    @Value("${ultari.ai.hwp-temp.path:D:\\projects\\chatbot\\tmp}")
-    String hwpTempPath;
+    @Value("${ultari.ai.model:}")
+    private String MODEL;
+
+    @Value("${ultari.ai.temp.path:tmp}")
+    String tempPath;
 
     public String callAi(List<Message> messages) throws Exception {
 
@@ -82,7 +84,7 @@ public class AIChatService {
         }
 
         JSONObject res = new JSONObject(removeThinkTag(sb.toString()));
-        log.info(res.toString());
+        log.debug(res.toString());
         return res.getJSONArray("choices")
                 .getJSONObject(0)
                 .getJSONObject("message")
@@ -149,30 +151,38 @@ public class AIChatService {
     }
 
     public String extractTextFromDocx2(MultipartFile file) throws Exception {
-        XWPFDocument doc = new XWPFDocument(file.getInputStream());
+        XWPFDocument doc = null;
         StringBuilder sb = new StringBuilder();
 
-        for (IBodyElement element : doc.getBodyElements()) {
+        try {
+            doc = new XWPFDocument(file.getInputStream());
+            for (IBodyElement element : doc.getBodyElements()) {
 
-            if (element instanceof XWPFParagraph) {
-                XWPFParagraph p = (XWPFParagraph) element;
-                sb.append(p.getText()).append("\n");
+                if (element instanceof XWPFParagraph) {
+                    XWPFParagraph p = (XWPFParagraph) element;
+                    sb.append(p.getText()).append("\n");
 
-            } else if (element instanceof XWPFTable) {
-                XWPFTable table = (XWPFTable) element;
+                } else if (element instanceof XWPFTable) {
+                    XWPFTable table = (XWPFTable) element;
 
-                sb.append("[표]\n");
-                for (XWPFTableRow row : table.getRows()) {
-                    sb.append("| ");
-                    for (XWPFTableCell cell : row.getTableCells()) {
-                        sb.append(cell.getText().replace("\n", " ")).append(" | ");
+                    sb.append("[표]\n");
+                    for (XWPFTableRow row : table.getRows()) {
+                        sb.append("| ");
+                        for (XWPFTableCell cell : row.getTableCells()) {
+                            sb.append(cell.getText().replace("\n", " ")).append(" | ");
+                        }
+                        sb.append("\n");
                     }
                     sb.append("\n");
                 }
-                sb.append("\n");
             }
+        } catch (Exception e) {
+            log.error("",e);
+        } finally {
+            if(doc != null) doc.close();
         }
-        log.info(sb.toString());
+
+        log.debug(sb.toString());
         return sb.toString();
     }
 
@@ -186,48 +196,58 @@ public class AIChatService {
                 sb.append(p.getText()).append("\n");
             }
 
-            log.info(sb.toString());
+            log.debug(sb.toString());
             return sb.toString();
         }
     }
 
     public String extractTextFromHwp(MultipartFile file) throws Exception {
         String text = "";
-        File f = new File(Paths.get(hwpTempPath+File.separator+file.getOriginalFilename()).toString());
+        File f = new File(Paths.get(tempPath+File.separator+file.getOriginalFilename()).toString());
         file.transferTo(f);
-        log.info(f.getPath());
+        log.debug(f.getPath());
         if(f.exists()) {
-            log.info("exists");
-            HWPFile hwpFile = HWPReader.fromFile(hwpTempPath + File.separator + file.getOriginalFilename());
+            HWPFile hwpFile = HWPReader.fromFile(tempPath + File.separator + file.getOriginalFilename());
             text = TextExtractor.extract(hwpFile, TextExtractMethod.InsertControlTextBetweenParagraphText);
             f.delete();
         }
-        log.info(text);
+        log.debug(text);
         return text;
     }
 
     public String extractTextFromHwpx(MultipartFile file) throws Exception {
         String text = "";
-        File f = new File(Paths.get(hwpTempPath+File.separator+file.getOriginalFilename()).toString());
+        File f = new File(Paths.get(tempPath+File.separator+file.getOriginalFilename()).toString());
         file.transferTo(f);
         if(f.exists()) {
-            HWPXFile hwpxFile = HWPXReader.fromFilepath(hwpTempPath + File.separator + file.getOriginalFilename());
+            HWPXFile hwpxFile = HWPXReader.fromFilepath(tempPath + File.separator + file.getOriginalFilename());
             text = kr.dogfoot.hwpxlib.tool.textextractor.TextExtractor.extract(hwpxFile, kr.dogfoot.hwpxlib.tool.textextractor.TextExtractMethod.InsertControlTextBetweenParagraphText,true,new TextMarks());
             f.delete();
         }
-        log.info(text);
+        log.debug(text);
         return text;
     }
 
     public String extractTextFromPdf(MultipartFile file) throws IOException {
-        File f = new File(Paths.get(hwpTempPath+File.separator+file.getOriginalFilename()).toString());
+        File f = new File(Paths.get(tempPath+File.separator+UUID.randomUUID()).toString());
         file.transferTo(f);
 
-        try (PDDocument document = PDDocument.load(f)) {
+        String text;
+        PDDocument document = null;
+
+        try {
+            document = PDDocument.load(f);
             PDFTextStripper stripper = new PDFTextStripper();
-            String text = stripper.getText(document);
-            f.delete();
-            return text;
+            text = stripper.getText(document);
+        } finally {
+            if (document != null) {
+                document.close();
+            }
+
+            boolean beDelete = f.delete();
+            log.trace("tmp pdf file deleted = {}",beDelete);
         }
+
+        return text;
     }
 }
