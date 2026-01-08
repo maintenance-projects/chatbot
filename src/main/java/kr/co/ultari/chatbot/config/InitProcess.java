@@ -17,9 +17,9 @@ public class InitProcess {
     @PostConstruct
     public void initDir() {
         File f = new File(tempPath);
-        log.trace("tmp path = {}",tempPath);
+        log.info("tmp path = {}",tempPath);
         if(!f.exists()) {
-            log.trace("Tmp directory not found. Creating path = {}",tempPath);
+            log.info("Tmp directory not found. Creating path = {}",tempPath);
             f.mkdirs();
         }
     }
