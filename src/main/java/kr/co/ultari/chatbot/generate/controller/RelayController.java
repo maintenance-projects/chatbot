@@ -5,19 +5,21 @@ import kr.co.ultari.chatbot.generate.datamodel.dto.ResponseDTO;
 import kr.co.ultari.chatbot.generate.service.AIRelayService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+@Profile("relay")
 @Slf4j
 @RestController
-@RequestMapping("/api/relay")
+@RequestMapping("/api/chat")
 public class RelayController {
 
     @Autowired
     AIRelayService relayService;
 
-    @PostMapping("/chat")
+    @PostMapping
     public ResponseEntity<?> chat(@RequestBody RequestDTO req) throws Exception {
         log.info(req.toString());
         String answer = relayService.ChatRelayService(req);

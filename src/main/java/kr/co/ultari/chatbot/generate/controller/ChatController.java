@@ -7,6 +7,7 @@ import kr.co.ultari.chatbot.generate.datamodel.vo.Message;
 import kr.co.ultari.chatbot.generate.service.AIChatService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.context.annotation.Profile;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
@@ -16,6 +17,7 @@ import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
+@Profile("chat")
 @Slf4j
 @RestController
 @RequestMapping("/api/chat")

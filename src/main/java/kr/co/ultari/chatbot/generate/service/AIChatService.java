@@ -55,7 +55,7 @@ public class AIChatService {
         }
 
         body.put("messages", msgArray);
-        body.put("temperature", 0.7);
+        body.put("temperature", 0.6);
         //body.put("max_tokens", 1024);
         //body.put("stream", false);
 
