@@ -1,6 +1,7 @@
 package kr.co.ultari.chatbot.generate.service;
 
 import kr.co.ultari.chatbot.generate.datamodel.vo.Message;
+import kr.co.ultari.chatbot.utils.DetectCharsetUtil;
 import kr.dogfoot.hwplib.object.HWPFile;
 import kr.dogfoot.hwplib.reader.HWPReader;
 import kr.dogfoot.hwplib.tool.textextractor.TextExtractMethod;
@@ -21,6 +22,7 @@ import org.springframework.web.multipart.MultipartFile;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.List;
@@ -107,6 +109,7 @@ public class AIChatService {
                 .put("role","system")
                 .put("content","다음은 사용자와 AI의 이전 대화이다.\n" +
                         "아래 규칙에 따라 요약하라.\n" +
+                        "- 이름, 나이, 전화번호, 직급 등의 개인정보는 꼭 기억 해라\n" +
                         "- 결정 사항, 요구사항, 중요한 기술 정보만 요약\n" +
                         "- 인사말, 잡담은 제거\n" +
                         "- 한국어로 작성\n" +
@@ -115,7 +118,7 @@ public class AIChatService {
         );
 
         body.put("messages", arr);
-        body.put("temperature", 0.3);
+        body.put("temperature", 0.5);
 
         return request(body);
     }
@@ -232,7 +235,7 @@ public class AIChatService {
         File f = new File(Paths.get(tempPath+File.separator+UUID.randomUUID()).toString());
         file.transferTo(f);
 
-        String text;
+        String text = "";
         PDDocument document = null;
 
         try {
@@ -247,7 +250,24 @@ public class AIChatService {
             boolean beDelete = f.delete();
             log.trace("tmp pdf file deleted = {}",beDelete);
         }
-
+        log.debug(text);
         return text;
+    }
+
+    public String extractTextFromTxt(MultipartFile file) throws IOException {
+        Charset charset = DetectCharsetUtil.detectCharset(file);
+
+        log.debug(charset.displayName());
+        StringBuilder sb = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(
+                new InputStreamReader(file.getInputStream(), charset))) {
+
+            String line;
+            while ((line = reader.readLine()) != null) {
+                sb.append(line).append("\n");
+            }
+        }
+        log.debug(sb.toString());
+        return sb.toString();
     }
 }

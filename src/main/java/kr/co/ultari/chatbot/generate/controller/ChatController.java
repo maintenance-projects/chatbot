@@ -6,6 +6,7 @@ import kr.co.ultari.chatbot.generate.datamodel.dto.ResponseDTO;
 import kr.co.ultari.chatbot.generate.datamodel.vo.Message;
 import kr.co.ultari.chatbot.generate.service.AIChatService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
@@ -19,6 +20,10 @@ import java.util.List;
 @RestController
 @RequestMapping("/api/chat")
 public class ChatController {
+
+    @Value("${ultari.ai.summary-size:5}")
+    int summarySize;
+
     private final ChatSessionStore sessionStore;
     private final AIChatService aiService;
 
@@ -38,16 +43,16 @@ public class ChatController {
         if (messages.isEmpty()) {
             messages.add(new Message(
                     "system",
-                    "너는 한국어로만 답변하는 친절한 AI 챗봇이다. 제발 한국어로만 대답하고 중국어는 좀 그만해줘."
+                    "너는 한국어로만 답변하는 친절한 AI 챗봇이다. 제발 한국어로만 대답하고 중국어는 좀 그만해줘. 제발 한국어만 사용해 주세요."
             ));
         }
 
         // 요약
-        int userCount = (int) messages.stream()
-                .filter(m -> "user".equals(m.getRole()))
+        int msgCount = (int) messages.stream()
+                .filter(m -> !"system".equals(m.getRole()))
                 .count();
-        log.debug("messages.'user'.size()={}",userCount);
-        if(userCount > 20) {
+        log.debug("messages.'user and assistant'.size()={}",msgCount);
+        if(msgCount > summarySize) {
             String summaryMessage = aiService.summarize(messages);
             log.debug(summaryMessage);
 
@@ -55,7 +60,7 @@ public class ChatController {
             //messages.clear();
 
             messages.add(new Message("system", "이전 대화 요약:"+summaryMessage));
-            log.debug(messages.toString());
+            log.debug("현재 메시지 : "+messages.toString());
             sessionStore.setMessages(req.getSessionId(), messages);
         }
 
@@ -78,7 +83,9 @@ public class ChatController {
         ResponseDTO responseDTO = null;
         String fileName = file.getOriginalFilename();
         String ext = fileName.substring(fileName.lastIndexOf(".")+1);
-        if(!ext.equalsIgnoreCase("docx") && !ext.equalsIgnoreCase("hwp")  && !ext.equalsIgnoreCase("hwpx") && !ext.equalsIgnoreCase("pdf")) {
+        if(!ext.equalsIgnoreCase("docx") && !ext.equalsIgnoreCase("hwp")
+                && !ext.equalsIgnoreCase("hwpx") && !ext.equalsIgnoreCase("pdf")
+                && !ext.equalsIgnoreCase("txt")) {
             return ResponseEntity.ok(new ResponseDTO("요약이 불가능한 파일입니다."));
         }
         String text = "";
@@ -90,6 +97,13 @@ public class ChatController {
             text = aiService.extractTextFromHwpx(file);
         } else if (ext.equalsIgnoreCase("pdf")) {
             text = aiService.extractTextFromPdf(file);
+        } else if (ext.equalsIgnoreCase("txt")) {
+            text = aiService.extractTextFromTxt(file);
+
+            //텍스트 파일 요약 요청을 효율적으로 하기 위한 전처리.
+            text = text.replaceAll("[ \\t]+", " ")
+                    .replaceAll("\\n{3,}", "\n\n")
+                    .trim();
         }
 
         if(StringUtils.hasText(text)) {
