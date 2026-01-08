@@ -6,6 +6,83 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (!body || !input || !sendBtn) return;
 
+    const sessionId = window.cbSessionId || "ultari01";
+    const defaultPlaceholder = (input.getAttribute("placeholder") || input.placeholder || "").trim();
+
+    const plusBtn = document.getElementById("cbPlus");
+    const pop = document.getElementById("cbPop");
+    const actionUpload = document.getElementById("cbActionUpload");
+    const actionPrint = document.getElementById("cbActionPrint");
+    const fileInput = document.getElementById("cbFileInput");
+
+    let isResearchMode = false;
+    let researchTag = null;
+
+    function injectStyleOnce() {
+        if (document.getElementById("cbFooterLayoutStyle")) return;
+        const s = document.createElement("style");
+        s.id = "cbFooterLayoutStyle";
+        s.textContent = `
+                            .cb-inputwrap{display:flex !important;flex-direction:column !important; align-items:stretch !important}
+                            .cb-inputwrap > div:first-child{display:flex !important;align-items:flex-end !important;gap:10px !important}
+                            .cb-inputwrap > div:first-child #cbInput{flex:1 1 auto !important;min-width:0 !important}
+                            .cb-inputwrap .cb-actions{display:flex !important;align-items:center !important;}
+                            .cb-inputwrap .cb-actions #cbPlus{flex:0 0 auto !important}
+                            .cb-inputwrap .cb-actions #cbPop{position:absolute}
+                            #cbResearchTag{display:inline-flex;align-items:center;gap:6px;margin-left:2px;color:#2563eb;background:transparent;border:0; border-radius:999px;cursor:pointer;user-select:none;line-height:1}
+                            #cbResearchTag .cb-rch__x{display:none}
+                            #cbResearchTag:hover{background:rgba(37,99,235,.12);padding:6px 10px}
+                            #cbResearchTag:hover .cb-rch__x{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:999px;background:#fff;color:#2563eb}
+                            #cbResearchTag .cb-rch__label{font-size:12px;font-weight:600;letter-spacing:-.01em}
+                            #cbResearchTag .cb-rch__icon{width:16px;height:16px;display:inline-block}
+                            #cbWidget.is-research #cbInput{min-height:64px !important;max-height:140px !important;resize:none !important}
+                        `;
+        document.head.appendChild(s);
+    }
+
+    function ensureResearchTag() {
+        if (researchTag) return researchTag;
+        if (!plusBtn || !plusBtn.parentElement) return null;
+
+        researchTag = document.createElement("button");
+        researchTag.type = "button";
+        researchTag.id = "cbResearchTag";
+        researchTag.setAttribute("aria-pressed", "false");
+        researchTag.innerHTML = `
+                                    <img src="/img/ic-research-mini.png" id="miniIcon" />
+                                    <span class="cb-rch__label">리서치</span>
+                                    <span class="cb-rch__x" aria-hidden="true">×</span>
+                                `;
+        researchTag.addEventListener("click", (e) => {
+            e.preventDefault();
+            setResearchMode(false);
+            input.focus();
+        });
+
+        plusBtn.insertAdjacentElement("afterend", researchTag);
+        researchTag.style.display = "none";
+        return researchTag;
+    }
+
+    function setResearchMode(on) {
+        isResearchMode = !!on;
+
+        injectStyleOnce();
+        const tag = ensureResearchTag();
+
+        // if (widget) widget.classList.toggle("is-research", isResearchMode);
+
+        if (tag) {
+            tag.style.display = isResearchMode ? "" : "none";
+            tag.setAttribute("aria-pressed", isResearchMode ? "true" : "false");
+        }
+
+        if (input) {
+            if (isResearchMode) input.placeholder = "디테일한 보고서를 작성해 주세요";
+            else input.placeholder = defaultPlaceholder;
+        }
+    }
+
     function pad2(n) {
         return String(n).padStart(2, "0");
     }
@@ -31,6 +108,13 @@ document.addEventListener("DOMContentLoaded", () => {
             .replaceAll("'", "&#039;");
     }
 
+    function normalizeBubbleText(text) {
+        let s = String(text ?? "");
+        s = s.replace(/\r\n/g, "\n");
+        s = s.replace(/^[ \t]*\n+/, "");
+        return s;
+    }
+
     function addUserMessage(text) {
         const now = formatTime(new Date());
         const html = `
@@ -46,29 +130,21 @@ document.addEventListener("DOMContentLoaded", () => {
         if (isSearchOpen() && searchInput && searchInput.value.trim()) rebuildHighlights(searchInput.value);
     }
 
-    function normalizeBubbleText(text) {
-        let s = String(text ?? "");
-        s = s.replace(/\r\n/g, "\n");
-        s = s.replace(/^[ \t]*\n+/, "");
-        return s;
-    }
-
-
     function addBotMessage(text, type) {
         const now = formatTime(new Date());
         const clean = normalizeBubbleText(text);
 
-        let html = '';
+        let html = "";
 
         if (type === "file") {
             html = `
                 <div class="cb-msg cb-msg--bot">
                     <div class="cb-avatar">
-                    <img class="cb-avatar__img" src="/img/ic-chatbot.png" alt="챗봇" />
+                      <img class="cb-avatar__img" src="/img/ic-chatbot.png" alt="챗봇" />
                     </div>
                     <div class="cb-bubble">
-                    <div class="cb-bubble__text txtStyle">${escapeHtml(clean)}</div>
-                    <div class="cb-meta">${now}</div>
+                      <div class="cb-bubble__text txtStyle">${escapeHtml(clean)}</div>
+                      <div class="cb-meta">${now}</div>
                     </div>
                 </div>
             `;
@@ -76,11 +152,11 @@ document.addEventListener("DOMContentLoaded", () => {
             html = `
                 <div class="cb-msg cb-msg--bot">
                     <div class="cb-avatar">
-                    <img class="cb-avatar__img" src="/img/ic-chatbot.png" alt="챗봇" />
+                      <img class="cb-avatar__img" src="/img/ic-chatbot.png" alt="챗봇" />
                     </div>
                     <div class="cb-bubble">
-                    <div class="cb-bubble__text">${escapeHtml(clean)}</div>
-                    <div class="cb-meta">${now}</div>
+                      <div class="cb-bubble__text">${escapeHtml(clean)}</div>
+                      <div class="cb-meta">${now}</div>
                     </div>
                 </div>
             `;
@@ -131,7 +207,7 @@ document.addEventListener("DOMContentLoaded", () => {
         addBotLoading();
         setSending(true);
 
-        const payload = { sessionId, message: msg };
+        const payload = { sessionId, message: msg, mode: isResearchMode ? "research" : "chat" };
 
         $.ajax({
             url: "/api/relay/chat",
@@ -177,14 +253,12 @@ document.addEventListener("DOMContentLoaded", () => {
     const firstMeta = body.querySelector(".cb-msg--bot .cb-meta");
     if (firstMeta && !firstMeta.textContent) firstMeta.textContent = formatTime(new Date());
 
+    injectStyleOnce();
+    ensureResearchTag();
+    setResearchMode(false);
+
     input.focus();
     scrollToBottom();
-
-    const plusBtn = document.getElementById("cbPlus");
-    const pop = document.getElementById("cbPop");
-    const actionUpload = document.getElementById("cbActionUpload");
-    const actionPrint = document.getElementById("cbActionPrint");
-    const fileInput = document.getElementById("cbFileInput");
 
     if (fileInput) {
         fileInput.setAttribute("accept", ".pdf,.hwp,.hwpx,.xls,.xlsx,.ppt,.pptx,.csv,.doc,.docx,.txt");
@@ -316,54 +390,38 @@ document.addEventListener("DOMContentLoaded", () => {
             document.documentElement.classList.toggle("is-dragover", on);
         }
 
-        document.addEventListener(
-            "dragenter",
-            (e) => {
-                if (!isFileDrag(e)) return;
-                e.preventDefault();
-                dragCounter++;
-                setDropEffect(e);
-                setDragUI(true);
-            },
-            true
-        );
+        document.addEventListener("dragenter", (e) => {
+            if (!isFileDrag(e)) return;
+            e.preventDefault();
+            dragCounter++;
+            setDropEffect(e);
+            setDragUI(true);
+        }, true);
 
-        document.addEventListener(
-            "dragleave",
-            (e) => {
-                if (!isFileDrag(e)) return;
-                dragCounter--;
-                if (dragCounter <= 0) {
-                    dragCounter = 0;
-                    setDragUI(false);
-                }
-            },
-            true
-        );
-
-        document.addEventListener(
-            "dragover",
-            (e) => {
-                if (!isFileDrag(e)) return;
-                e.preventDefault();
-                setDropEffect(e);
-            },
-            true
-        );
-
-        document.addEventListener(
-            "drop",
-            (e) => {
-                if (!isFileDrag(e)) return;
-                e.preventDefault();
-                e.stopPropagation();
+        document.addEventListener("dragleave", (e) => {
+            if (!isFileDrag(e)) return;
+            dragCounter--;
+            if (dragCounter <= 0) {
                 dragCounter = 0;
                 setDragUI(false);
-                const files = e.dataTransfer && e.dataTransfer.files ? e.dataTransfer.files : null;
-                if (files && files.length) uploadFiles(files);
-            },
-            true
-        );
+            }
+        }, true);
+
+        document.addEventListener("dragover", (e) => {
+            if (!isFileDrag(e)) return;
+            e.preventDefault();
+            setDropEffect(e);
+        }, true);
+
+        document.addEventListener("drop", (e) => {
+            if (!isFileDrag(e)) return;
+            e.preventDefault();
+            e.stopPropagation();
+            dragCounter = 0;
+            setDragUI(false);
+            const files = e.dataTransfer && e.dataTransfer.files ? e.dataTransfer.files : null;
+            if (files && files.length) uploadFiles(files);
+        }, true);
     }
 
     function openPop() {
@@ -448,6 +506,15 @@ document.addEventListener("DOMContentLoaded", () => {
             w.document.close();
         });
     }
+
+    document.addEventListener("click", (e) => {
+        const btn = e.target && e.target.closest ? e.target.closest("#cbActionUpResearch") : null;
+        if (!btn) return;
+        e.preventDefault();
+        closePop();
+        setResearchMode(!isResearchMode);
+        input.focus();
+    }, true);
 
     const searchBtn = document.getElementById("cbSearchBtn");
     const searchBar = document.getElementById("cbSearchBar");

@@ -11,11 +11,11 @@
     <link rel="stylesheet" th:href="@{/css/dialog.css}" />
 
     <!-- js -->
-    <script th:inline="javascript">
-        const sessionId = [[${sessionId}]];
-    </script>
     <script th:src="@{/jquery/jquery-3.7.1.min.js}"></script>
     <script th:src="@{/js/dialog.js}"></script>
+    <script th:inline="javascript">
+        const sessionId = [[${ sessionId }]];
+    </script>
 
 </head>
 
@@ -76,6 +76,11 @@
 
                 <footer class="cb-footer">
                     <div class="cb-inputwrap">
+                        <div>
+                            <input class="cb-input" id="cbInput" type="text" placeholder="메시지를 입력해주세요."
+                                autocomplete="off" />
+                            <button class="cb-send" id="cbSend" type="button" aria-label="전송">➤</button>
+                        </div>
                         <div class="cb-actions">
                             <button class="cb-plus" id="cbPlus" type="button" aria-label="추가 메뉴"
                                 aria-expanded="false">＋</button>
@@ -89,12 +94,12 @@
                                     <img class="cb-avatar__img" src="/img/ic-print.png" alt="인쇄" />
                                     <span class="cb-pop__text">대화 인쇄</span>
                                 </button>
+                                <button class="cb-pop__item" id="cbActionUpResearch" type="button" role="menuitem">
+                                    <img class="cb-avatar__img" src="/img/ic-research.png" alt="심층 리서치" />
+                                    <span class="cb-pop__text">심층 리서치</span>
+                                </button>
                             </div>
                         </div>
-
-                        <input class="cb-input" id="cbInput" type="text" placeholder="메시지를 입력해주세요."
-                            autocomplete="off" />
-                        <button class="cb-send" id="cbSend" type="button" aria-label="전송">➤</button>
 
                         <input id="cbFileInput" type="file" hidden />
                     </div>
