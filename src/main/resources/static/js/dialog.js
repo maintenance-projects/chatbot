@@ -134,7 +134,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const payload = { sessionId, message: msg };
 
         $.ajax({
-            url: "/api/chat",
+            url: "/api/relay/chat",
             type: "POST",
             contentType: "application/json; charset=UTF-8",
             data: JSON.stringify(payload),
@@ -230,7 +230,7 @@ document.addEventListener("DOMContentLoaded", () => {
         setSending(true);
 
         $.ajax({
-            url: "/api/chat/upload",
+            url: "/api/relay/upload",
             type: "POST",
             data: formData,
             processData: false,

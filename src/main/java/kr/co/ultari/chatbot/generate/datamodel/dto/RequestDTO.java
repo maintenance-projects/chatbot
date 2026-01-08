@@ -13,4 +13,5 @@ import java.util.List;
 public class RequestDTO {
     private String sessionId;
     private String message;
+    private boolean deepResearch = false;
 }
