@@ -11,6 +11,9 @@
     <link rel="stylesheet" th:href="@{/css/dialog.css}" />
 
     <!-- js -->
+    <script th:inline="javascript">
+        const sessionId = [[${sessionId}]];
+    </script>
     <script th:src="@{/jquery/jquery-3.7.1.min.js}"></script>
     <script th:src="@{/js/dialog.js}"></script>
 

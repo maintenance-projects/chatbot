@@ -6,8 +6,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (!body || !input || !sendBtn) return;
 
-    const sessionId = "ultari01";
-
     function pad2(n) {
         return String(n).padStart(2, "0");
     }
