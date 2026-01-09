@@ -182,10 +182,10 @@ document.addEventListener("DOMContentLoaded", () => {
         addBotLoading();
         setSending(true);
 
-        const payload = { sessionId, message: msg, mode: isResearchMode ? "research" : "chat" };
+        const payload = { sessionId, message: msg, deepResearch: isResearchMode ? true : false };
 
         $.ajax({
-            url: "/api/relay/chat",
+            url: "/api/chat",
             type: "POST",
             contentType: "application/json; charset=UTF-8",
             data: JSON.stringify(payload),
@@ -273,12 +273,13 @@ document.addEventListener("DOMContentLoaded", () => {
         const formData = new FormData();
         formData.append("file", file);
         formData.append("sessionId", sessionId);
+        formData.append("deepResearch",isResearchMode ? true : false);
 
         addBotLoading();
         setSending(true);
 
         $.ajax({
-            url: "/api/relay/upload",
+            url: "/api/chat/upload",
             type: "POST",
             data: formData,
             processData: false,
