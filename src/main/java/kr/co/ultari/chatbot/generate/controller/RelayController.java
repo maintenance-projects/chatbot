@@ -20,19 +20,23 @@ public class RelayController {
     AIRelayService relayService;
 
     @PostMapping
-    public ResponseEntity<?> chat(@RequestBody RequestDTO req) throws Exception {
-        log.info(req.toString());
+    public ResponseEntity<?> chat(@RequestBody RequestDTO req) {
+        if(log.isDebugEnabled()) {
+            log.debug(req.toString());
+        }
         String answer = relayService.ChatRelayService(req);
-        log.info(answer);
+        log.debug(answer);
         return ResponseEntity.ok(new ResponseDTO(answer));
     }
 
     @PostMapping("/upload")
-    public ResponseEntity<?> upload(@RequestParam("file") MultipartFile file, @RequestParam("deepResearch") boolean deepRsrch, @RequestParam("sessionId") String sessionId) throws Exception {
-        log.info(file.getOriginalFilename());
-        log.info("sessionId={}, deepResearch={}",sessionId,deepRsrch);
+    public ResponseEntity<?> upload(@RequestParam("file") MultipartFile file, @RequestParam("deepResearch") boolean deepRsrch, @RequestParam("sessionId") String sessionId) {
+        if(log.isDebugEnabled()) {
+            log.debug(file.getOriginalFilename());
+            log.debug("sessionId={}, deepResearch={}", sessionId, deepRsrch);
+        }
         String answer = relayService.DocumentRelayService(sessionId,file,deepRsrch);
-        log.info(answer);
+        log.debug(answer);
         return ResponseEntity.ok(new ResponseDTO(answer));
     }
 }

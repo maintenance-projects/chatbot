@@ -1,6 +1,7 @@
 package kr.co.ultari.chatbot.generate.service;
 
 import io.netty.channel.ChannelOption;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
@@ -9,6 +10,7 @@ import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
 import reactor.netty.http.client.HttpClient;
 
+@Slf4j
 @Service
 public class AIRelayClientService {
 
@@ -23,12 +25,18 @@ public class AIRelayClientService {
     }
 
     public String callAI(String requestUrl, String sessionId, MultipartBodyBuilder builder) {
-        return webClient.post()
+
+        String response = webClient.post()
                 .uri(requestUrl + "/" + sessionId)
                 .contentType(MediaType.MULTIPART_FORM_DATA)
                 .body(BodyInserters.fromMultipartData(builder.build()))
                 .retrieve()
                 .bodyToMono(String.class)
                 .block(); // 여기서만 block 허용
+
+        if(log.isDebugEnabled())
+            log.debug(response);
+
+        return response;
     }
 }

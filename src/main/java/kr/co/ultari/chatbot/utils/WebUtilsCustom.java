@@ -4,7 +4,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONObject;
-import org.springframework.stereotype.Component;
 
 import java.io.*;
 import java.net.HttpURLConnection;
@@ -104,7 +103,8 @@ public class WebUtilsCustom {
         }
 
         JSONObject res = new JSONObject(sb.toString());
-        log.debug(res.toString());
+        if(log.isDebugEnabled())
+            log.debug(res.toString());
 
         return StringUtilsCustom.removeThinkTag(
                 res.getJSONArray("choices")

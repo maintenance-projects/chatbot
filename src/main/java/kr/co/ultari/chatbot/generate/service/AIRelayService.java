@@ -64,12 +64,14 @@ public class AIRelayService {
         String fileName = originalFileName.substring(0,originalFileName.lastIndexOf("."));
         String ext = originalFileName.substring(originalFileName.lastIndexOf(".")+1);
 
-        String response = "";
+        if(log.isDebugEnabled()) {
+            log.debug("originalFileName={}, fileName={}, ext={}",originalFileName, fileName, ext);
+        }
 
         CompletableFuture<String> future =
                 CompletableFuture.supplyAsync(() -> {
                             MultipartBodyBuilder builder = new MultipartBodyBuilder();
-                            builder.part("message", "문서를 요약해줘.");
+                            builder.part("message", "문서 파일명 : "+originalFileName+", 이 문서를 요약해줘.");
                             builder.part("attachFile_name", fileName);
                             builder.part("attachFile_extension", ext);
                             builder.part("attachFile_bin", file.getResource())
@@ -77,9 +79,9 @@ public class AIRelayService {
                                     .contentType(MediaType.APPLICATION_OCTET_STREAM);
                             builder.part("deepResearch", deep);
 
-                            try {
-                                String _response = aiClientService.callAI(AI_GATE_URL, sessionId, builder);
-                                JSONObject res = new JSONObject(_response);
+                    try {
+                                String response = aiClientService.callAI(AI_GATE_URL, sessionId, builder);
+                                JSONObject res = new JSONObject(response);
                                 return StringUtilsCustom.removeThinkTag(res.getJSONArray("choices")
                                         .getJSONObject(0)
                                         .getJSONObject("message")
@@ -97,26 +99,5 @@ public class AIRelayService {
             log.error("", e);
             return "AI 서버 응답이 지연되고 있습니다. 다시 시도해 주시기 바랍니다... 😥";
         }
-
-        /*try {
-            response = webClient.post()
-                    .uri(AI_GATE_URL + "/" + sessionId)
-                    .contentType(MediaType.MULTIPART_FORM_DATA)
-                    .body(BodyInserters.fromMultipartData(builder.build()))
-                    .retrieve()
-                    .bodyToMono(String.class)
-                    .block();
-
-            log.info(response);
-        } catch (Exception e) {
-            log.error("",e);
-            return "AI 서버 연결에 실패하였습니다... 😥";
-        }
-        JSONObject res = new JSONObject(response);
-
-        return StringUtilsCustom.removeThinkTag(res.getJSONArray("choices")
-                .getJSONObject(0)
-                .getJSONObject("message")
-                .getString("content"));*/
     }
 }
