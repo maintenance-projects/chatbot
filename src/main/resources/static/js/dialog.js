@@ -6,7 +6,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (!body || !input || !sendBtn) return;
 
-    //const sessionId = window.cbSessionId || "ultari01";
     const defaultPlaceholder = (input.getAttribute("placeholder") || input.placeholder || "").trim();
 
     const plusBtn = document.getElementById("cbPlus");
@@ -18,6 +17,8 @@ document.addEventListener("DOMContentLoaded", () => {
     let isResearchMode = false;
     let researchTag = null;
 
+    const MAX_HEIGHT = 250;
+
     function ensureResearchTag() {
         if (researchTag) return researchTag;
         if (!plusBtn || !plusBtn.parentElement) return null;
@@ -27,10 +28,10 @@ document.addEventListener("DOMContentLoaded", () => {
         researchTag.id = "cbResearchTag";
         researchTag.setAttribute("aria-pressed", "false");
         researchTag.innerHTML = `
-      <img src="/img/ic-research-mini.png" id="miniIcon" />
-      <span class="cb-rch__label">리서치</span>
-      <span class="cb-rch__x" aria-hidden="true">×</span>
-    `;
+                                    <img src="/img/ic-research-mini.png" id="miniIcon" />
+                                    <span class="cb-rch__label">리서치</span>
+                                    <span class="cb-rch__x" aria-hidden="true">×</span>
+                                `;
 
         researchTag.addEventListener("click", (e) => {
             e.preventDefault();
@@ -57,6 +58,8 @@ document.addEventListener("DOMContentLoaded", () => {
             if (isResearchMode) input.placeholder = "디테일한 보고서를 작성해 주세요.";
             else input.placeholder = defaultPlaceholder;
         }
+
+        autoResizeInput();
     }
 
     function pad2(n) {
@@ -91,6 +94,21 @@ document.addEventListener("DOMContentLoaded", () => {
         return s;
     }
 
+    function autoResizeInput() {
+        if (!input) return;
+
+        input.style.height = "auto";
+
+        const nextHeight = Math.min(input.scrollHeight, MAX_HEIGHT);
+        input.style.height = `${nextHeight}px`;
+
+        if (input.scrollHeight > MAX_HEIGHT) {
+            input.style.overflowY = "auto";
+        } else {
+            input.style.overflowY = "hidden";
+        }
+    }
+
     function addUserMessage(text) {
         const now = formatTime(new Date());
         const html = `
@@ -110,9 +128,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const now = formatTime(new Date());
         const clean = normalizeBubbleText(text);
 
-        let html = "";
-        if (type === "file") {
-            html = `
+        const html = `
         <div class="cb-msg cb-msg--bot">
           <div class="cb-avatar">
             <img class="cb-avatar__img" src="/img/ic-chatbot.png" alt="챗봇" />
@@ -123,19 +139,6 @@ document.addEventListener("DOMContentLoaded", () => {
           </div>
         </div>
       `;
-        } else {
-            html = `
-        <div class="cb-msg cb-msg--bot">
-          <div class="cb-avatar">
-            <img class="cb-avatar__img" src="/img/ic-chatbot.png" alt="챗봇" />
-          </div>
-          <div class="cb-bubble">
-            <div class="cb-bubble__text"><pre>${escapeHtml(clean)}</pre></div>
-            <div class="cb-meta">${now}</div>
-          </div>
-        </div>
-      `;
-        }
 
         body.insertAdjacentHTML("beforeend", html);
         scrollToBottom();
@@ -178,6 +181,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         addUserMessage(msg);
         input.value = "";
+        autoResizeInput();
 
         addBotLoading();
         setSending(true);
@@ -209,6 +213,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 removeBotLoading();
                 setSending(false);
                 input.focus();
+                autoResizeInput();
             }
         });
     }
@@ -225,6 +230,10 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
+    input.addEventListener("input", () => {
+        autoResizeInput();
+    });
+
     const firstMeta = body.querySelector(".cb-msg--bot .cb-meta");
     if (firstMeta && !firstMeta.textContent) firstMeta.textContent = formatTime(new Date());
 
@@ -233,6 +242,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     input.focus();
     scrollToBottom();
+    autoResizeInput();
 
     if (fileInput) {
         fileInput.setAttribute("accept", ".pdf,.hwp,.hwpx,.xls,.xlsx,.ppt,.pptx,.csv,.doc,.docx,.txt");
@@ -273,7 +283,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const formData = new FormData();
         formData.append("file", file);
         formData.append("sessionId", sessionId);
-        formData.append("deepResearch",isResearchMode ? true : false);
+        formData.append("deepResearch", isResearchMode ? true : false);
 
         addBotLoading();
         setSending(true);
@@ -303,6 +313,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 removeBotLoading();
                 setSending(false);
                 input.focus();
+                autoResizeInput();
                 if (typeof onDone === "function") onDone();
             }
         });

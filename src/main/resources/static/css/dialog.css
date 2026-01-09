@@ -28,9 +28,7 @@ pre {
     word-break: break-word;
 }
 
-.cb-msg--loading > pre {
-
-}
+.cb-msg--loading>pre {}
 
 .cb-widget,
 .cb-widget * {
@@ -68,6 +66,7 @@ pre {
     display: flex;
     align-items: center;
     justify-content: space-between;
+    gap: 12px;
     color: #fff;
     background: #3d8def;
 }
@@ -99,6 +98,80 @@ pre {
     font-size: 12px;
     opacity: 0.9;
     margin-top: 2px;
+}
+
+.cb-header__right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.cb-iconbtn {
+    width: 36px;
+    height: 36px;
+    border: none;
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    background: #3d8def;
+}
+
+.cb-iconbtn img {
+    width: 18px;
+    height: 18px;
+    display: block;
+}
+
+.cb-searchbar {
+    display: none;
+    padding: 10px 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, .08);
+    background: rgb(30 30 30 / 12%);
+}
+
+.cb-searchbar.is-open {
+    display: block;
+}
+
+.cb-searchbar__inner {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.cb-searchbar__input {
+    flex: 1;
+    height: 36px;
+    border: none;
+    background: rgb(0 0 0 / 6%);
+    color: #555555;
+    padding: 0 10px;
+    outline: none;
+}
+
+.cb-searchbar__meta {
+    min-width: 56px;
+    text-align: center;
+    font-size: 12px;
+    color: #555555;
+    font-weight: 700;
+}
+
+.cb-searchbar__nav,
+.cb-searchbar__close {
+    width: 36px;
+    height: 36px;
+    border-radius: 12px;
+    border: none;
+    background: rgb(0 0 0 / 6%);
+    color: #555555;
+    cursor: pointer;
+    font-weight: 700;
+}
+
+.cb-searchbar__inner>button {
+    opacity: 0.5 !important;
 }
 
 .cb-body {
@@ -166,8 +239,6 @@ pre {
 .cb-bubble__text {
     font-size: 12px;
     line-height: 1.45;
-    /*white-space: pre-wrap;
-    word-break: break-word;*/
     overflow-wrap: anywhere;
 }
 
@@ -186,9 +257,9 @@ pre {
 }
 
 .cb-inputwrap {
-    height: 88px;
+    min-height: 88px;
     display: grid;
-    grid-template-rows: 1fr auto;
+    grid-template-rows: auto auto;
     gap: 6px;
     align-items: stretch;
     border: 1px solid var(--cb-line);
@@ -201,15 +272,16 @@ pre {
     border: 0;
     outline: 0;
     width: 100%;
-    min-height: 0;
-    height: 100%;
     font-size: 13px;
     color: var(--cb-text);
     background: transparent;
     resize: none;
-    overflow: auto;
     line-height: 1.45;
     padding: 2px 0 0 0;
+
+    overflow-y: hidden;
+    min-height: calc(1.45em + 2px);
+    max-height: 250px;
 }
 
 .cb-inputbar {
@@ -339,7 +411,6 @@ pre {
     display: inline-flex;
     align-items: center;
     gap: 6px;
-    /* margin-left: 2px; */
     color: #2563eb;
     background: transparent;
     border: 0;
@@ -347,7 +418,6 @@ pre {
     cursor: pointer;
     user-select: none;
     line-height: 1;
-    /* padding: 0 6px; */
     height: 34px;
 }
 
@@ -397,87 +467,6 @@ html.is-dragover::before {
     pointer-events: none;
     font-size: 16px;
     font-weight: 800;
-}
-
-.cb-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 12px;
-}
-
-.cb-header__right {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.cb-iconbtn {
-    width: 36px;
-    height: 36px;
-    border: none;
-    border-radius: 12px;
-    display: grid;
-    place-items: center;
-    cursor: pointer;
-    background: #3d8def;
-}
-
-.cb-iconbtn img {
-    width: 18px;
-    height: 18px;
-    display: block;
-}
-
-.cb-searchbar {
-    display: none;
-    padding: 10px 12px;
-    border-bottom: 1px solid rgba(255, 255, 255, .08);
-    background: rgb(30 30 30 / 12%);
-}
-
-.cb-searchbar.is-open {
-    display: block;
-}
-
-.cb-searchbar__inner {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.cb-searchbar__input {
-    flex: 1;
-    height: 36px;
-    border: none;
-    background: rgb(0 0 0 / 6%);
-    color: #555555;
-    padding: 0 10px;
-    outline: none;
-}
-
-.cb-searchbar__meta {
-    min-width: 56px;
-    text-align: center;
-    font-size: 12px;
-    color: #555555;
-    font-weight: 700;
-}
-
-.cb-searchbar__nav,
-.cb-searchbar__close {
-    width: 36px;
-    height: 36px;
-    border-radius: 12px;
-    border: none;
-    background: rgb(0 0 0 / 6%);
-    color: #555555;
-    cursor: pointer;
-    font-weight: 700;
-}
-
-.cb-searchbar__inner>button {
-    opacity: 0.5 !important;
 }
 
 .cb-mark {
