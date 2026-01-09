@@ -6,7 +6,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (!body || !input || !sendBtn) return;
 
-    const sessionId = window.cbSessionId || "ultari01";
+    //const sessionId = window.cbSessionId || "ultari01";
     const defaultPlaceholder = (input.getAttribute("placeholder") || input.placeholder || "").trim();
 
     const plusBtn = document.getElementById("cbPlus");
@@ -96,7 +96,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const html = `
       <div class="cb-msg cb-msg--user">
         <div class="cb-bubble">
-          <div class="cb-bubble__text">${escapeHtml(text)}</div>
+          <div class="cb-bubble__text"><pre>${escapeHtml(text)}</pre></div>
           <div class="cb-meta">${now}</div>
         </div>
       </div>
@@ -118,7 +118,7 @@ document.addEventListener("DOMContentLoaded", () => {
             <img class="cb-avatar__img" src="/img/ic-chatbot.png" alt="챗봇" />
           </div>
           <div class="cb-bubble">
-            <div class="cb-bubble__text">${escapeHtml(clean)}</div>
+            <div class="cb-bubble__text"><pre>${escapeHtml(clean)}</pre></div>
             <div class="cb-meta">${now}</div>
           </div>
         </div>
@@ -130,7 +130,7 @@ document.addEventListener("DOMContentLoaded", () => {
             <img class="cb-avatar__img" src="/img/ic-chatbot.png" alt="챗봇" />
           </div>
           <div class="cb-bubble">
-            <div class="cb-bubble__text">${escapeHtml(clean)}</div>
+            <div class="cb-bubble__text"><pre>${escapeHtml(clean)}</pre></div>
             <div class="cb-meta">${now}</div>
           </div>
         </div>
