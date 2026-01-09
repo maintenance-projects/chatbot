@@ -2,6 +2,7 @@ package kr.co.ultari.chatbot.generate.service;
 
 import kr.co.ultari.chatbot.generate.datamodel.vo.Message;
 import kr.co.ultari.chatbot.utils.DetectCharsetUtil;
+import kr.co.ultari.chatbot.utils.WebUtilsCustom;
 import kr.dogfoot.hwplib.object.HWPFile;
 import kr.dogfoot.hwplib.reader.HWPReader;
 import kr.dogfoot.hwplib.tool.textextractor.TextExtractMethod;
@@ -20,10 +21,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.*;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.nio.charset.Charset;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Paths;
 import java.util.List;
 import java.util.UUID;
@@ -59,38 +57,7 @@ public class AIChatService {
         //body.put("max_tokens", 1024);
         //body.put("stream", false);
 
-        return request(body);
-    }
-
-    private String request(JSONObject body) throws Exception {
-        URL url = new URL(AI_API_URL);
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-
-        conn.setRequestMethod("POST");
-        conn.setDoOutput(true);
-        conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
-
-        try (BufferedWriter bw = new BufferedWriter(
-                new OutputStreamWriter(conn.getOutputStream(), StandardCharsets.UTF_8))) {
-            bw.write(body.toString());
-        }
-
-        InputStream is = conn.getInputStream();
-        BufferedReader br = new BufferedReader(
-                new InputStreamReader(is, StandardCharsets.UTF_8));
-
-        StringBuilder sb = new StringBuilder();
-        String line;
-        while ((line = br.readLine()) != null) {
-            sb.append(line);
-        }
-
-        JSONObject res = new JSONObject(removeThinkTag(sb.toString()));
-        log.debug(res.toString());
-        return res.getJSONArray("choices")
-                .getJSONObject(0)
-                .getJSONObject("message")
-                .getString("content");
+        return WebUtilsCustom.request(AI_API_URL, body);
     }
 
     public String summarize(List<Message> messages) throws Exception {
@@ -120,15 +87,7 @@ public class AIChatService {
         body.put("messages", arr);
         body.put("temperature", 0.5);
 
-        return request(body);
-    }
-
-    //think 태그 제거.
-    public String removeThinkTag(String content) {
-        if (content == null) {
-            return null;
-        }
-        return content.replaceAll("(?s)<think>.*?</think>", "").trim();
+        return WebUtilsCustom.request(AI_API_URL, body);
     }
 
     public String summarizeRequest(String text) throws Exception {
@@ -150,7 +109,7 @@ public class AIChatService {
         body.put("messages", messages);
         body.put("temperature", 0.3);
 
-        return request(body);
+        return WebUtilsCustom.request(AI_API_URL, body);
     }
 
     public String extractTextFromDocx2(MultipartFile file) throws Exception {

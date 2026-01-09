@@ -1,0 +1,34 @@
+package kr.co.ultari.chatbot.generate.service;
+
+import io.netty.channel.ChannelOption;
+import org.springframework.http.MediaType;
+import org.springframework.http.client.MultipartBodyBuilder;
+import org.springframework.http.client.reactive.ReactorClientHttpConnector;
+import org.springframework.stereotype.Service;
+import org.springframework.web.reactive.function.BodyInserters;
+import org.springframework.web.reactive.function.client.WebClient;
+import reactor.netty.http.client.HttpClient;
+
+@Service
+public class AIRelayClientService {
+
+    private final WebClient webClient;
+
+    public AIRelayClientService(WebClient.Builder webClientBuilder) {
+        HttpClient httpClient = HttpClient.create()
+                .tcpConfiguration(client ->
+                        client.option(ChannelOption.CONNECT_TIMEOUT_MILLIS, 3000)
+                );
+        this.webClient = webClientBuilder.clientConnector(new ReactorClientHttpConnector(httpClient)).build();
+    }
+
+    public String callAI(String requestUrl, String sessionId, MultipartBodyBuilder builder) {
+        return webClient.post()
+                .uri(requestUrl + "/" + sessionId)
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(BodyInserters.fromMultipartData(builder.build()))
+                .retrieve()
+                .bodyToMono(String.class)
+                .block(); // 여기서만 block 허용
+    }
+}

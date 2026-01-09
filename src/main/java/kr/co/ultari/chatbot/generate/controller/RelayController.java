@@ -30,7 +30,8 @@ public class RelayController {
     @PostMapping("/upload")
     public ResponseEntity<?> upload(@RequestParam("file") MultipartFile file, @RequestParam("deepResearch") boolean deepRsrch, @RequestParam("sessionId") String sessionId) throws Exception {
         log.info(file.getOriginalFilename());
-        String answer = relayService.DocumentRelayService(file,deepRsrch);
+        log.info("sessionId={}, deepResearch={}",sessionId,deepRsrch);
+        String answer = relayService.DocumentRelayService(sessionId,file,deepRsrch);
         log.info(answer);
         return ResponseEntity.ok(new ResponseDTO(answer));
     }
