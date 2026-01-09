@@ -76,34 +76,37 @@
 
                 <footer class="cb-footer">
                     <div class="cb-inputwrap">
-                        <div>
-                            <input class="cb-input" id="cbInput" type="text" placeholder="메시지를 입력해주세요."
-                                autocomplete="off" />
-                            <button class="cb-send" id="cbSend" type="button" aria-label="전송">➤</button>
-                        </div>
-                        <div class="cb-actions">
-                            <button class="cb-plus" id="cbPlus" type="button" aria-label="추가 메뉴"
-                                aria-expanded="false">＋</button>
+                        <textarea class="cb-input" id="cbInput" placeholder="메시지를 입력해주세요."
+                            autocomplete="off"></textarea>
 
-                            <div class="cb-pop" id="cbPop" role="menu" aria-hidden="true">
-                                <button class="cb-pop__item" id="cbActionUpload" type="button" role="menuitem">
-                                    <img class="cb-avatar__img" src="/img/ic-file.png" alt="첨부파일" />
-                                    <span class="cb-pop__text">첨부파일 추가</span>
-                                </button>
-                                <button class="cb-pop__item" id="cbActionPrint" type="button" role="menuitem">
-                                    <img class="cb-avatar__img" src="/img/ic-print.png" alt="인쇄" />
-                                    <span class="cb-pop__text">대화 인쇄</span>
-                                </button>
-                                <button class="cb-pop__item" id="cbActionUpResearch" type="button" role="menuitem">
-                                    <img class="cb-avatar__img" src="/img/ic-research.png" alt="심층 리서치" />
-                                    <span class="cb-pop__text">심층 리서치</span>
-                                </button>
+                        <div class="cb-inputbar">
+                            <div class="cb-actions">
+                                <button class="cb-plus" id="cbPlus" type="button" aria-label="추가 메뉴"
+                                    aria-expanded="false">＋</button>
+
+                                <div class="cb-pop" id="cbPop" role="menu" aria-hidden="true">
+                                    <button class="cb-pop__item" id="cbActionUpload" type="button" role="menuitem">
+                                        <img class="cb-avatar__img" src="/img/ic-file.png" alt="첨부파일" />
+                                        <span class="cb-pop__text">첨부파일 추가</span>
+                                    </button>
+                                    <button class="cb-pop__item" id="cbActionPrint" type="button" role="menuitem">
+                                        <img class="cb-avatar__img" src="/img/ic-print.png" alt="인쇄" />
+                                        <span class="cb-pop__text">대화 인쇄</span>
+                                    </button>
+                                    <button class="cb-pop__item" id="cbActionUpResearch" type="button" role="menuitem">
+                                        <img class="cb-avatar__img" src="/img/ic-research.png" alt="심층 리서치" />
+                                        <span class="cb-pop__text">심층 리서치</span>
+                                    </button>
+                                </div>
                             </div>
+
+                            <button class="cb-send" id="cbSend" type="button" aria-label="전송">➤</button>
                         </div>
 
                         <input id="cbFileInput" type="file" hidden />
                     </div>
                 </footer>
+
 
             </aside>
         </section>

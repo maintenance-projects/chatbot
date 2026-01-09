@@ -18,28 +18,6 @@ document.addEventListener("DOMContentLoaded", () => {
     let isResearchMode = false;
     let researchTag = null;
 
-    function injectStyleOnce() {
-        if (document.getElementById("cbFooterLayoutStyle")) return;
-        const s = document.createElement("style");
-        s.id = "cbFooterLayoutStyle";
-        s.textContent = `
-                            .cb-inputwrap{display:flex !important;flex-direction:column !important; align-items:stretch !important}
-                            .cb-inputwrap > div:first-child{display:flex !important;align-items:flex-end !important;gap:10px !important}
-                            .cb-inputwrap > div:first-child #cbInput{flex:1 1 auto !important;min-width:0 !important}
-                            .cb-inputwrap .cb-actions{display:flex !important;align-items:center !important;}
-                            .cb-inputwrap .cb-actions #cbPlus{flex:0 0 auto !important}
-                            .cb-inputwrap .cb-actions #cbPop{position:absolute}
-                            #cbResearchTag{display:inline-flex;align-items:center;gap:6px;margin-left:2px;color:#2563eb;background:transparent;border:0; border-radius:999px;cursor:pointer;user-select:none;line-height:1}
-                            #cbResearchTag .cb-rch__x{display:none}
-                            #cbResearchTag:hover{background:rgba(37,99,235,.12);padding:6px 10px}
-                            #cbResearchTag:hover .cb-rch__x{display:inline-flex;align-items:center;justify-content:center;width:18px;height:18px;border-radius:999px;background:#fff;color:#2563eb}
-                            #cbResearchTag .cb-rch__label{font-size:12px;font-weight:600;letter-spacing:-.01em}
-                            #cbResearchTag .cb-rch__icon{width:16px;height:16px;display:inline-block}
-                            #cbWidget.is-research #cbInput{min-height:64px !important;max-height:140px !important;resize:none !important}
-                        `;
-        document.head.appendChild(s);
-    }
-
     function ensureResearchTag() {
         if (researchTag) return researchTag;
         if (!plusBtn || !plusBtn.parentElement) return null;
@@ -49,10 +27,11 @@ document.addEventListener("DOMContentLoaded", () => {
         researchTag.id = "cbResearchTag";
         researchTag.setAttribute("aria-pressed", "false");
         researchTag.innerHTML = `
-                                    <img src="/img/ic-research-mini.png" id="miniIcon" />
-                                    <span class="cb-rch__label">리서치</span>
-                                    <span class="cb-rch__x" aria-hidden="true">×</span>
-                                `;
+      <img src="/img/ic-research-mini.png" id="miniIcon" />
+      <span class="cb-rch__label">리서치</span>
+      <span class="cb-rch__x" aria-hidden="true">×</span>
+    `;
+
         researchTag.addEventListener("click", (e) => {
             e.preventDefault();
             setResearchMode(false);
@@ -67,10 +46,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function setResearchMode(on) {
         isResearchMode = !!on;
 
-        injectStyleOnce();
         const tag = ensureResearchTag();
-
-        // if (widget) widget.classList.toggle("is-research", isResearchMode);
 
         if (tag) {
             tag.style.display = isResearchMode ? "" : "none";
@@ -78,7 +54,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         if (input) {
-            if (isResearchMode) input.placeholder = "디테일한 보고서를 작성해 주세요";
+            if (isResearchMode) input.placeholder = "디테일한 보고서를 작성해 주세요.";
             else input.placeholder = defaultPlaceholder;
         }
     }
@@ -135,31 +111,30 @@ document.addEventListener("DOMContentLoaded", () => {
         const clean = normalizeBubbleText(text);
 
         let html = "";
-
         if (type === "file") {
             html = `
-                <div class="cb-msg cb-msg--bot">
-                    <div class="cb-avatar">
-                      <img class="cb-avatar__img" src="/img/ic-chatbot.png" alt="챗봇" />
-                    </div>
-                    <div class="cb-bubble">
-                      <div class="cb-bubble__text txtStyle">${escapeHtml(clean)}</div>
-                      <div class="cb-meta">${now}</div>
-                    </div>
-                </div>
-            `;
+        <div class="cb-msg cb-msg--bot">
+          <div class="cb-avatar">
+            <img class="cb-avatar__img" src="/img/ic-chatbot.png" alt="챗봇" />
+          </div>
+          <div class="cb-bubble">
+            <div class="cb-bubble__text">${escapeHtml(clean)}</div>
+            <div class="cb-meta">${now}</div>
+          </div>
+        </div>
+      `;
         } else {
             html = `
-                <div class="cb-msg cb-msg--bot">
-                    <div class="cb-avatar">
-                      <img class="cb-avatar__img" src="/img/ic-chatbot.png" alt="챗봇" />
-                    </div>
-                    <div class="cb-bubble">
-                      <div class="cb-bubble__text">${escapeHtml(clean)}</div>
-                      <div class="cb-meta">${now}</div>
-                    </div>
-                </div>
-            `;
+        <div class="cb-msg cb-msg--bot">
+          <div class="cb-avatar">
+            <img class="cb-avatar__img" src="/img/ic-chatbot.png" alt="챗봇" />
+          </div>
+          <div class="cb-bubble">
+            <div class="cb-bubble__text">${escapeHtml(clean)}</div>
+            <div class="cb-meta">${now}</div>
+          </div>
+        </div>
+      `;
         }
 
         body.insertAdjacentHTML("beforeend", html);
@@ -198,7 +173,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function sendMessage() {
-        const msg = (input.value || "").trim();
+        const msg = String(input.value || "").trim();
         if (!msg) return;
 
         addUserMessage(msg);
@@ -253,7 +228,6 @@ document.addEventListener("DOMContentLoaded", () => {
     const firstMeta = body.querySelector(".cb-msg--bot .cb-meta");
     if (firstMeta && !firstMeta.textContent) firstMeta.textContent = formatTime(new Date());
 
-    injectStyleOnce();
     ensureResearchTag();
     setResearchMode(false);
 
@@ -492,7 +466,7 @@ document.addEventListener("DOMContentLoaded", () => {
             .cb-avatar{ width:34px; height:34px; display:grid; place-items:center; border:1px solid #ddd; border-radius:12px; }
             .cb-bubble{ max-width:74%; border:1px solid #ddd; border-radius:16px; padding:10px 12px; background:#f3f4f6; }
             .cb-msg--user .cb-bubble{ background:#2f3a4f; color:#fff; border-color:#2f3a4f; }
-            .cb-bubble__text{ font-size:14px; line-height:1.45; white-space:pre-wrap; word-break:break-word; }
+            .cb-bubble__text{ font-size:14px; line-height:1.45; white-space:pre-wrap; word-break:break-word; overflow-wrap:anywhere; }
             .cb-meta{ margin-top:6px; font-size:11px; opacity:.7; }
             .cb-chips,.cb-msg--loading{ display:none !important; }
           </style>
