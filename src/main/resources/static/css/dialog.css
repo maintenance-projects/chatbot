@@ -419,17 +419,13 @@ pre {
     user-select: none;
     line-height: 1;
     height: 34px;
+
+    background: rgba(37, 99, 235, .12);
 }
 
 #cbResearchTag .cb-rch__x {
     display: none;
-}
 
-#cbResearchTag:hover {
-    background: rgba(37, 99, 235, .12);
-}
-
-#cbResearchTag:hover .cb-rch__x {
     display: inline-flex;
     align-items: center;
     justify-content: center;
@@ -438,6 +434,10 @@ pre {
     border-radius: 999px;
     background: #fff;
     color: #2563eb;
+}
+
+#cbResearchTag:hover {
+    background: rgba(37, 99, 235, .43);
 }
 
 #cbResearchTag .cb-rch__label {
