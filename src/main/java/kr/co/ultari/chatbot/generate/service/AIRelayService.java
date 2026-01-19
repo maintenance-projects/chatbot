@@ -129,6 +129,98 @@ public class AIRelayService {
         }
     }
 
+    public SseEmitter ChatRelayServiceStream(String sessionId, String message, boolean deep, MultipartFile file) {
+        SseEmitter emitter = new SseEmitter(0L); // timeout 없음
+        AtomicBoolean completed = new AtomicBoolean(false);
+
+        String originalFileName = file.getOriginalFilename();
+        String fileName = originalFileName.substring(0,originalFileName.lastIndexOf("."));
+        String ext = originalFileName.substring(originalFileName.lastIndexOf(".")+1);
+
+        aiUsageService.increase(
+                sessionId,
+                sessionId,
+                "DOCUMENT"
+        );
+
+        // AI Gateway로 보낼 multipart 구성 (기존 ChatRelayService의 JSON과 동일 필드)
+        MultipartBodyBuilder builder = new MultipartBodyBuilder();
+        builder.part("message", message);
+        builder.part("attachFile_name", fileName);
+        builder.part("attachFile_extension", ext);
+        builder.part("attachFile_bin", file.getResource())
+                .filename(originalFileName)
+                .contentType(MediaType.APPLICATION_OCTET_STREAM);
+        builder.part("deepResearch", deep);
+
+        // 클라이언트가 끊으면 subscription 정리
+        final Disposable[] disposableHolder = new Disposable[1];
+        emitter.onCompletion(() -> {
+            completed.set(true);
+            if (disposableHolder[0] != null) disposableHolder[0].dispose();
+        });
+        emitter.onTimeout(() -> {
+            completed.set(true);
+            if (disposableHolder[0] != null) disposableHolder[0].dispose();
+        });
+        emitter.onError(e -> {
+            completed.set(true);
+            if (disposableHolder[0] != null) disposableHolder[0].dispose();
+        });
+
+        try {
+            emitter.send(SseEmitter.event().name("start").data(""));
+        } catch (IOException ignored) {}
+
+        // 진짜 스트리밍: AI Gateway 스트림(Flux)을 subscribe 해서 emitter로 바로 흘림
+        try {
+            disposableHolder[0] = aiClientService
+                    .callAIStream("http://10.0.0.92:8000/call-summary", sessionId, builder)
+                    .subscribe(
+                            rawChunk -> {
+                                if (completed.get()) return;
+
+                                // rawChunk는 게이트웨이 구현에 따라
+                                // - 이미 "data: {...}\n\n" 같은 SSE 조각일 수도 있고
+                                // - 그냥 JSON 문자열 조각일 수도 있음
+                                // 아래는 OpenAI 스타일 SSE(data: {...})를 최대한 content(delta)로 뽑는 파서
+                                String delta = extractDelta(rawChunk);
+
+                                // 뽑히면 delta로 보내고, 아니면 rawChunk를 그대로 보냄(최소 동작 보장)
+                                String payload = (delta != null && !delta.isEmpty()) ? delta : rawChunk;
+
+                                try {
+                                    emitter.send(SseEmitter.event().name("delta").data(payload));
+                                } catch (IOException e) {
+                                    completed.set(true);
+                                    if (disposableHolder[0] != null) disposableHolder[0].dispose();
+                                }
+                            },
+                            err -> {
+                                if (completed.get()) return;
+                                try {
+                                    emitter.send(SseEmitter.event().name("error").data("AI 서버 스트리밍 오류"));
+                                } catch (IOException ignored) {}
+                                emitter.completeWithError(err);
+                            },
+                            () -> {
+                                if (completed.get()) return;
+                                try {
+                                    emitter.send(SseEmitter.event().name("done").data(""));
+                                } catch (IOException ignored) {}
+                                emitter.complete();
+                            }
+                    );
+        } catch (Exception e) {
+            try {
+                emitter.send(SseEmitter.event().name("error").data("AI 서버 연결 실패"));
+            } catch (IOException ignored) {}
+            emitter.completeWithError(e);
+        }
+
+        return emitter;
+    }
+
     public SseEmitter ChatRelayServiceAudioStream(String sessionId, MultipartFile file) {
         SseEmitter emitter = new SseEmitter(0L); // timeout 없음
         AtomicBoolean completed = new AtomicBoolean(false);
@@ -162,7 +254,7 @@ public class AIRelayService {
             emitter.send(SseEmitter.event().name("start").data(""));
         } catch (IOException ignored) {}
 
-        // ✅ 진짜 스트리밍: AI Gateway 스트림(Flux)을 subscribe 해서 emitter로 바로 흘림
+        // 진짜 스트리밍: AI Gateway 스트림(Flux)을 subscribe 해서 emitter로 바로 흘림
         try {
             disposableHolder[0] = aiClientService
                     .callAIStream("http://10.0.0.92:8000/call-summary", sessionId, builder)
@@ -249,7 +341,7 @@ public class AIRelayService {
             emitter.send(SseEmitter.event().name("start").data(""));
         } catch (IOException ignored) {}
 
-        // ✅ 진짜 스트리밍: AI Gateway 스트림(Flux)을 subscribe 해서 emitter로 바로 흘림
+        // 진짜 스트리밍: AI Gateway 스트림(Flux)을 subscribe 해서 emitter로 바로 흘림
         try {
             disposableHolder[0] = aiClientService
                     .callAIStream(AI_GATE_URL, requestDTO.getSessionId(), builder)
