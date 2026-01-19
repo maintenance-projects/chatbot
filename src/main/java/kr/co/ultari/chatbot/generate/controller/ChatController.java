@@ -8,10 +8,12 @@ import kr.co.ultari.chatbot.generate.service.AIChatService;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
 import java.io.File;
 import java.io.IOException;
@@ -124,5 +126,11 @@ public class ChatController {
         File file = new File(multipartFile.getOriginalFilename());
         multipartFile.transferTo(file);
         return file;
+    }
+
+    @PostMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter chatStream(@RequestBody RequestDTO req) {
+        log.info(req.toString());
+        return aiService.ChatRelayServiceStream(req);
     }
 }

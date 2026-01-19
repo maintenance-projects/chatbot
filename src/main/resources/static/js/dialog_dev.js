@@ -124,11 +124,12 @@ document.addEventListener("DOMContentLoaded", () => {
         if (isSearchOpen() && searchInput && searchInput.value.trim()) rebuildHighlights(searchInput.value);
     }
 
+    //dev
     function addBotMessage(text, type) {
-        const now = formatTime(new Date());
-        const clean = normalizeBubbleText(text);
+      const now = formatTime(new Date());
+      const clean = normalizeBubbleText(text);
 
-        const html = `
+      const html = `
         <div class="cb-msg cb-msg--bot">
           <div class="cb-avatar">
             <img class="cb-avatar__img" src="/img/ic-chatbot.png" alt="챗봇" />
@@ -140,9 +141,11 @@ document.addEventListener("DOMContentLoaded", () => {
         </div>
       `;
 
-        body.insertAdjacentHTML("beforeend", html);
-        scrollToBottom();
-        if (isSearchOpen() && searchInput && searchInput.value.trim()) rebuildHighlights(searchInput.value);
+      body.insertAdjacentHTML("beforeend", html);
+      const el = body.lastElementChild;   // 추가
+      scrollToBottom();
+      if (isSearchOpen() && searchInput && searchInput.value.trim()) rebuildHighlights(searchInput.value);
+      return el;                          // 추가
     }
 
     function addBotLoading() {
@@ -175,47 +178,78 @@ document.addEventListener("DOMContentLoaded", () => {
         if (widget) widget.classList.toggle("is-sending", isSending);
     }
 
-    function sendMessage() {
-        const msg = String(input.value || "").trim();
-        if (!msg) return;
+    //dev
+    async function sendMessage() {
+      const msg = String(input.value || "").trim();
+      if (!msg) return;
 
-        addUserMessage(msg);
-        input.value = "";
-        autoResizeInput();
+      addUserMessage(msg);
+      input.value = "";
+      autoResizeInput();
 
-        addBotLoading();
-        setSending(true);
+      addBotLoading();
+      setSending(true);
 
-        const payload = { sessionId, message: msg, deepResearch: isResearchMode ? true : false };
+      const payload = { sessionId, message: msg, deepResearch: isResearchMode ? true : false };
 
-        $.ajax({
-            url: "/api/chat",
-            type: "POST",
-            contentType: "application/json; charset=UTF-8",
-            data: JSON.stringify(payload),
-            dataType: "json",
-            success: function (d) {
-                removeBotLoading();
-                const answer = (d && (d.answer ?? d.response ?? d.message)) ? String(d.answer ?? d.response ?? d.message) : "";
-                addBotMessage(answer || "응답을 받았지만 표시할 내용이 없습니다.", "chat");
-            },
-            error: function (xhr) {
-                removeBotLoading();
-                let text = "요청 처리 중 오류가 발생했습니다.";
-                try {
-                    const json = xhr.responseJSON;
-                    if (json && (json.message || json.error)) text = String(json.message || json.error);
-                    else if (xhr.responseText) text = String(xhr.responseText);
-                } catch (e) { }
-                addBotMessage(text, "chat");
-            },
-            complete: function () {
-                removeBotLoading();
-                setSending(false);
-                input.focus();
-                autoResizeInput();
-            }
+      try {
+        const res = await fetch("/api/chat/stream", {
+          method: "POST",
+          headers: { "Content-Type": "application/json; charset=UTF-8" },
+          body: JSON.stringify(payload),
         });
+
+        if (!res.ok || !res.body) throw new Error("stream failed");
+
+        removeBotLoading();
+        const botEl = addBotMessage("", "chat");
+        const pre = botEl.querySelector("pre");
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder("utf-8");
+
+        let buffer = "";
+        let acc = "";
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+
+          // SSE 이벤트는 보통 \n\n 로 구분됨
+          const events = buffer.split("\n\n");
+          buffer = events.pop() || "";
+
+          for (const evt of events) {
+            const lines = evt.split("\n");
+            let eventName = "";
+            let data = "";
+
+            for (const line of lines) {
+              if (line.startsWith("event:")) eventName = line.slice(6).trim();
+              else if (line.startsWith("data:")) data += line.slice(5); // data는 여러 줄일 수 있음
+            }
+
+            if (eventName === "delta") {
+              acc += data;
+              pre.textContent = acc;
+              scrollToBottom();
+            } else if (eventName === "error") {
+              acc += "\n" + data;
+              pre.textContent = acc;
+              scrollToBottom();
+            } else if (eventName === "done") {
+              // 끝
+            }
+          }
+        }
+      } catch (e) {
+        pre.textContent = "요청 처리 중 오류가 발생했습니다.";
+      } finally {
+        setSending(false);
+        input.focus();
+        autoResizeInput();
+      }
     }
 
     sendBtn.addEventListener("click", (e) => {
@@ -266,57 +300,147 @@ document.addEventListener("DOMContentLoaded", () => {
         return allowedExt.has(ext);
     }
 
-    function uploadFile(file, onDone) {
-        if (!file) {
-            if (typeof onDone === "function") onDone();
-            return;
+    //dev
+    async function uploadFile(file, onDone) {
+      if (!file) { onDone?.(); return; }
+
+      if (!isAllowedFile(file)) {
+        addBotMessage("업로드할 수 없는 파일 형식입니다. (가능: PDF, 한글(HWP/HWPX), 엑셀(XLS/XLSX/CSV), PPT(PPT/PPTX), 워드(DOC/DOCX), TXT)", "chat");
+        onDone?.();
+        return;
+      }
+
+      addUserMessage(`첨부파일 선택: ${file.name}`);
+
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("sessionId", sessionId);
+      formData.append("deepResearch", isResearchMode ? true : false);
+
+      addBotLoading();
+      setSending(true);
+      removeBotLoading();
+
+      // 진행상황을 한 곳에 누적해서 보여주고 싶으면 botEl을 잡아두는 게 좋아요
+      const botEl = addBotMessage("처리 시작…", "file");
+      const pre = botEl?.querySelector?.("pre"); // addBotMessage가 element 반환하도록 해두면 best
+
+      // progress UI(있으면) 업데이트용 (없으면 무시됨)
+      const bar = document.querySelector("#uploadProgressBar");     // <progress id="uploadProgressBar" max="100"></progress>
+      const label = document.querySelector("#uploadProgressLabel"); // <div id="uploadProgressLabel"></div>
+
+      let buffer = "";
+      let accLog = "";
+      let finalRendered = false;
+
+      const appendLog = (line) => {
+        // 너무 길어지면 최근 N줄만 유지하는 식으로 제한해도 좋음
+        accLog += (accLog ? "\n" : "") + line;
+        if (pre) pre.textContent = accLog;
+        scrollToBottom();
+      };
+
+      const updateProgress = (obj) => {
+        const percent = (typeof obj.percent === "number") ? obj.percent : null;
+        const stage = obj.stage ?? "";
+        const msg = obj.message ?? "";
+
+        if (bar && percent != null) bar.value = percent;
+        if (label) label.textContent = `${percent ?? ""}% ${stage} - ${msg}`.trim();
+
+        // 채팅에도 로그 남기기(원하면 끄기)
+        const line = `${percent ?? ""}% [${stage}] ${msg}`.replace(/\s+/g, " ").trim();
+        if (line) appendLog(line);
+      };
+
+      const renderFinal = (obj) => {
+        if (finalRendered) return;
+        // summary는 길고 보기 좋으니 summary 중심으로 출력
+        if (obj.summary) addBotMessage(String(obj.summary), "file");
+        if (obj.duration_seconds != null) {
+          addBotMessage(`처리 완료 (소요시간: ${obj.duration_seconds}s)`, "file");
         }
 
-        if (!isAllowedFile(file)) {
-            addBotMessage("업로드할 수 없는 파일 형식입니다. (가능: PDF, 한글(HWP/HWPX), 엑셀(XLS/XLSX/CSV), PPT(PPT/PPTX), 워드(DOC/DOCX), TXT)", "chat");
-            if (typeof onDone === "function") onDone();
-            return;
+        // transcript는 매우 길 수 있으니: 기본은 “원문 길이”만 표시
+        if (obj.transcript) {
+          addBotMessage(`원문(Transcript) ${obj.transcript.length}자 생성됨 (필요하면 '원문 보기' UI로 연결 추천)`, "file");
+          // 원문을 바로 찍고 싶으면 아래 주석 해제:
+          // addBotMessage(String(obj.transcript), "file");
         }
 
-        addUserMessage(`첨부파일 선택: ${file.name}`);
+        finalRendered = true;
+      };
 
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("sessionId", sessionId);
-        formData.append("deepResearch", isResearchMode ? true : false);
-
-        addBotLoading();
-        setSending(true);
-
-        $.ajax({
-            url: "/api/chat/upload",
-            type: "POST",
-            data: formData,
-            processData: false,
-            contentType: false,
-            success: function (d) {
-                removeBotLoading();
-                const msg = (d && (d.message ?? d.answer ?? d.response))
-                    ? String(d.message ?? d.answer ?? d.response)
-                    : "파일 업로드 완료";
-                addBotMessage(msg, "file");
-            },
-            error: function (xhr) {
-                removeBotLoading();
-                let text = "파일 업로드 중 오류가 발생했습니다.";
-                try {
-                    if (xhr.responseText) text = String(xhr.responseText);
-                } catch (e) { }
-                addBotMessage(text, "chat");
-            },
-            complete: function () {
-                removeBotLoading();
-                setSending(false);
-                input.focus();
-                autoResizeInput();
-                if (typeof onDone === "function") onDone();
-            }
+      try {
+        const res = await fetch("/api/chat/upload/stream", {
+          method: "POST",
+          body: formData
         });
+
+        if (!res.ok || !res.body) {
+          const t = await res.text().catch(() => "");
+          throw new Error(t || `파일 업로드 실패 (${res.status})`);
+        }
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder("utf-8");
+
+        while (true) {
+          const { value, done } = await reader.read();
+          if (done) break;
+
+          buffer += decoder.decode(value, { stream: true });
+
+          // ✅ NDJSON: 줄 단위로 자르기
+          const lines = buffer.split("\n");
+          buffer = lines.pop() || ""; // 마지막은 미완성 라인일 수 있음
+
+          for (const line of lines) {
+            const s = line.trim();
+            if (!s) continue;
+
+            let obj;
+            try {
+              obj = JSON.parse(s);
+            } catch (e) {
+              // 서버가 가끔 빈 문자열/깨진 조각 보내면 그냥 무시
+              continue;
+            }
+
+            // 1) progress 이벤트
+            if (obj.percent != null || obj.stage || obj.message) {
+              updateProgress(obj);
+            }
+
+            // 2) 최종 결과 이벤트 (summary/transcript)
+            if (obj.summary || obj.transcript || obj.duration_seconds != null) {
+              renderFinal(obj);
+            }
+          }
+        }
+
+        // 스트림이 끝났는데 마지막 버퍼에 JSON이 남아있을 수도 있으니 한 번 더 시도(옵션)
+        const tail = buffer.trim();
+        if (tail) {
+          try {
+            const obj = JSON.parse(tail);
+            if (obj.percent != null || obj.stage || obj.message) updateProgress(obj);
+            if (obj.summary || obj.transcript || obj.duration_seconds != null) renderFinal(obj);
+          } catch {}
+        }
+
+        if (!finalRendered) {
+          addBotMessage("처리는 완료됐지만 결과(summary/transcript)를 받지 못했습니다.", "chat");
+        }
+
+      } catch (e) {
+        addBotMessage(e?.message ? String(e.message) : "파일 업로드 중 오류가 발생했습니다.", "chat");
+      } finally {
+        setSending(false);
+        input.focus();
+        autoResizeInput();
+        onDone?.();
+      }
     }
 
     function uploadFiles(fileList) {

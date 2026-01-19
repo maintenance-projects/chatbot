@@ -1,5 +1,6 @@
 package kr.co.ultari.chatbot.generate.service;
 
+import kr.co.ultari.chatbot.generate.datamodel.dto.RequestDTO;
 import kr.co.ultari.chatbot.generate.datamodel.vo.Message;
 import kr.co.ultari.chatbot.utils.DetectCharsetUtil;
 import kr.co.ultari.chatbot.utils.WebUtilsCustom;
@@ -11,20 +12,27 @@ import kr.dogfoot.hwpxlib.object.HWPXFile;
 import kr.dogfoot.hwpxlib.reader.HWPXReader;
 import kr.dogfoot.hwpxlib.tool.textextractor.TextMarks;
 import lombok.extern.slf4j.Slf4j;
+import lombok.var;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.text.PDFTextStripper;
 import org.apache.poi.xwpf.usermodel.*;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+import reactor.core.Disposable;
+import reactor.core.publisher.Flux;
 
 import java.io.*;
 import java.nio.charset.Charset;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
 @Service
@@ -38,6 +46,9 @@ public class AIChatService {
 
     @Value("${ultari.ai.temp.path:tmp}")
     String tempPath;
+
+    @Autowired
+    AIRelayClientService aiClientService;
 
     public String callAi(List<Message> messages) throws Exception {
 
@@ -228,5 +239,104 @@ public class AIChatService {
         }
         log.debug(sb.toString());
         return sb.toString();
+    }
+
+    public SseEmitter ChatRelayServiceStream(RequestDTO requestDTO) {
+        SseEmitter emitter = new SseEmitter(0L);
+
+        final AtomicBoolean closed = new AtomicBoolean(false);
+        final AtomicBoolean doneSent = new AtomicBoolean(false);
+        final Disposable[] sub = new Disposable[1];
+
+        Runnable stopUpstream = () -> {
+            if (sub[0] != null && !sub[0].isDisposed()) {
+                sub[0].dispose();
+            }
+        };
+
+        emitter.onCompletion(() -> {
+            closed.set(true);
+            stopUpstream.run();
+        });
+        emitter.onTimeout(() -> {
+            closed.set(true);
+            stopUpstream.run();
+        });
+        emitter.onError(e -> {
+            closed.set(true);
+            stopUpstream.run();
+        });
+
+        trySend(emitter, closed, "start", "");
+
+        sub[0] = aiClientService
+                .callOllamaGenerateStream(AI_API_URL, requestDTO.getMessage())
+                .subscribe(
+                        line -> {
+                            if (closed.get()) return;
+
+                            try {
+                                JSONObject obj = new JSONObject(line);
+
+                                // 1️⃣ 토큰(delta) 처리
+                                String delta = obj.optString("response", "");
+                                if (!delta.isEmpty()) {
+                                    if (!trySend(emitter, closed, "delta", delta)) {
+                                        stopUpstream.run();
+                                        return;
+                                    }
+                                }
+
+                                // 2️⃣ Ollama done 처리 (여기서만!)
+                                if (obj.optBoolean("done", false)) {
+                                    if (doneSent.compareAndSet(false, true)) {
+                                        trySend(emitter, closed, "done", "");
+                                        closed.set(true);
+                                        emitter.complete();
+                                        stopUpstream.run();
+                                    }
+                                }
+                            } catch (Exception parseErr) {
+                                // JSON 파싱 실패 → 그냥 문자열로 흘림
+                                if (!trySend(emitter, closed, "delta", line)) {
+                                    stopUpstream.run();
+                                }
+                            }
+                        },
+                        err -> {
+                            if (closed.get()) return;
+
+                            closed.set(true);
+                            trySend(emitter, closed, "error",
+                                    err.getMessage() != null ? err.getMessage() : "AI 스트림 오류");
+                            emitter.complete();
+                            stopUpstream.run();
+                        },
+                        () -> {
+                            // 3️⃣ Flux onComplete (done을 아직 안 보냈을 때만)
+                            if (closed.get()) return;
+
+                            if (doneSent.compareAndSet(false, true)) {
+                                trySend(emitter, closed, "done", "");
+                                closed.set(true);
+                                emitter.complete();
+                            }
+                            stopUpstream.run();
+                        }
+                );
+
+        return emitter;
+    }
+
+    private boolean trySend(SseEmitter emitter, AtomicBoolean closed, String event, String data) {
+        if (closed.get()) return false;
+        try {
+            emitter.send(SseEmitter.event().name(event).data(data));
+            return true;
+        } catch (IllegalStateException | IOException e) {
+            // ✅ 이미 complete 됐거나 클라가 끊김
+            closed.set(true);
+            return false;
+        }
     }
 }
