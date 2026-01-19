@@ -286,34 +286,153 @@ document.addEventListener("DOMContentLoaded", () => {
         if (isSearchOpen() && searchInput && searchInput.value.trim()) rebuildHighlights(searchInput.value);
     }
 
-    function addBotLoading() {
-        removeBotLoading();
+    function setSending(isSending) {
+        sendBtn.disabled = isSending;
+        input.disabled = isSending;
+        if (widget) widget.classList.toggle("is-sending", isSending);
+    }
+
+    function addBotStreamLoadingMessage() {
+        const id = `cbStream_${Date.now()}_${Math.random().toString(16).slice(2)}`;
         const html = `
-            <div class="cb-msg cb-msg--bot cb-msg--loading" id="cbLoadingBubble">
+            <div class="cb-msg cb-msg--bot cb-msg--streaming" data-stream-id="${id}">
                 <div class="cb-avatar">
                     <img class="cb-avatar__img" src="/img/ic-chatbot.png" alt="챗봇" />
                 </div>
                 <div class="cb-bubble">
                     <div class="cb-bubble__text">
                         <span class="cb-typing"><i></i><i></i><i></i></span>
+                        <pre style="display:none"></pre>
                     </div>
                     <div class="cb-meta"></div>
                 </div>
             </div>
         `;
         body.insertAdjacentHTML("beforeend", html);
+        const msgEl = body.querySelector(`.cb-msg[data-stream-id="${id}"]`);
+        const preEl = msgEl ? msgEl.querySelector(".cb-bubble__text pre") : null;
+        const metaEl = msgEl ? msgEl.querySelector(".cb-meta") : null;
+        const typingEl = msgEl ? msgEl.querySelector(".cb-typing") : null;
+        scrollToBottom();
+        return { msgEl, preEl, metaEl, typingEl, started: false };
+    }
+
+    function startStreaming(handle) {
+        if (!handle || handle.started) return;
+        handle.started = true;
+        if (handle.typingEl) handle.typingEl.style.display = "none";
+        if (handle.preEl) handle.preEl.style.display = "block";
         scrollToBottom();
     }
 
-    function removeBotLoading() {
-        const el = document.getElementById("cbLoadingBubble");
-        if (el) el.remove();
+    function appendStreamText(handle, chunk) {
+        if (!handle || !handle.preEl) return;
+        handle.preEl.textContent = (handle.preEl.textContent || "") + String(chunk || "");
+        scrollToBottom();
+        if (isSearchOpen() && searchInput && searchInput.value.trim()) rebuildHighlights(searchInput.value);
     }
 
-    function setSending(isSending) {
-        sendBtn.disabled = isSending;
-        input.disabled = isSending;
-        if (widget) widget.classList.toggle("is-sending", isSending);
+    function finalizeStream(handle) {
+        if (!handle || !handle.metaEl) return;
+        if (!handle.metaEl.textContent) handle.metaEl.textContent = formatTime(new Date());
+    }
+
+    function parseSseFrame(frame) {
+        const lines = String(frame || "").split("\n");
+        let eventName = "";
+        const dataParts = [];
+        for (const line of lines) {
+            if (line.startsWith("event:")) {
+                eventName = line.slice(6).trim();
+            } else if (line.startsWith("data:")) {
+                dataParts.push(line.slice(5));
+            }
+        }
+        const data = dataParts.join("\n").replace(/^\s*/, "");
+        return { eventName, data };
+    }
+
+    async function streamEventText(url, options, onText, onFirstToken) {
+        const res = await fetch(url, options);
+
+        if (!res.ok) {
+            let t = "";
+            try { t = await res.text(); } catch (e) { }
+            const err = new Error(t || "요청 처리 중 오류가 발생했습니다.");
+            err.status = res.status;
+            throw err;
+        }
+
+        if (!res.body) {
+            let t = "";
+            try { t = await res.text(); } catch (e) { }
+            if (t) {
+                if (typeof onFirstToken === "function") onFirstToken();
+                onText(t);
+                return;
+            }
+            throw new Error("응답을 받을 수 없습니다.");
+        }
+
+        const reader = res.body.getReader();
+        const decoder = new TextDecoder("utf-8");
+        let buf = "";
+        let first = true;
+
+        while (true) {
+            const { value, done } = await reader.read();
+            if (done) break;
+
+            const chunk = decoder.decode(value, { stream: true });
+            if (!chunk) continue;
+
+            buf += chunk;
+
+            while (true) {
+                const sep = buf.indexOf("\n\n");
+                if (sep < 0) break;
+
+                const frame = buf.slice(0, sep);
+                buf = buf.slice(sep + 2);
+
+                const { data } = parseSseFrame(frame);
+
+                if (data === "[DONE]") return;
+                if (!data) continue;
+
+                if (data.startsWith("{") || data.startsWith("[")) {
+                    let j = null;
+                    try {
+                        j = JSON.parse(data);
+                    } catch (e) {
+                        if (first) {
+                            first = false;
+                            if (typeof onFirstToken === "function") onFirstToken();
+                        }
+                        onText(data);
+                        continue;
+                    }
+
+                    const content = j && j.choices && j.choices[0] && j.choices[0].delta
+                        ? j.choices[0].delta.content
+                        : null;
+
+                    if (typeof content === "string" && content.length) {
+                        if (first) {
+                            first = false;
+                            if (typeof onFirstToken === "function") onFirstToken();
+                        }
+                        onText(content);
+                    }
+                } else {
+                    if (first) {
+                        first = false;
+                        if (typeof onFirstToken === "function") onFirstToken();
+                    }
+                    onText(data);
+                }
+            }
+        }
     }
 
     function sendTextMessage(msg) {
@@ -322,8 +441,9 @@ document.addEventListener("DOMContentLoaded", () => {
         input.value = "";
         autoResizeInput();
 
-        addBotLoading();
         setSending(true);
+
+        const handle = addBotStreamLoadingMessage();
 
         const payload = {
             sessionId,
@@ -332,34 +452,34 @@ document.addEventListener("DOMContentLoaded", () => {
             templateKey: selectedTemplate ? selectedTemplate.key : null
         };
 
-        $.ajax({
-            url: "/api/chat",
-            type: "POST",
-            contentType: "application/json; charset=UTF-8",
-            data: JSON.stringify(payload),
-            dataType: "json",
-            success: function (d) {
-                removeBotLoading();
-                const answer = (d && (d.answer ?? d.response ?? d.message)) ? String(d.answer ?? d.response ?? d.message) : "";
-                addBotMessage(answer || "응답을 받았지만 표시할 내용이 없습니다.");
+        streamEventText("/api/chat/stream", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json; charset=UTF-8",
+                "Accept": "text/event-stream"
             },
-            error: function (xhr) {
-                removeBotLoading();
-                let text = "요청 처리 중 오류가 발생했습니다.";
-                try {
-                    const json = xhr.responseJSON;
-                    if (json && (json.message || json.error)) text = String(json.message || json.error);
-                    else if (xhr.responseText) text = String(xhr.responseText);
-                } catch (e) { }
-                addBotMessage(text);
-            },
-            complete: function () {
-                removeBotLoading();
+            body: JSON.stringify(payload),
+            credentials: "same-origin"
+        }, (t) => {
+            startStreaming(handle);
+            appendStreamText(handle, t);
+        }, () => startStreaming(handle))
+            .then(() => {
+                startStreaming(handle);
+                finalizeStream(handle);
+                if (!handle.preEl || !handle.preEl.textContent) {
+                    appendStreamText(handle, "응답을 받았지만 표시할 내용이 없습니다.");
+                }
+            })
+            .catch((err) => {
+                if (handle && handle.msgEl) handle.msgEl.remove();
+                addBotMessage(err && err.message ? String(err.message) : "요청 처리 중 오류가 발생했습니다.");
+            })
+            .finally(() => {
                 setSending(false);
                 input.focus();
                 autoResizeInput();
-            }
-        });
+            });
     }
 
     function sendMessage() {
@@ -460,38 +580,36 @@ document.addEventListener("DOMContentLoaded", () => {
         formData.append("deepResearch", isResearchMode ? true : false);
         formData.append("templateKey", selectedTemplate ? selectedTemplate.key : "");
 
-        addBotLoading();
         setSending(true);
 
-        $.ajax({
-            url: "/api/chat/upload",
-            type: "POST",
-            data: formData,
-            processData: false,
-            contentType: false,
-            success: function (d) {
-                removeBotLoading();
-                const msg = (d && (d.message ?? d.answer ?? d.response))
-                    ? String(d.message ?? d.answer ?? d.response)
-                    : "파일 업로드 완료";
-                addBotMessage(msg);
-            },
-            error: function (xhr) {
-                removeBotLoading();
-                let text = "파일 업로드 중 오류가 발생했습니다.";
-                try {
-                    if (xhr.responseText) text = String(xhr.responseText);
-                } catch (e) { }
-                addBotMessage(text);
-            },
-            complete: function () {
-                removeBotLoading();
+        const handle = addBotStreamLoadingMessage();
+
+        streamEventText("/api/chat/upload/stream", {
+            method: "POST",
+            headers: { "Accept": "text/event-stream" },
+            body: formData,
+            credentials: "same-origin"
+        }, (t) => {
+            startStreaming(handle);
+            appendStreamText(handle, t);
+        }, () => startStreaming(handle))
+            .then(() => {
+                startStreaming(handle);
+                finalizeStream(handle);
+                if (!handle.preEl || !handle.preEl.textContent) {
+                    appendStreamText(handle, "파일 업로드 완료");
+                }
+            })
+            .catch((err) => {
+                if (handle && handle.msgEl) handle.msgEl.remove();
+                addBotMessage(err && err.message ? String(err.message) : "파일 업로드 중 오류가 발생했습니다.");
+            })
+            .finally(() => {
                 setSending(false);
                 input.focus();
                 autoResizeInput();
                 if (typeof onDone === "function") onDone();
-            }
-        });
+            });
     }
 
     if (fileInput) {
