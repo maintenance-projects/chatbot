@@ -16,7 +16,6 @@
     <script th:inline="javascript">
         const sessionId = [[${ sessionId }]];
     </script>
-
 </head>
 
 <body>
@@ -72,7 +71,7 @@
                     </div>
                 </section>
 
-                <footer class="cb-footer">
+                <footer class="cb-footer" id="cbFooter">
                     <div class="cb-inputwrap" id="cbInputWrap">
                         <textarea class="cb-input" id="cbInput" placeholder="메시지를 입력해주세요."
                             autocomplete="off"></textarea>
@@ -95,6 +94,10 @@
                                         <img class="cb-avatar__img" src="/img/ic-research.png" alt="광역 리서치" />
                                         <span class="cb-pop__text">광역 리서치</span>
                                     </button>
+                                    <button class="cb-pop__item" id="cbActionSelect" type="button" role="menuitem">
+                                        <img class="cb-avatar__img" src="/img/ic-select.png" alt="양식 선택" />
+                                        <span class="cb-pop__text">양식 선택</span>
+                                    </button>
                                 </div>
                             </div>
 
@@ -103,6 +106,74 @@
 
                         <input id="cbFileInput" type="file" hidden />
                     </div>
+
+                    <section class="cb-tray" id="cbTplTray" aria-hidden="true">
+                        <div class="cb-tray__head">
+                            <div class="cb-tray__title">
+                                <img src="/img/ic-select.png" alt="" />
+                                <span>양식 선택</span>
+                            </div>
+                            <button class="cb-tray__close" id="cbTplTrayClose" type="button" aria-label="닫기">×</button>
+                        </div>
+
+                        <div class="cb-tray__body" id="cbTplTrayBody">
+                            <button class="cb-tpl" type="button" data-template="report">
+                                <div class="cb-tpl__top">
+                                    <div class="cb-tpl__name">정기점검</div>
+                                </div>
+                                <div class="cb-tpl__desc">정기점검 양식</div>
+                            </button>
+
+                            <button class="cb-tpl" type="button" data-template="meeting">
+                                <div class="cb-tpl__top">
+                                    <div class="cb-tpl__name">회의록</div>
+                                </div>
+                                <div class="cb-tpl__desc">회의록 양식</div>
+                            </button>
+
+                            <button class="cb-tpl" type="button" data-template="bug">
+                                <div class="cb-tpl__top">
+                                    <div class="cb-tpl__name">결함 보고서</div>
+                                </div>
+                                <div class="cb-tpl__desc">결함 보고서 양식</div>
+                            </button>
+
+                            <button class="cb-tpl" type="button" data-template="spec">
+                                <div class="cb-tpl__top">
+                                    <div class="cb-tpl__name">기능 명세</div>
+                                </div>
+                                <div class="cb-tpl__desc">명세서 양식</div>
+                            </button>
+
+                            <button class="cb-tpl" type="button" data-template="email">
+                                <div class="cb-tpl__top">
+                                    <div class="cb-tpl__name">업무 메일 초안</div>
+                                </div>
+                                <div class="cb-tpl__desc">메일 초안 요청 양식</div>
+                            </button>
+
+                            <button class="cb-tpl" type="button" data-template="plan">
+                                <div class="cb-tpl__top">
+                                    <div class="cb-tpl__name">작업 계획</div>
+                                </div>
+                                <div class="cb-tpl__desc">계획서 양식</div>
+                            </button>
+
+                            <button class="cb-tpl" type="button" data-template="email2">
+                                <div class="cb-tpl__top">
+                                    <div class="cb-tpl__name">업무 메일 초안(확장)</div>
+                                </div>
+                                <div class="cb-tpl__desc">메일 초안 요청 양식</div>
+                            </button>
+
+                            <button class="cb-tpl" type="button" data-template="plan2">
+                                <div class="cb-tpl__top">
+                                    <div class="cb-tpl__name">작업 계획(상세)</div>
+                                </div>
+                                <div class="cb-tpl__desc">계획서 양식</div>
+                            </button>
+                        </div>
+                    </section>
                 </footer>
             </aside>
         </section>

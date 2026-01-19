@@ -3,8 +3,20 @@ document.addEventListener("DOMContentLoaded", () => {
     const body = document.getElementById("cbBody");
     const input = document.getElementById("cbInput");
     const sendBtn = document.getElementById("cbSend");
+    const inputWrap = document.getElementById("cbInputWrap");
 
-    if (!body || !input || !sendBtn) return;
+    if (!body || !input || !sendBtn || !inputWrap) return;
+
+    let chipRow = document.getElementById("cbChipRow");
+    if (!chipRow) {
+        chipRow = document.createElement("div");
+        chipRow.className = "cb-chiprow";
+        chipRow.id = "cbChipRow";
+        chipRow.setAttribute("aria-hidden", "true");
+        const inputbar = inputWrap.querySelector(".cb-inputbar");
+        if (inputbar) inputbar.insertAdjacentElement("afterend", chipRow);
+        else inputWrap.appendChild(chipRow);
+    }
 
     const defaultPlaceholder = (input.getAttribute("placeholder") || input.placeholder || "").trim();
 
@@ -12,26 +24,53 @@ document.addEventListener("DOMContentLoaded", () => {
     const pop = document.getElementById("cbPop");
     const actionUpload = document.getElementById("cbActionUpload");
     const actionPrint = document.getElementById("cbActionPrint");
+    const actionSelect = document.getElementById("cbActionSelect");
+    const actionUpResearch = document.getElementById("cbActionUpResearch");
     const fileInput = document.getElementById("cbFileInput");
+
+    const tray = document.getElementById("cbTplTray");
+    const trayClose = document.getElementById("cbTplTrayClose");
+    const trayBody = document.getElementById("cbTplTrayBody");
 
     let isResearchMode = false;
     let researchTag = null;
 
+    let selectedTemplate = null;
+    let templateTag = null;
+
+    let pendingFile = null;
+    let fileTag = null;
+
     const MAX_HEIGHT = 250;
+
+    function updateChipRow() {
+        const hasAny =
+            (researchTag && researchTag.style.display !== "none") ||
+            (templateTag && templateTag.style.display !== "none") ||
+            (fileTag && fileTag.style.display !== "none");
+
+        chipRow.classList.toggle("is-open", !!hasAny);
+        chipRow.setAttribute("aria-hidden", hasAny ? "false" : "true");
+    }
+
+    function mountChip(el) {
+        if (!el) return;
+        if (el.parentElement !== chipRow) chipRow.appendChild(el);
+        updateChipRow();
+    }
 
     function ensureResearchTag() {
         if (researchTag) return researchTag;
-        if (!plusBtn || !plusBtn.parentElement) return null;
 
         researchTag = document.createElement("button");
         researchTag.type = "button";
         researchTag.id = "cbResearchTag";
         researchTag.setAttribute("aria-pressed", "false");
         researchTag.innerHTML = `
-                                    <img src="/img/ic-research-mini.png" id="miniIcon" />
-                                    <span class="cb-rch__label">리서치</span>
-                                    <span class="cb-rch__x" aria-hidden="true">×</span>
-                                `;
+            <img src="/img/ic-research-mini.png" class="cb-tag__icon" />
+            <span class="cb-rch__label">리서치</span>
+            <span class="cb-rch__x" aria-hidden="true">×</span>
+        `;
 
         researchTag.addEventListener("click", (e) => {
             e.preventDefault();
@@ -39,13 +78,121 @@ document.addEventListener("DOMContentLoaded", () => {
             input.focus();
         });
 
-        plusBtn.insertAdjacentElement("afterend", researchTag);
+        mountChip(researchTag);
         researchTag.style.display = "none";
+        updateChipRow();
         return researchTag;
     }
 
+    function ensureTemplateTag() {
+        if (templateTag) return templateTag;
+
+        templateTag = document.createElement("button");
+        templateTag.type = "button";
+        templateTag.id = "cbTemplateTag";
+        templateTag.setAttribute("aria-pressed", "false");
+        templateTag.innerHTML = `
+            <img src="/img/ic-select.png" class="cb-tag__icon" />
+            <span class="cb-tpltag__label"></span>
+            <span class="cb-tpltag__x" aria-hidden="true">×</span>
+        `;
+
+        templateTag.addEventListener("click", (e) => {
+            e.preventDefault();
+            setTemplate(null);
+            input.focus();
+        });
+
+        ensureResearchTag();
+        mountChip(templateTag);
+        templateTag.style.display = "none";
+        updateChipRow();
+        return templateTag;
+    }
+
+    function ensureFileTag() {
+        if (fileTag) return fileTag;
+
+        fileTag = document.createElement("button");
+        fileTag.type = "button";
+        fileTag.id = "cbFileTag";
+        fileTag.setAttribute("aria-pressed", "false");
+        fileTag.innerHTML = `
+            <img src="/img/ic-file.png" class="cb-tag__icon" />
+            <span class="cb-filetag__label"></span>
+            <span class="cb-filetag__x" aria-hidden="true">×</span>
+        `;
+
+        fileTag.addEventListener("click", (e) => {
+            e.preventDefault();
+            setPendingFile(null);
+            input.focus();
+        });
+
+        ensureTemplateTag();
+        mountChip(fileTag);
+        fileTag.style.display = "none";
+        updateChipRow();
+        return fileTag;
+    }
+
+    function setTemplate(tpl) {
+        if (tpl && isResearchMode) setResearchMode(false);
+
+        selectedTemplate = tpl ? { ...tpl } : null;
+
+        const tag = ensureTemplateTag();
+        if (!tag) return;
+
+        if (!selectedTemplate) {
+            tag.style.display = "none";
+            tag.setAttribute("aria-pressed", "false");
+            const labelEl = tag.querySelector(".cb-tpltag__label");
+            if (labelEl) labelEl.textContent = "";
+            updateChipRow();
+            return;
+        }
+
+        tag.style.display = "";
+        tag.setAttribute("aria-pressed", "true");
+        const labelEl = tag.querySelector(".cb-tpltag__label");
+        if (labelEl) labelEl.textContent = selectedTemplate.name || "양식";
+        updateChipRow();
+    }
+
+    function setPendingFile(file) {
+        if (file && isResearchMode) setResearchMode(false);
+
+        pendingFile = file || null;
+
+        const tag = ensureFileTag();
+        if (!tag) return;
+
+        if (!pendingFile) {
+            tag.style.display = "none";
+            tag.setAttribute("aria-pressed", "false");
+            const labelEl = tag.querySelector(".cb-filetag__label");
+            if (labelEl) labelEl.textContent = "";
+            updateChipRow();
+            return;
+        }
+
+        tag.style.display = "";
+        tag.setAttribute("aria-pressed", "true");
+        const labelEl = tag.querySelector(".cb-filetag__label");
+        if (labelEl) labelEl.textContent = pendingFile.name || "파일";
+        updateChipRow();
+    }
+
     function setResearchMode(on) {
-        isResearchMode = !!on;
+        const next = !!on;
+
+        if (next) {
+            setTemplate(null);
+            setPendingFile(null);
+        }
+
+        isResearchMode = next;
 
         const tag = ensureResearchTag();
 
@@ -55,10 +202,10 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         if (input) {
-            if (isResearchMode) input.placeholder = "디테일한 보고서를 작성해 주세요.";
-            else input.placeholder = defaultPlaceholder;
+            input.placeholder = isResearchMode ? "디테일한 보고서를 작성해 주세요." : defaultPlaceholder;
         }
 
+        updateChipRow();
         autoResizeInput();
     }
 
@@ -95,50 +242,44 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function autoResizeInput() {
-        if (!input) return;
-
         input.style.height = "auto";
-
         const nextHeight = Math.min(input.scrollHeight, MAX_HEIGHT);
         input.style.height = `${nextHeight}px`;
 
-        if (input.scrollHeight > MAX_HEIGHT) {
-            input.style.overflowY = "auto";
-        } else {
-            input.style.overflowY = "hidden";
-        }
+        if (input.scrollHeight > MAX_HEIGHT) input.style.overflowY = "auto";
+        else input.style.overflowY = "hidden";
     }
 
     function addUserMessage(text) {
         const now = formatTime(new Date());
         const html = `
-      <div class="cb-msg cb-msg--user">
-        <div class="cb-bubble">
-          <div class="cb-bubble__text"><pre>${escapeHtml(text)}</pre></div>
-          <div class="cb-meta">${now}</div>
-        </div>
-      </div>
-    `;
+            <div class="cb-msg cb-msg--user">
+                <div class="cb-bubble">
+                    <div class="cb-bubble__text"><pre>${escapeHtml(text)}</pre></div>
+                    <div class="cb-meta">${now}</div>
+                </div>
+            </div>
+        `;
         body.insertAdjacentHTML("beforeend", html);
         scrollToBottom();
         if (isSearchOpen() && searchInput && searchInput.value.trim()) rebuildHighlights(searchInput.value);
     }
 
-    function addBotMessage(text, type) {
+    function addBotMessage(text) {
         const now = formatTime(new Date());
         const clean = normalizeBubbleText(text);
 
         const html = `
-        <div class="cb-msg cb-msg--bot">
-          <div class="cb-avatar">
-            <img class="cb-avatar__img" src="/img/ic-chatbot.png" alt="챗봇" />
-          </div>
-          <div class="cb-bubble">
-            <div class="cb-bubble__text"><pre>${escapeHtml(clean)}</pre></div>
-            <div class="cb-meta">${now}</div>
-          </div>
-        </div>
-      `;
+            <div class="cb-msg cb-msg--bot">
+                <div class="cb-avatar">
+                    <img class="cb-avatar__img" src="/img/ic-chatbot.png" alt="챗봇" />
+                </div>
+                <div class="cb-bubble">
+                    <div class="cb-bubble__text"><pre>${escapeHtml(clean)}</pre></div>
+                    <div class="cb-meta">${now}</div>
+                </div>
+            </div>
+        `;
 
         body.insertAdjacentHTML("beforeend", html);
         scrollToBottom();
@@ -148,18 +289,18 @@ document.addEventListener("DOMContentLoaded", () => {
     function addBotLoading() {
         removeBotLoading();
         const html = `
-      <div class="cb-msg cb-msg--bot cb-msg--loading" id="cbLoadingBubble">
-        <div class="cb-avatar">
-          <img class="cb-avatar__img" src="/img/ic-chatbot.png" alt="챗봇" />
-        </div>
-        <div class="cb-bubble">
-          <div class="cb-bubble__text">
-            <span class="cb-typing"><i></i><i></i><i></i></span>
-          </div>
-          <div class="cb-meta"></div>
-        </div>
-      </div>
-    `;
+            <div class="cb-msg cb-msg--bot cb-msg--loading" id="cbLoadingBubble">
+                <div class="cb-avatar">
+                    <img class="cb-avatar__img" src="/img/ic-chatbot.png" alt="챗봇" />
+                </div>
+                <div class="cb-bubble">
+                    <div class="cb-bubble__text">
+                        <span class="cb-typing"><i></i><i></i><i></i></span>
+                    </div>
+                    <div class="cb-meta"></div>
+                </div>
+            </div>
+        `;
         body.insertAdjacentHTML("beforeend", html);
         scrollToBottom();
     }
@@ -175,10 +316,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (widget) widget.classList.toggle("is-sending", isSending);
     }
 
-    function sendMessage() {
-        const msg = String(input.value || "").trim();
-        if (!msg) return;
-
+    function sendTextMessage(msg) {
+        closeTray();
         addUserMessage(msg);
         input.value = "";
         autoResizeInput();
@@ -186,7 +325,12 @@ document.addEventListener("DOMContentLoaded", () => {
         addBotLoading();
         setSending(true);
 
-        const payload = { sessionId, message: msg, deepResearch: isResearchMode ? true : false };
+        const payload = {
+            sessionId,
+            message: msg,
+            deepResearch: isResearchMode ? true : false,
+            templateKey: selectedTemplate ? selectedTemplate.key : null
+        };
 
         $.ajax({
             url: "/api/chat",
@@ -197,7 +341,7 @@ document.addEventListener("DOMContentLoaded", () => {
             success: function (d) {
                 removeBotLoading();
                 const answer = (d && (d.answer ?? d.response ?? d.message)) ? String(d.answer ?? d.response ?? d.message) : "";
-                addBotMessage(answer || "응답을 받았지만 표시할 내용이 없습니다.", "chat");
+                addBotMessage(answer || "응답을 받았지만 표시할 내용이 없습니다.");
             },
             error: function (xhr) {
                 removeBotLoading();
@@ -207,7 +351,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     if (json && (json.message || json.error)) text = String(json.message || json.error);
                     else if (xhr.responseText) text = String(xhr.responseText);
                 } catch (e) { }
-                addBotMessage(text, "chat");
+                addBotMessage(text);
             },
             complete: function () {
                 removeBotLoading();
@@ -216,6 +360,31 @@ document.addEventListener("DOMContentLoaded", () => {
                 autoResizeInput();
             }
         });
+    }
+
+    function sendMessage() {
+        const msg = String(input.value || "").trim();
+        if (!msg && !pendingFile) return;
+
+        if (pendingFile) {
+            const f = pendingFile;
+            setPendingFile(null);
+
+            if (!msg) {
+                uploadFile(f, () => {
+                    input.focus();
+                    autoResizeInput();
+                });
+                return;
+            }
+
+            uploadFile(f, () => {
+                sendTextMessage(msg);
+            });
+            return;
+        }
+
+        sendTextMessage(msg);
     }
 
     sendBtn.addEventListener("click", (e) => {
@@ -238,7 +407,11 @@ document.addEventListener("DOMContentLoaded", () => {
     if (firstMeta && !firstMeta.textContent) firstMeta.textContent = formatTime(new Date());
 
     ensureResearchTag();
+    ensureTemplateTag();
+    ensureFileTag();
     setResearchMode(false);
+    setTemplate(null);
+    setPendingFile(null);
 
     input.focus();
     scrollToBottom();
@@ -273,17 +446,19 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         if (!isAllowedFile(file)) {
-            addBotMessage("업로드할 수 없는 파일 형식입니다. (가능: PDF, 한글(HWP/HWPX), 엑셀(XLS/XLSX/CSV), PPT(PPT/PPTX), 워드(DOC/DOCX), TXT)", "chat");
+            addBotMessage("업로드할 수 없는 파일 형식입니다. (가능: PDF, 한글(HWP/HWPX), 엑셀(XLS/XLSX/CSV), PPT(PPT/PPTX), 워드(DOC/DOCX), TXT)");
             if (typeof onDone === "function") onDone();
             return;
         }
 
+        closeTray();
         addUserMessage(`첨부파일 선택: ${file.name}`);
 
         const formData = new FormData();
         formData.append("file", file);
         formData.append("sessionId", sessionId);
         formData.append("deepResearch", isResearchMode ? true : false);
+        formData.append("templateKey", selectedTemplate ? selectedTemplate.key : "");
 
         addBotLoading();
         setSending(true);
@@ -299,7 +474,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const msg = (d && (d.message ?? d.answer ?? d.response))
                     ? String(d.message ?? d.answer ?? d.response)
                     : "파일 업로드 완료";
-                addBotMessage(msg, "file");
+                addBotMessage(msg);
             },
             error: function (xhr) {
                 removeBotLoading();
@@ -307,7 +482,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 try {
                     if (xhr.responseText) text = String(xhr.responseText);
                 } catch (e) { }
-                addBotMessage(text, "chat");
+                addBotMessage(text);
             },
             complete: function () {
                 removeBotLoading();
@@ -319,99 +494,32 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
-    function uploadFiles(fileList) {
-        const all = Array.from(fileList || []);
-        if (all.length === 0) return;
-
-        const allowed = all.filter(isAllowedFile);
-        const blocked = all.filter((f) => !isAllowedFile(f));
-
-        if (blocked.length > 0) {
-            const names = blocked.map((f) => f.name).join(", ");
-            addBotMessage(`업로드 불가 파일이 제외되었습니다: ${names}`, "chat");
-        }
-
-        if (allowed.length === 0) return;
-
-        let idx = 0;
-        const next = () => {
-            if (idx >= allowed.length) return;
-            const f = allowed[idx++];
-            uploadFile(f, next);
-        };
-        next();
-    }
-
     if (fileInput) {
         fileInput.addEventListener("change", () => {
-            if (!fileInput.files || fileInput.files.length === 0) return;
-            uploadFiles(fileInput.files);
+            const files = fileInput.files ? Array.from(fileInput.files) : [];
             fileInput.value = "";
+            if (!files.length) return;
+
+            const first = files.find(isAllowedFile);
+            const blocked = files.filter((f) => !isAllowedFile(f));
+
+            if (blocked.length > 0) {
+                const names = blocked.map((f) => f.name).join(", ");
+                addBotMessage(`업로드 불가 파일이 제외되었습니다: ${names}`);
+            }
+
+            if (!first) return;
+
+            setPendingFile(first);
+            closePop();
+            closeTray();
+            input.focus();
         });
-
-        function isFileDrag(e) {
-            const dt = e.dataTransfer;
-            if (!dt) return false;
-
-            if (dt.items && dt.items.length) {
-                return Array.from(dt.items).some((it) => it && it.kind === "file");
-            }
-
-            const types = dt.types;
-            if (!types) return false;
-            const arr = Array.from(types);
-            return arr.includes("Files") || arr.includes("application/x-moz-file");
-        }
-
-        function setDropEffect(e) {
-            if (!e.dataTransfer) return;
-            try {
-                e.dataTransfer.dropEffect = "copy";
-            } catch (_) { }
-        }
-
-        let dragCounter = 0;
-
-        function setDragUI(on) {
-            document.documentElement.classList.toggle("is-dragover", on);
-        }
-
-        document.addEventListener("dragenter", (e) => {
-            if (!isFileDrag(e)) return;
-            e.preventDefault();
-            dragCounter++;
-            setDropEffect(e);
-            setDragUI(true);
-        }, true);
-
-        document.addEventListener("dragleave", (e) => {
-            if (!isFileDrag(e)) return;
-            dragCounter--;
-            if (dragCounter <= 0) {
-                dragCounter = 0;
-                setDragUI(false);
-            }
-        }, true);
-
-        document.addEventListener("dragover", (e) => {
-            if (!isFileDrag(e)) return;
-            e.preventDefault();
-            setDropEffect(e);
-        }, true);
-
-        document.addEventListener("drop", (e) => {
-            if (!isFileDrag(e)) return;
-            e.preventDefault();
-            e.stopPropagation();
-            dragCounter = 0;
-            setDragUI(false);
-            const files = e.dataTransfer && e.dataTransfer.files ? e.dataTransfer.files : null;
-            if (files && files.length) uploadFiles(files);
-        }, true);
     }
 
     function openPop() {
         if (!pop || !plusBtn) return;
+        closeTray();
         pop.classList.add("is-open");
         pop.setAttribute("aria-hidden", "false");
         plusBtn.setAttribute("aria-expanded", "true");
@@ -430,77 +538,146 @@ document.addEventListener("DOMContentLoaded", () => {
         else openPop();
     }
 
+    function isTrayOpen() {
+        return !!(tray && tray.classList.contains("is-open"));
+    }
+
+    function openTray() {
+        if (!tray) return;
+        closePop();
+        tray.classList.add("is-open");
+        tray.setAttribute("aria-hidden", "false");
+        setTimeout(() => {
+            if (trayBody) trayBody.scrollTop = 0;
+        }, 0);
+    }
+
+    function closeTray() {
+        if (!tray) return;
+        tray.classList.remove("is-open");
+        tray.setAttribute("aria-hidden", "true");
+    }
+
+    function toggleTray() {
+        if (isTrayOpen()) closeTray();
+        else openTray();
+    }
+
     if (plusBtn && pop) {
         plusBtn.addEventListener("click", (e) => {
+            e.preventDefault();
             e.stopPropagation();
             togglePop();
         });
 
         document.addEventListener("click", (e) => {
-            if (!pop.classList.contains("is-open")) return;
-            const inside = pop.contains(e.target) || plusBtn.contains(e.target);
-            if (!inside) closePop();
+            if (pop.classList.contains("is-open")) {
+                const inside = pop.contains(e.target) || plusBtn.contains(e.target);
+                if (!inside) closePop();
+            }
+
+            if (isTrayOpen()) {
+                const insideTray = tray.contains(e.target) || inputWrap.contains(e.target);
+                if (!insideTray) closeTray();
+            }
         });
 
         document.addEventListener("keydown", (e) => {
-            if (e.key === "Escape") closePop();
+            if (e.key === "Escape") {
+                closePop();
+                closeTray();
+            }
         });
     }
 
     if (actionUpload && fileInput) {
         actionUpload.addEventListener("click", () => {
             closePop();
+            closeTray();
             fileInput.click();
+        });
+    }
+
+    if (actionSelect) {
+        actionSelect.addEventListener("click", () => {
+            closePop();
+            toggleTray();
+            if (!isTrayOpen()) input.focus();
+        });
+    }
+
+    if (actionUpResearch) {
+        actionUpResearch.addEventListener("click", (e) => {
+            e.preventDefault();
+            closePop();
+            closeTray();
+            setResearchMode(!isResearchMode);
+            input.focus();
+        });
+    }
+
+    if (trayClose) {
+        trayClose.addEventListener("click", () => {
+            closeTray();
+            input.focus();
+        });
+    }
+
+    if (trayBody) {
+        trayBody.addEventListener("click", (e) => {
+            const btn = e.target && e.target.closest ? e.target.closest(".cb-tpl") : null;
+            if (!btn) return;
+
+            const nameEl = btn.querySelector(".cb-tpl__name");
+            const key = btn.getAttribute("data-template") || "";
+            const name = nameEl ? (nameEl.textContent || "").trim() : "양식";
+
+            setTemplate({ key, name });
+
+            closeTray();
+            input.focus();
         });
     }
 
     if (actionPrint) {
         actionPrint.addEventListener("click", () => {
             closePop();
+            closeTray();
             const chatHtml = body.innerHTML;
             const w = window.open("", "_blank", "width=900,height=700");
             if (!w) return;
 
             w.document.open();
             w.document.write(`
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8" />
-          <meta name="viewport" content="width=device-width, initial-scale=1" />
-          <title>Chat Print</title>
-          <style>
-            body{ font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 24px; background:#fff; color:#111; }
-            .wrap{ max-width: 720px; margin: 0 auto; }
-            .cb-divider{ text-align:center; margin: 12px 0; color:#666; font-size:12px; }
-            .cb-msg{ display:flex; gap:10px; margin:10px 0; }
-            .cb-msg--user{ justify-content:flex-end; }
-            .cb-avatar{ width:34px; height:34px; display:grid; place-items:center; border:1px solid #ddd; border-radius:12px; }
-            .cb-bubble{ max-width:74%; border:1px solid #ddd; border-radius:16px; padding:10px 12px; background:#f3f4f6; }
-            .cb-msg--user .cb-bubble{ background:#2f3a4f; color:#fff; border-color:#2f3a4f; }
-            .cb-bubble__text{ font-size:14px; line-height:1.45; white-space:pre-wrap; word-break:break-word; overflow-wrap:anywhere; }
-            .cb-meta{ margin-top:6px; font-size:11px; opacity:.7; }
-            .cb-chips,.cb-msg--loading{ display:none !important; }
-          </style>
-        </head>
-        <body>
-          <div class="wrap">${chatHtml}</div>
-          <script>window.onload=()=>{window.focus();window.print();};</script>
-        </body>
-        </html>
-      `);
+                <!DOCTYPE html>
+                <html>
+                <head>
+                  <meta charset="utf-8" />
+                  <meta name="viewport" content="width=device-width, initial-scale=1" />
+                  <title>Chat Print</title>
+                  <style>
+                    body{ font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 24px; background:#fff; color:#111; }
+                    .wrap{ max-width: 720px; margin: 0 auto; }
+                    .cb-divider{ text-align:center; margin: 12px 0; color:#666; font-size:12px; }
+                    .cb-msg{ display:flex; gap:10px; margin:10px 0; }
+                    .cb-msg--user{ justify-content:flex-end; }
+                    .cb-avatar{ width:34px; height:34px; display:grid; place-items:center; border:1px solid #ddd; border-radius:12px; }
+                    .cb-bubble{ max-width:74%; border:1px solid #ddd; border-radius:16px; padding:10px 12px; background:#f3f4f6; }
+                    .cb-msg--user .cb-bubble{ background:#2f3a4f; color:#fff; border-color:#2f3a4f; }
+                    .cb-bubble__text{ font-size:14px; line-height:1.45; white-space:pre-wrap; word-break:break-word; overflow-wrap:anywhere; }
+                    .cb-meta{ margin-top:6px; font-size:11px; opacity:.7; }
+                    .cb-msg--loading{ display:none !important; }
+                  </style>
+                </head>
+                <body>
+                  <div class="wrap">${chatHtml}</div>
+                  <script>window.onload=()=>{window.focus();window.print();};<\/script>
+                </body>
+                </html>
+            `);
             w.document.close();
         });
     }
-
-    document.addEventListener("click", (e) => {
-        const btn = e.target && e.target.closest ? e.target.closest("#cbActionUpResearch") : null;
-        if (!btn) return;
-        e.preventDefault();
-        closePop();
-        setResearchMode(!isResearchMode);
-        input.focus();
-    }, true);
 
     const searchBtn = document.getElementById("cbSearchBtn");
     const searchBar = document.getElementById("cbSearchBar");
