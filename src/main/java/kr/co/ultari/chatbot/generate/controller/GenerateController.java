@@ -3,29 +3,14 @@ package kr.co.ultari.chatbot.generate.controller;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONArray;
 import org.json.JSONObject;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.ByteArrayResource;
-import org.springframework.core.io.FileSystemResource;
-import org.springframework.core.io.Resource;
-import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.client.RestTemplate;
-
-import java.nio.file.Path;
-import java.nio.file.Paths;
 
 @RequestMapping("/chatbot")
 @Controller
 @Slf4j
 public class GenerateController {
-
-    @Value("${ultari.ai.temp.path:tmp}")
-    String tempPath;
 
     @RequestMapping("/{key}")
     public String login(Model model, @PathVariable("key") String sessionId) {
@@ -39,65 +24,6 @@ public class GenerateController {
         model.addAttribute("sessionId",sessionId);
         model.addAttribute("templateList", templateList.toString());
         return "dialog";
-    }
-
-    @GetMapping("/document/view/{fileName}")
-    public ResponseEntity<Resource> viewDocument(@PathVariable String fileName) {
-
-        log.debug(fileName);
-        String ext = fileName.substring(fileName.lastIndexOf(".")+1).toLowerCase();
-
-        Path path = Paths.get(tempPath, fileName);
-        Resource resource = new FileSystemResource(path);
-
-        MediaType mediaType;
-        String disposition = "attachment";
-
-        switch (ext) {
-            case "pdf":
-                mediaType = MediaType.APPLICATION_PDF;
-                disposition = "inline";
-                break;
-
-            case "txt":
-                mediaType = MediaType.TEXT_PLAIN;
-                disposition = "inline";
-                break;
-
-            case "csv":
-                mediaType = MediaType.parseMediaType("text/csv");
-                disposition = "inline";
-                break;
-
-            case "docx":
-                mediaType = MediaType.parseMediaType(
-                        "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
-                break;
-
-            case "xlsx":
-                mediaType = MediaType.parseMediaType(
-                        "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
-                break;
-
-            case "pptx":
-                mediaType = MediaType.parseMediaType(
-                        "application/vnd.openxmlformats-officedocument.presentationml.presentation");
-                break;
-
-            case "hwp":
-            case "hwpx":
-                mediaType = MediaType.APPLICATION_OCTET_STREAM;
-                break;
-
-            default:
-                mediaType = MediaType.APPLICATION_OCTET_STREAM;
-        }
-
-        return ResponseEntity.ok()
-                .contentType(mediaType)
-                .header(HttpHeaders.CONTENT_DISPOSITION,
-                        disposition + "; filename=\"" + fileName + "\"")
-                .body(resource);
     }
 
     protected JSONObject createTemplate(String key, String fileName, String name, String sort) {
