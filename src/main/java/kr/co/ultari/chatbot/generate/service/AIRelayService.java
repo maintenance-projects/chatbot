@@ -175,7 +175,7 @@ public class AIRelayService {
         // 진짜 스트리밍: AI Gateway 스트림(Flux)을 subscribe 해서 emitter로 바로 흘림
         try {
             disposableHolder[0] = aiClientService
-                    .callAIStream("http://10.0.0.92:8000/call-summary", sessionId, builder)
+                    .callAIStream(AI_GATE_URL, sessionId, builder)
                     .subscribe(
                             rawChunk -> {
                                 if (completed.get()) return;
@@ -199,7 +199,7 @@ public class AIRelayService {
                             err -> {
                                 if (completed.get()) return;
                                 try {
-                                    emitter.send(SseEmitter.event().name("error").data("AI 서버 스트리밍 오류"));
+                                    emitter.send(SseEmitter.event().name("error").data("AI 서버 연결에 실패하였습니다... 😥"));
                                 } catch (IOException ignored) {}
                                 emitter.completeWithError(err);
                             },
@@ -213,7 +213,7 @@ public class AIRelayService {
                     );
         } catch (Exception e) {
             try {
-                emitter.send(SseEmitter.event().name("error").data("AI 서버 연결 실패"));
+                emitter.send(SseEmitter.event().name("error").data("AI 서버 연결에 실패하였습니다... 😥"));
             } catch (IOException ignored) {}
             emitter.completeWithError(e);
         }
@@ -281,7 +281,7 @@ public class AIRelayService {
                             err -> {
                                 if (completed.get()) return;
                                 try {
-                                    emitter.send(SseEmitter.event().name("error").data("AI 서버 스트리밍 오류"));
+                                    emitter.send(SseEmitter.event().name("error").data("AI 서버 연결에 실패하였습니다... 😥"));
                                 } catch (IOException ignored) {}
                                 emitter.completeWithError(err);
                             },
@@ -295,7 +295,7 @@ public class AIRelayService {
                     );
         } catch (Exception e) {
             try {
-                emitter.send(SseEmitter.event().name("error").data("AI 서버 연결 실패"));
+                emitter.send(SseEmitter.event().name("error").data("AI 서버 연결에 실패하였습니다... 😥"));
             } catch (IOException ignored) {}
             emitter.completeWithError(e);
         }
@@ -368,7 +368,7 @@ public class AIRelayService {
                             err -> {
                                 if (completed.get()) return;
                                 try {
-                                    emitter.send(SseEmitter.event().name("error").data("AI 서버 스트리밍 오류"));
+                                    emitter.send(SseEmitter.event().name("error").data("AI 서버 연결에 실패하였습니다... 😥"));
                                 } catch (IOException ignored) {}
                                 emitter.completeWithError(err);
                             },
@@ -382,7 +382,7 @@ public class AIRelayService {
                     );
         } catch (Exception e) {
             try {
-                emitter.send(SseEmitter.event().name("error").data("AI 서버 연결 실패"));
+                emitter.send(SseEmitter.event().name("error").data("AI 서버 연결에 실패하였습니다... 😥"));
             } catch (IOException ignored) {}
             emitter.completeWithError(e);
         }
@@ -438,5 +438,144 @@ public class AIRelayService {
         }
 
         return out.toString();
+    }
+
+    public SseEmitter ChatRelayServiceTemplatesStream(String sessionId, String message, boolean deep, MultipartFile file, String templateKey) {
+        SseEmitter emitter = new SseEmitter(0L); // timeout 없음
+        AtomicBoolean completed = new AtomicBoolean(false);
+
+        String originalFileName = file.getOriginalFilename();
+        String fileName = originalFileName.substring(0,originalFileName.lastIndexOf("."));
+        String ext = originalFileName.substring(originalFileName.lastIndexOf(".")+1);
+
+        aiUsageService.increase(
+                sessionId,
+                sessionId,
+                "DOCUMENT"
+        );
+
+        // AI Gateway로 보낼 multipart 구성 (기존 ChatRelayService의 JSON과 동일 필드)
+        MultipartBodyBuilder builder = new MultipartBodyBuilder();
+        String templateJson = "{\n" +
+                "    \"doc_number\": \"신사복지 제2026-0042호\",\n" +
+                "    \"draft_date\": \"2026. 01. 20.\",\n" +
+                "    \"exec_date\": \"2026. 01. 21.\",\n" +
+                "    \"via\": \"\",\n" +
+                "    \"recipient\": \"내부결재\",\n" +
+                "    \"reference\": \"\",\n" +
+                "    \"title\": \"2026년 상반기 직원 교육 계획 보고\",\n" +
+                "    \"retention\": \"3년\",\n" +
+                "    \"sign_manager\": \"김철수\",\n" +
+                "    \"sign_drafter\": \"이영희\",\n" +
+                "    \"sign_coop\": \"\",\n" +
+                "    \"doc_number_2\": \"신사복지 제2026-0042호\",\n" +
+                "    \"exec_date_2\": \"2026. 01. 21.\",\n" +
+                "    \"via_2\": \"\",\n" +
+                "    \"recipient_2\": \"내부결재\",\n" +
+                "    \"reference_2\": \"\",\n" +
+                "    \"title_2\": \"2026년 상반기 직원 교육 계획 보고\",\n" +
+                "    \"items\": [\n" +
+                "      {\"text\": \"1. 교육 목적\", \"level\": 1},\n" +
+                "      {\"text\": \"직원 역량 강화 및 서비스 품질 향상을 위한 정기 교육 실시\", \"level\": 2},\n" +
+                "      {\"text\": \"2. 교육 일정\", \"level\": 1},\n" +
+                "      {\"text\": \"2026년 2월 15일 ~ 2월 17일 (3일간)\", \"level\": 2},\n" +
+                "      {\"text\": \"3. 교육 대상: 전 직원\", \"level\": 1}\n" +
+                "    ],\n" +
+                "    \"has_attachment\": false\n" +
+                "  }";
+
+        String templateJson2 = "{\n" +
+                "    \"recipient\": \"각 부서장\",\n" +
+                "    \"via\": \"경영지원팀\",\n" +
+                "    \"title\": \"회의실 사용 안내\",\n" +
+                "    \"attachment\": \"\",\n" +
+                "    \"content_lines\": [\n" +
+                "      \"안녕하십니까.\",\n" +
+                "      \"\",\n" +
+                "      \"2026년 1월 25일부터 3층 대회의실 리모델링 공사로 인해\",\n" +
+                "      \"약 2주간 해당 회의실 사용이 제한됨을 알려드립니다.\"\n" +
+                "    ]\n" +
+                "  }";
+        if(templateKey.equals("A001")) {
+            builder.part("template_name", "template.hwpx");
+            builder.part("context_data", templateJson);
+        } else if(templateKey.equals("A002")) {
+            builder.part("template_name", "template2.hwpx");
+            builder.part("context_data", templateJson2);
+        }
+        /*builder.part("message", message);
+        builder.part("attachFile_name", fileName);
+        builder.part("attachFile_extension", ext);
+        builder.part("attachFile_bin", file.getResource())
+                .filename(originalFileName)
+                .contentType(MediaType.APPLICATION_OCTET_STREAM);
+        builder.part("deepResearch", deep);*/
+
+        // 클라이언트가 끊으면 subscription 정리
+        final Disposable[] disposableHolder = new Disposable[1];
+        emitter.onCompletion(() -> {
+            completed.set(true);
+            if (disposableHolder[0] != null) disposableHolder[0].dispose();
+        });
+        emitter.onTimeout(() -> {
+            completed.set(true);
+            if (disposableHolder[0] != null) disposableHolder[0].dispose();
+        });
+        emitter.onError(e -> {
+            completed.set(true);
+            if (disposableHolder[0] != null) disposableHolder[0].dispose();
+        });
+
+        try {
+            emitter.send(SseEmitter.event().name("start").data(""));
+        } catch (IOException ignored) {}
+
+        // 진짜 스트리밍: AI Gateway 스트림(Flux)을 subscribe 해서 emitter로 바로 흘림
+        try {
+            disposableHolder[0] = aiClientService
+                    .callAIStream("http://10.0.0.92:8000/documents/generate-hwpx", sessionId, builder)
+                    .subscribe(
+                            rawChunk -> {
+                                if (completed.get()) return;
+
+                                // rawChunk는 게이트웨이 구현에 따라
+                                // - 이미 "data: {...}\n\n" 같은 SSE 조각일 수도 있고
+                                // - 그냥 JSON 문자열 조각일 수도 있음
+                                // 아래는 OpenAI 스타일 SSE(data: {...})를 최대한 content(delta)로 뽑는 파서
+                                String delta = extractDelta(rawChunk);
+
+                                // 뽑히면 delta로 보내고, 아니면 rawChunk를 그대로 보냄(최소 동작 보장)
+                                String payload = (delta != null && !delta.isEmpty()) ? delta : rawChunk;
+
+                                try {
+                                    emitter.send(SseEmitter.event().name("delta").data(payload));
+                                } catch (IOException e) {
+                                    completed.set(true);
+                                    if (disposableHolder[0] != null) disposableHolder[0].dispose();
+                                }
+                            },
+                            err -> {
+                                if (completed.get()) return;
+                                try {
+                                    emitter.send(SseEmitter.event().name("error").data("AI 서버 연결에 실패하였습니다... 😥"));
+                                } catch (IOException ignored) {}
+                                emitter.completeWithError(err);
+                            },
+                            () -> {
+                                if (completed.get()) return;
+                                try {
+                                    emitter.send(SseEmitter.event().name("done").data(""));
+                                } catch (IOException ignored) {}
+                                emitter.complete();
+                            }
+                    );
+        } catch (Exception e) {
+            try {
+                emitter.send(SseEmitter.event().name("error").data("AI 서버 연결에 실패하였습니다... 😥"));
+            } catch (IOException ignored) {}
+            emitter.completeWithError(e);
+        }
+
+        return emitter;
     }
 }
