@@ -639,6 +639,7 @@ public class AIRelayService {
                         builder.part("template_name", "template2.hwpx");
                         builder.part("context_data", templateJson2);
                     }
+                    builder.part("one_time",false);
 
                     try {
                         String response = aiClientService.callAI("http://10.0.0.92:8000/documents/generate-hwpx", builder);
