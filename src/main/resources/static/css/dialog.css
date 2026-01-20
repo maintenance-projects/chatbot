@@ -653,6 +653,49 @@ textarea {
     color: #92400e;
 }
 
+.cb-filecard {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    background: #eef2ff;
+    color: #111;
+    border-radius: 12px;
+    padding: 10px 12px;
+    max-width: 320px
+}
+
+.cb-filecard__icon {
+    width: 16px;
+    height: 16px;
+    flex: 0 0 auto
+}
+
+.cb-filecard__meta {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0
+}
+
+.cb-filecard__name {
+    font-size: 11px;
+    line-height: 1.2;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 260px
+}
+
+.cb-filecard__badge {
+    font-size: 11px;
+    opacity: .7
+}
+
+.cb-msg--user .cb-filecard {
+    background: #e8edf7
+}
+
+
 @keyframes cbDot {
 
     0%,

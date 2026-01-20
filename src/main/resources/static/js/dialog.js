@@ -43,6 +43,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const MAX_HEIGHT = 250;
 
+    const allowedExt = new Set(["pdf", "hwp", "hwpx", "xls", "xlsx", "ppt", "pptx", "csv", "doc", "docx", "txt", "m4a"]);
+    const blockedExt = new Set(["png", "jpg", "jpeg", "gif", "webp", "bmp", "heic", "svg"]);
+
     function updateChipRow() {
         const hasAny =
             (researchTag && researchTag.style.display !== "none") ||
@@ -234,6 +237,11 @@ document.addEventListener("DOMContentLoaded", () => {
             .replaceAll("'", "&#039;");
     }
 
+    function renderRichText(raw) {
+        const esc = escapeHtml(raw || "");
+        return esc.replace(/\*\*([^*]+?)\*\*/g, "<strong>$1</strong>");
+    }
+
     function normalizeBubbleText(text) {
         let s = String(text ?? "");
         s = s.replace(/\r\n/g, "\n");
@@ -250,6 +258,21 @@ document.addEventListener("DOMContentLoaded", () => {
         else input.style.overflowY = "hidden";
     }
 
+    function getExt(name) {
+        const n = (name || "").toLowerCase().trim();
+        const i = n.lastIndexOf(".");
+        if (i < 0) return "";
+        return n.slice(i + 1);
+    }
+
+    function isAllowedFile(file) {
+        if (!file) return false;
+        const ext = getExt(file.name);
+        if (!ext) return false;
+        if (blockedExt.has(ext)) return false;
+        return allowedExt.has(ext);
+    }
+
     function addUserMessage(text) {
         const now = formatTime(new Date());
         const html = `
@@ -257,6 +280,32 @@ document.addEventListener("DOMContentLoaded", () => {
                 <div class="cb-bubble">
                     <div class="cb-bubble__text"><pre>${escapeHtml(text)}</pre></div>
                     <div class="cb-meta">${now}</div>
+                </div>
+            </div>
+        `;
+        body.insertAdjacentHTML("beforeend", html);
+        scrollToBottom();
+        if (isSearchOpen() && searchInput && searchInput.value.trim()) rebuildHighlights(searchInput.value);
+    }
+
+    function addUserFileMessage(file) {
+        const now = formatTime(new Date());
+        const name = file && file.name ? String(file.name) : "파일";
+        const ext = getExt(name);
+        const badge = ext ? ext.toUpperCase() : "FILE";
+
+        const html = `
+            <div class="cb-msg cb-msg--user">
+                <div class="cb-bubble---file">
+                    <div class="cb-bubble__text">
+                        <div class="cb-filecard" role="group" aria-label="첨부파일">
+                            <img src="/img/ic-file.png" class="cb-filecard__icon" alt="" />
+                            <div class="cb-filecard__meta">
+                                <div class="cb-filecard__name">${escapeHtml(name)}</div>
+                                <div class="cb-filecard__badge">${escapeHtml(badge)}</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         `;
@@ -275,7 +324,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     <img class="cb-avatar__img" src="/img/ic-chatbot.png" alt="챗봇" />
                 </div>
                 <div class="cb-bubble">
-                    <div class="cb-bubble__text"><pre>${escapeHtml(clean)}</pre></div>
+                    <div class="cb-bubble__text" data-raw="${escapeHtml(clean)}"><pre>${renderRichText(clean)}</pre></div>
                     <div class="cb-meta">${now}</div>
                 </div>
             </div>
@@ -300,9 +349,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     <img class="cb-avatar__img" src="/img/ic-chatbot.png" alt="챗봇" />
                 </div>
                 <div class="cb-bubble">
-                    <div class="cb-bubble__text">
+                    <div class="cb-bubble__text" data-raw="">
                         <span class="cb-typing"><i></i><i></i><i></i></span>
-                        <pre style="display:none"></pre>
+                        <pre style="display:none" data-raw=""></pre>
                     </div>
                     <div class="cb-meta"></div>
                 </div>
@@ -310,11 +359,12 @@ document.addEventListener("DOMContentLoaded", () => {
         `;
         body.insertAdjacentHTML("beforeend", html);
         const msgEl = body.querySelector(`.cb-msg[data-stream-id="${id}"]`);
+        const textEl = msgEl ? msgEl.querySelector(".cb-bubble__text") : null;
         const preEl = msgEl ? msgEl.querySelector(".cb-bubble__text pre") : null;
         const metaEl = msgEl ? msgEl.querySelector(".cb-meta") : null;
         const typingEl = msgEl ? msgEl.querySelector(".cb-typing") : null;
         scrollToBottom();
-        return { msgEl, preEl, metaEl, typingEl, started: false };
+        return { msgEl, textEl, preEl, metaEl, typingEl, started: false };
     }
 
     function startStreaming(handle) {
@@ -322,12 +372,22 @@ document.addEventListener("DOMContentLoaded", () => {
         handle.started = true;
         if (handle.typingEl) handle.typingEl.style.display = "none";
         if (handle.preEl) handle.preEl.style.display = "block";
+        if (handle.preEl && handle.preEl.getAttribute("data-raw") == null) handle.preEl.setAttribute("data-raw", "");
+        if (handle.textEl && handle.textEl.getAttribute("data-raw") == null) handle.textEl.setAttribute("data-raw", "");
         scrollToBottom();
     }
 
     function appendStreamText(handle, chunk) {
         if (!handle || !handle.preEl) return;
-        handle.preEl.textContent = (handle.preEl.textContent || "") + String(chunk || "");
+
+        const prev = handle.preEl.getAttribute("data-raw") || "";
+        const next = prev + String(chunk || "");
+        handle.preEl.setAttribute("data-raw", next);
+
+        if (handle.textEl) handle.textEl.setAttribute("data-raw", renderRichText(next));
+
+        handle.preEl.innerHTML = renderRichText(next);
+
         scrollToBottom();
         if (isSearchOpen() && searchInput && searchInput.value.trim()) rebuildHighlights(searchInput.value);
     }
@@ -335,6 +395,10 @@ document.addEventListener("DOMContentLoaded", () => {
     function finalizeStream(handle) {
         if (!handle || !handle.metaEl) return;
         if (!handle.metaEl.textContent) handle.metaEl.textContent = formatTime(new Date());
+
+        if (handle && handle.msgEl) {
+            handle.msgEl.classList.remove("cb-msg--streaming");
+        }
     }
 
     function parseSseFrame(frame) {
@@ -435,6 +499,52 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    function closePop() {
+        if (!pop || !plusBtn) return;
+        pop.classList.remove("is-open");
+        pop.setAttribute("aria-hidden", "true");
+        plusBtn.setAttribute("aria-expanded", "false");
+    }
+
+    function openPop() {
+        if (!pop || !plusBtn) return;
+        closeTray();
+        pop.classList.add("is-open");
+        pop.setAttribute("aria-hidden", "false");
+        plusBtn.setAttribute("aria-expanded", "true");
+    }
+
+    function togglePop() {
+        if (!pop) return;
+        if (pop.classList.contains("is-open")) closePop();
+        else openPop();
+    }
+
+    function isTrayOpen() {
+        return !!(tray && tray.classList.contains("is-open"));
+    }
+
+    function openTray() {
+        if (!tray) return;
+        closePop();
+        tray.classList.add("is-open");
+        tray.setAttribute("aria-hidden", "false");
+        setTimeout(() => {
+            if (trayBody) trayBody.scrollTop = 0;
+        }, 0);
+    }
+
+    function closeTray() {
+        if (!tray) return;
+        tray.classList.remove("is-open");
+        tray.setAttribute("aria-hidden", "true");
+    }
+
+    function toggleTray() {
+        if (isTrayOpen()) closeTray();
+        else openTray();
+    }
+
     function sendTextMessage(msg) {
         closeTray();
         addUserMessage(msg);
@@ -467,9 +577,8 @@ document.addEventListener("DOMContentLoaded", () => {
             .then(() => {
                 startStreaming(handle);
                 finalizeStream(handle);
-                if (!handle.preEl || !handle.preEl.textContent) {
-                    appendStreamText(handle, "응답을 받았지만 표시할 내용이 없습니다.");
-                }
+                const raw = handle.preEl ? (handle.preEl.getAttribute("data-raw") || "") : "";
+                if (!raw.trim()) appendStreamText(handle, "응답을 받았지만 표시할 내용이 없습니다.");
             })
             .catch((err) => {
                 if (handle && handle.msgEl) handle.msgEl.remove();
@@ -482,24 +591,79 @@ document.addEventListener("DOMContentLoaded", () => {
             });
     }
 
+    function uploadFile(file, messageText, onDone) {
+        if (!file) {
+            if (typeof onDone === "function") onDone();
+            return;
+        }
+
+        if (!isAllowedFile(file)) {
+            addBotMessage("업로드할 수 없는 파일 형식입니다. (가능: PDF, 한글(HWP/HWPX), 엑셀(XLS/XLSX/CSV), PPT(PPT/PPTX), 워드(DOC/DOCX), TXT)");
+            if (typeof onDone === "function") onDone();
+            return;
+        }
+
+        closeTray();
+
+        const msg = String(messageText || "").trim();
+
+        addUserFileMessage(file);
+        if (msg) addUserMessage(msg);
+
+        const formData = new FormData();
+        formData.append("file", file);
+        formData.append("sessionId", sessionId);
+        formData.append("deepResearch", isResearchMode ? true : false);
+        formData.append("templateKey", selectedTemplate ? selectedTemplate.key : "");
+        formData.append("message", msg);
+
+        setSending(true);
+
+        const handle = addBotStreamLoadingMessage();
+
+        streamEventText("/api/chat/upload/stream", {
+            method: "POST",
+            headers: { "Accept": "text/event-stream" },
+            body: formData,
+            credentials: "same-origin"
+        }, (t) => {
+            startStreaming(handle);
+            appendStreamText(handle, t);
+        }, () => startStreaming(handle))
+            .then(() => {
+                startStreaming(handle);
+                finalizeStream(handle);
+                const raw = handle.preEl ? (handle.preEl.getAttribute("data-raw") || "") : "";
+                if (!raw.trim()) appendStreamText(handle, "파일 업로드 완료");
+            })
+            .catch((err) => {
+                if (handle && handle.msgEl) handle.msgEl.remove();
+                addBotMessage(err && err.message ? String(err.message) : "파일 업로드 중 오류가 발생했습니다.");
+            })
+            .finally(() => {
+                setSending(false);
+                input.focus();
+                autoResizeInput();
+                if (typeof onDone === "function") onDone();
+            });
+    }
+
     function sendMessage() {
         const msg = String(input.value || "").trim();
-        if (!msg && !pendingFile) return;
+        const hasFile = !!pendingFile;
 
-        if (pendingFile) {
+        if (!msg && !hasFile) return;
+
+        if (hasFile) {
             const f = pendingFile;
             setPendingFile(null);
 
-            if (!msg) {
-                uploadFile(f, () => {
-                    input.focus();
-                    autoResizeInput();
-                });
-                return;
-            }
+            input.value = "";
+            autoResizeInput();
 
-            uploadFile(f, () => {
-                sendTextMessage(msg);
+            uploadFile(f, msg, () => {
+                input.focus();
+                autoResizeInput();
             });
             return;
         }
@@ -541,77 +705,6 @@ document.addEventListener("DOMContentLoaded", () => {
         fileInput.setAttribute("accept", ".pdf,.hwp,.hwpx,.xls,.xlsx,.ppt,.pptx,.csv,.doc,.docx,.txt,.m4a");
     }
 
-    const allowedExt = new Set(["pdf", "hwp", "hwpx", "xls", "xlsx", "ppt", "pptx", "csv", "doc", "docx", "txt", "m4a"]);
-    const blockedExt = new Set(["png", "jpg", "jpeg", "gif", "webp", "bmp", "heic", "svg"]);
-
-    function getExt(name) {
-        const n = (name || "").toLowerCase().trim();
-        const i = n.lastIndexOf(".");
-        if (i < 0) return "";
-        return n.slice(i + 1);
-    }
-
-    function isAllowedFile(file) {
-        if (!file) return false;
-        const ext = getExt(file.name);
-        if (!ext) return false;
-        if (blockedExt.has(ext)) return false;
-        return allowedExt.has(ext);
-    }
-
-    function uploadFile(file, onDone) {
-        if (!file) {
-            if (typeof onDone === "function") onDone();
-            return;
-        }
-
-        if (!isAllowedFile(file)) {
-            addBotMessage("업로드할 수 없는 파일 형식입니다. (가능: PDF, 한글(HWP/HWPX), 엑셀(XLS/XLSX/CSV), PPT(PPT/PPTX), 워드(DOC/DOCX), TXT)");
-            if (typeof onDone === "function") onDone();
-            return;
-        }
-
-        closeTray();
-        addUserMessage(`첨부파일 선택: ${file.name}`);
-
-        const formData = new FormData();
-        formData.append("file", file);
-        formData.append("sessionId", sessionId);
-        formData.append("deepResearch", isResearchMode ? true : false);
-        formData.append("templateKey", selectedTemplate ? selectedTemplate.key : "");
-
-        setSending(true);
-
-        const handle = addBotStreamLoadingMessage();
-
-        streamEventText("/api/chat/upload/stream", {
-            method: "POST",
-            headers: { "Accept": "text/event-stream" },
-            body: formData,
-            credentials: "same-origin"
-        }, (t) => {
-            startStreaming(handle);
-            appendStreamText(handle, t);
-        }, () => startStreaming(handle))
-            .then(() => {
-                startStreaming(handle);
-                finalizeStream(handle);
-                if (!handle.preEl || !handle.preEl.textContent) {
-                    appendStreamText(handle, "파일 업로드 완료");
-                }
-            })
-            .catch((err) => {
-                if (handle && handle.msgEl) handle.msgEl.remove();
-                addBotMessage(err && err.message ? String(err.message) : "파일 업로드 중 오류가 발생했습니다.");
-            })
-            .finally(() => {
-                setSending(false);
-                input.focus();
-                autoResizeInput();
-                if (typeof onDone === "function") onDone();
-            });
-    }
-
     if (fileInput) {
         fileInput.addEventListener("change", () => {
             const files = fileInput.files ? Array.from(fileInput.files) : [];
@@ -633,52 +726,6 @@ document.addEventListener("DOMContentLoaded", () => {
             closeTray();
             input.focus();
         });
-    }
-
-    function openPop() {
-        if (!pop || !plusBtn) return;
-        closeTray();
-        pop.classList.add("is-open");
-        pop.setAttribute("aria-hidden", "false");
-        plusBtn.setAttribute("aria-expanded", "true");
-    }
-
-    function closePop() {
-        if (!pop || !plusBtn) return;
-        pop.classList.remove("is-open");
-        pop.setAttribute("aria-hidden", "true");
-        plusBtn.setAttribute("aria-expanded", "false");
-    }
-
-    function togglePop() {
-        if (!pop) return;
-        if (pop.classList.contains("is-open")) closePop();
-        else openPop();
-    }
-
-    function isTrayOpen() {
-        return !!(tray && tray.classList.contains("is-open"));
-    }
-
-    function openTray() {
-        if (!tray) return;
-        closePop();
-        tray.classList.add("is-open");
-        tray.setAttribute("aria-hidden", "false");
-        setTimeout(() => {
-            if (trayBody) trayBody.scrollTop = 0;
-        }, 0);
-    }
-
-    function closeTray() {
-        if (!tray) return;
-        tray.classList.remove("is-open");
-        tray.setAttribute("aria-hidden", "true");
-    }
-
-    function toggleTray() {
-        if (isTrayOpen()) closeTray();
-        else openTray();
     }
 
     if (plusBtn && pop) {
@@ -849,15 +896,16 @@ document.addEventListener("DOMContentLoaded", () => {
         const texts = Array.from(body.querySelectorAll(".cb-bubble__text"));
 
         for (const el of texts) {
-            if (!el.getAttribute("data-raw")) el.setAttribute("data-raw", el.innerHTML);
+            const raw = el.getAttribute("data-raw");
+            if (raw == null) el.setAttribute("data-raw", el.innerHTML);
 
             const plain = el.textContent || "";
             re.lastIndex = 0;
             if (!re.test(plain)) continue;
 
-            const raw = el.getAttribute("data-raw") || el.innerHTML;
+            const base = el.getAttribute("data-raw") || el.innerHTML;
             re.lastIndex = 0;
-            el.innerHTML = raw.replace(re, (m) => `<mark class="cb-mark">${m}</mark>`);
+            el.innerHTML = base.replace(re, (m) => `<mark class="cb-mark">${m}</mark>`);
 
             const msg = el.closest(".cb-msg");
             if (msg) searchHits.push(msg);
