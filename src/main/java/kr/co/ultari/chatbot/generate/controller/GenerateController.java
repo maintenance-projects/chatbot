@@ -20,8 +20,9 @@ public class GenerateController {
         templateList.put(createTemplate("A001", "template.hwpx", "결재보고","000001"));
         templateList.put(createTemplate("A002", "template2.hwpx", "공지사항","000002"));
 
+        log.debug(templateList.toString());
         model.addAttribute("sessionId",sessionId);
-        model.addAttribute("templateList", templateList);
+        model.addAttribute("templateList", templateList.toString());
         return "dialog";
     }
 
