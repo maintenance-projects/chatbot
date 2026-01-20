@@ -73,7 +73,7 @@ public class AIRelayService {
                 }, aiExecutor);
 
         try {
-            return future.get(120, TimeUnit.SECONDS);
+            return future.get(180, TimeUnit.SECONDS);
         } catch (Exception e) {
             log.error("", e);
             return "AI 서버 응답이 지연되고 있습니다. 다시 시도해 주시기 바랍니다... 😥";
@@ -124,7 +124,7 @@ public class AIRelayService {
                 }, aiExecutor);
 
         try {
-            return future.get(120, TimeUnit.SECONDS);
+            return future.get(180, TimeUnit.SECONDS);
         } catch (Exception e) {
             log.error("", e);
             return "AI 서버 응답이 지연되고 있습니다. 다시 시도해 주시기 바랍니다... 😥";
@@ -653,7 +653,7 @@ public class AIRelayService {
                 }, aiExecutor);
 
         try {
-            return future.get(120, TimeUnit.SECONDS);
+            return future.get(180, TimeUnit.SECONDS);
         } catch (Exception e) {
             log.error("", e);
             return "AI 서버 응답이 지연되고 있습니다. 다시 시도해 주시기 바랍니다... 😥";

@@ -109,31 +109,6 @@ public class GenerateController {
         return json;
     }
 
-    @RequestMapping("/documents/download/{key}")
-    public ResponseEntity<Resource> download(@PathVariable String key) {
-
-        String targetUrl = "http://10.0.0.92:8000/documents/download/" + key;
-
-        RestTemplate restTemplate = new RestTemplate();
-
-        ResponseEntity<byte[]> response =
-                restTemplate.getForEntity(targetUrl, byte[].class);
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(
-                response.getHeaders().getContentType()
-        );
-        headers.setContentDisposition(
-                response.getHeaders().getContentDisposition()
-        );
-
-        return new ResponseEntity<>(
-                new ByteArrayResource(response.getBody()),
-                headers,
-                HttpStatus.OK
-        );
-    }
-
     /*@RequestMapping("/dialog")
     public String dialog() {
         return "dialog";
