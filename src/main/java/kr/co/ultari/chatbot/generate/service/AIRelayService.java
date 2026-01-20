@@ -145,7 +145,7 @@ public class AIRelayService {
 
         // AI Gateway로 보낼 multipart 구성 (기존 ChatRelayService의 JSON과 동일 필드)
         MultipartBodyBuilder builder = new MultipartBodyBuilder();
-        builder.part("message", message);
+        builder.part("message", fileName + "\n" + message);
         builder.part("attachFile_name", fileName);
         builder.part("attachFile_extension", ext);
         builder.part("attachFile_bin", file.getResource())

@@ -46,11 +46,14 @@ public class RelayController {
     }
 
     @PostMapping(value = "/upload/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter uploadStream(@RequestParam("file") MultipartFile file, @RequestParam("message") String message, @RequestParam("deepResearch") boolean deepRsrch, @RequestParam("sessionId") String sessionId) {
+    public SseEmitter uploadStream(@RequestParam("file") MultipartFile file, @RequestParam("message") String message, @RequestParam("deepResearch") boolean deepRsrch, @RequestParam("sessionId") String sessionId, @RequestParam(value="templateKey", required = false) String templateKey) {
         log.info(file.getOriginalFilename());
         log.info(sessionId);
         //return relayService.ChatRelayServiceAudioStream(sessionId, file);
-        return relayService.ChatRelayServiceStream(sessionId, message, deepRsrch, file);
+        if(!templateKey.isEmpty()) {
+            return relayService.ChatRelayServiceTemplatesStream(sessionId, message, deepRsrch, file, templateKey);
+        }
+        else return relayService.ChatRelayServiceStream(sessionId, message, deepRsrch, file);
     }
 
     @PostMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
