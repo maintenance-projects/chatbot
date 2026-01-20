@@ -545,14 +545,14 @@ textarea {
 #cbResearchTag {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 3px;
     color: #2563eb;
     border: 0;
     border-radius: 999px;
     cursor: pointer;
     user-select: none;
     line-height: 1;
-    height: 34px;
+    height: 27px;
     background: rgba(37, 99, 235, .12);
 }
 
@@ -561,7 +561,7 @@ textarea {
 }
 
 #cbResearchTag .cb-rch__label {
-    font-size: 12px;
+    font-size: 10px;
     font-weight: 600;
     letter-spacing: -.01em;
 }
@@ -580,14 +580,14 @@ textarea {
 #cbTemplateTag {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 3px;
     color: #0f172a;
     border: 0;
     border-radius: 999px;
     cursor: pointer;
     user-select: none;
     line-height: 1;
-    height: 34px;
+    height: 27px;
     background: rgba(15, 23, 42, .06);
 }
 
@@ -596,8 +596,8 @@ textarea {
 }
 
 #cbTemplateTag .cb-tpltag__label {
-    font-size: 12px;
-    font-weight: 700;
+    font-size: 10px;
+    font-weight: 600;
     letter-spacing: -.01em;
     max-width: 160px;
     overflow: hidden;
@@ -619,14 +619,14 @@ textarea {
 #cbFileTag {
     display: inline-flex;
     align-items: center;
-    gap: 6px;
+    gap: 3px;
     color: #b25923;
     border: 0;
     border-radius: 999px;
     cursor: pointer;
     user-select: none;
     line-height: 1;
-    height: 34px;
+    height: 27px;
     background: rgb(255 215 0 / 35%);
 }
 
@@ -635,8 +635,8 @@ textarea {
 }
 
 #cbFileTag .cb-filetag__label {
-    font-size: 12px;
-    font-weight: 700;
+    font-size: 10px;
+    font-weight: 600;
     letter-spacing: -.01em;
     max-width: 180px;
     overflow: hidden;
