@@ -32,6 +32,8 @@ document.addEventListener("DOMContentLoaded", () => {
     const trayClose = document.getElementById("cbTplTrayClose");
     const trayBody = document.getElementById("cbTplTrayBody");
 
+    const sessionId = window.sessionId || "";
+
     let isResearchMode = false;
     let researchTag = null;
 
@@ -216,6 +218,31 @@ document.addEventListener("DOMContentLoaded", () => {
         return String(n).padStart(2, "0");
     }
 
+    if (!trayBody) return;
+
+    const list = Array.isArray(window.templateList) ? window.templateList : [];
+
+    if (list.length === 0) {
+        trayBody.innerHTML = `<div>템플릿이 없습니다.</div>`;
+        return;
+    }
+
+    trayBody.innerHTML = list.map((t) => {
+        const key = escapeHtml(t.key);
+        const name = escapeHtml(t.name);
+        const fileName = escapeHtml(t.fileName);
+
+        return `
+            <button class="cb-tpl" type="button" data-template="${key}" data-template-name="${name}" data-template-file="${fileName}">
+                <div class="cb-tpl__top">
+                    <span style="display:none;">${key}</span>
+                    <div class="cb-tpl__name">${name}</div>
+                </div>
+                <div class="cb-tpl__desc">${fileName}</div>
+            </button>
+        `;
+    }).join("");
+
     function formatTime(d) {
         const h = d.getHours();
         const m = d.getMinutes();
@@ -229,15 +256,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function escapeHtml(str) {
-        return String(str)
-            .replaceAll("&", "&amp;")
-            .replaceAll("<", "&lt;")
-            .replaceAll(">", "&gt;")
-            .replaceAll('"', "&quot;")
-            .replaceAll("'", "&#039;");
-    }
-
-    function escapeAttr(str) {
         return String(str)
             .replaceAll("&", "&amp;")
             .replaceAll("<", "&lt;")
@@ -289,7 +307,7 @@ document.addEventListener("DOMContentLoaded", () => {
             <div class="cb-msg cb-msg--user">
                 <div class="cb-bubble">
                     <div class="cb-bubble__text">
-                        <pre data-rawtext="${escapeAttr(raw)}">${escapeHtml(raw)}</pre>
+                        <pre data-rawtext="${escapeHtml(raw)}">${escapeHtml(raw)}</pre>
                     </div>
                     <div class="cb-meta">${now}</div>
                 </div>
@@ -308,13 +326,37 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const html = `
             <div class="cb-msg cb-msg--user">
-                <div class="cb-bubble---file">
+                <div class="cb-bubble--new cb-bubble--card">
                     <div class="cb-bubble__text">
                         <div class="cb-filecard" role="group" aria-label="첨부파일">
                             <img src="/img/ic-file.png" class="cb-filecard__icon" alt="" />
                             <div class="cb-filecard__meta">
                                 <div class="cb-filecard__name">${escapeHtml(name)}</div>
                                 <div class="cb-filecard__badge">${escapeHtml(badge)}</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+        body.insertAdjacentHTML("beforeend", html);
+        scrollToBottom();
+        if (isSearchOpen() && searchInput && searchInput.value.trim()) rebuildHighlights(searchInput.value);
+    }
+
+    function addUserTemplateMessage(tpl) {
+        const now = formatTime(new Date());
+        const name = tpl && tpl.name ? String(tpl.name) : "양식";
+        const key = tpl && tpl.key ? String(tpl.key) : "";
+        const html = `
+            <div class="cb-msg cb-msg--user">
+                <div class="cb-bubble--new cb-bubble--card">
+                    <div class="cb-bubble__text">
+                        <div class="cb-tplcard" role="group" aria-label="양식 선택">
+                            <img src="/img/ic-select.png" class="cb-tplcard__icon" alt="" />
+                            <div class="cb-tplcard__meta">
+                                <div class="cb-tplcard__name">${escapeHtml(name)}</div>
+                                <div class="cb-tplcard__badge">${escapeHtml(key ? key : "TEMPLATE")}</div>
                             </div>
                         </div>
                     </div>
@@ -337,7 +379,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 </div>
                 <div class="cb-bubble">
                     <div class="cb-bubble__text">
-                        <pre data-rawtext="${escapeAttr(clean)}">${renderRichText(clean)}</pre>
+                        <pre data-rawtext="${escapeHtml(clean)}">${renderRichText(clean)}</pre>
                     </div>
                     <div class="cb-meta">${now}</div>
                 </div>
@@ -551,9 +593,12 @@ document.addEventListener("DOMContentLoaded", () => {
         else openTray();
     }
 
-    function sendTextMessage(msg) {
+    function sendTextMessage(msg, templateKey) {
         closeTray();
-        addUserMessage(msg);
+
+        const m = String(msg || "").trim();
+        if (m) addUserMessage(m);
+
         input.value = "";
         autoResizeInput();
 
@@ -563,9 +608,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const payload = {
             sessionId,
-            message: msg,
+            message: m,
             deepResearch: isResearchMode ? true : false,
-            templateKey: selectedTemplate ? selectedTemplate.key : null
+            templateKey: templateKey || null
         };
 
         streamEventText("/api/chat/stream", {
@@ -597,7 +642,7 @@ document.addEventListener("DOMContentLoaded", () => {
             });
     }
 
-    function uploadFile(file, messageText, onDone) {
+    function uploadFile(file, messageText, templateKey, onDone) {
         if (!file) {
             if (typeof onDone === "function") onDone();
             return;
@@ -620,7 +665,7 @@ document.addEventListener("DOMContentLoaded", () => {
         formData.append("file", file);
         formData.append("sessionId", sessionId);
         formData.append("deepResearch", isResearchMode ? true : false);
-        formData.append("templateKey", selectedTemplate ? selectedTemplate.key : "");
+        formData.append("templateKey", templateKey || "");
         formData.append("message", msg);
 
         setSending(true);
@@ -657,8 +702,15 @@ document.addEventListener("DOMContentLoaded", () => {
     function sendMessage() {
         const msg = String(input.value || "").trim();
         const hasFile = !!pendingFile;
+        const tpl = selectedTemplate ? { ...selectedTemplate } : null;
+        const tplKey = tpl ? (tpl.key || "") : "";
 
-        if (!msg && !hasFile) return;
+        if (!msg && !hasFile && !tplKey) return;
+
+        if (tpl) {
+            addUserTemplateMessage(tpl);
+            setTemplate(null);
+        }
 
         if (hasFile) {
             const f = pendingFile;
@@ -667,14 +719,14 @@ document.addEventListener("DOMContentLoaded", () => {
             input.value = "";
             autoResizeInput();
 
-            uploadFile(f, msg, () => {
+            uploadFile(f, msg, tplKey, () => {
                 input.focus();
                 autoResizeInput();
             });
             return;
         }
 
-        sendTextMessage(msg);
+        sendTextMessage(msg, tplKey);
     }
 
     sendBtn.addEventListener("click", (e) => {
@@ -799,10 +851,8 @@ document.addEventListener("DOMContentLoaded", () => {
             const btn = e.target && e.target.closest ? e.target.closest(".cb-tpl") : null;
             if (!btn) return;
 
-            const nameEl = btn.querySelector(".cb-tpl__name");
             const key = btn.getAttribute("data-template") || "";
-            const name = nameEl ? (nameEl.textContent || "").trim() : "양식";
-
+            const name = (btn.getAttribute("data-template-name") || "").trim() || "양식";
             setTemplate({ key, name });
 
             closeTray();
@@ -1011,6 +1061,24 @@ document.addEventListener("DOMContentLoaded", () => {
                 e.preventDefault();
                 if (searchClose) searchClose.click();
                 else setSearchUI(false);
+            }
+        });
+    }
+
+    const inputField = document.getElementById("cbInput");
+    const popup = document.getElementById("cbPop--new");
+
+    if (inputField && popup) {
+        inputField.addEventListener("keyup", (event) => {
+            if (event.key === "#") {
+                const { offsetLeft, offsetTop } = inputField;
+                popup.style.display = "block";
+                popup.style.left = offsetLeft + "px";
+                popup.style.top = (offsetTop - 10) + "px";
+            }
+
+            if (event.key === "Escape" || inputField.value === "") {
+                popup.style.display = "none";
             }
         });
     }

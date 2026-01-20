@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html xmlns:th="http://www.thymeleaf.org">
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
 
 <head>
     <title>ULTARI</title>
@@ -7,15 +7,16 @@
     <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 
-    <!-- css -->
     <link rel="stylesheet" th:href="@{/css/dialog.css}" />
 
-    <!-- js -->
     <script th:src="@{/jquery/jquery-3.7.1.min.js}"></script>
     <script th:src="@{/js/dialog.js}"></script>
+
     <script th:inline="javascript">
-        const sessionId = [[${ sessionId }]];
-        const tempList = JSON.parse([[${ templateList }]]);
+        const sessionId = /*[[${sessionId}]]*/ "";
+        const tempList = JSON.parse(/*[[${templateList}]]*/ "[]");
+        window.sessionId = sessionId;
+        window.templateList = tempList;
     </script>
 </head>
 
@@ -117,63 +118,7 @@
                             <button class="cb-tray__close" id="cbTplTrayClose" type="button" aria-label="닫기">×</button>
                         </div>
 
-                        <div class="cb-tray__body" id="cbTplTrayBody">
-                            <button class="cb-tpl" type="button" data-template="report">
-                                <div class="cb-tpl__top">
-                                    <div class="cb-tpl__name">정기점검</div>
-                                </div>
-                                <div class="cb-tpl__desc">정기점검 양식</div>
-                            </button>
-
-                            <button class="cb-tpl" type="button" data-template="meeting">
-                                <div class="cb-tpl__top">
-                                    <div class="cb-tpl__name">회의록</div>
-                                </div>
-                                <div class="cb-tpl__desc">회의록 양식</div>
-                            </button>
-
-                            <button class="cb-tpl" type="button" data-template="bug">
-                                <div class="cb-tpl__top">
-                                    <div class="cb-tpl__name">결함 보고서</div>
-                                </div>
-                                <div class="cb-tpl__desc">결함 보고서 양식</div>
-                            </button>
-
-                            <button class="cb-tpl" type="button" data-template="spec">
-                                <div class="cb-tpl__top">
-                                    <div class="cb-tpl__name">기능 명세</div>
-                                </div>
-                                <div class="cb-tpl__desc">명세서 양식</div>
-                            </button>
-
-                            <button class="cb-tpl" type="button" data-template="email">
-                                <div class="cb-tpl__top">
-                                    <div class="cb-tpl__name">업무 메일 초안</div>
-                                </div>
-                                <div class="cb-tpl__desc">메일 초안 요청 양식</div>
-                            </button>
-
-                            <button class="cb-tpl" type="button" data-template="plan">
-                                <div class="cb-tpl__top">
-                                    <div class="cb-tpl__name">작업 계획</div>
-                                </div>
-                                <div class="cb-tpl__desc">계획서 양식</div>
-                            </button>
-
-                            <button class="cb-tpl" type="button" data-template="email2">
-                                <div class="cb-tpl__top">
-                                    <div class="cb-tpl__name">업무 메일 초안(확장)</div>
-                                </div>
-                                <div class="cb-tpl__desc">메일 초안 요청 양식</div>
-                            </button>
-
-                            <button class="cb-tpl" type="button" data-template="plan2">
-                                <div class="cb-tpl__top">
-                                    <div class="cb-tpl__name">작업 계획(상세)</div>
-                                </div>
-                                <div class="cb-tpl__desc">계획서 양식</div>
-                            </button>
-                        </div>
+                        <div class="cb-tray__body" id="cbTplTrayBody" data-render="tpl"></div>
                     </section>
                 </footer>
             </aside>
