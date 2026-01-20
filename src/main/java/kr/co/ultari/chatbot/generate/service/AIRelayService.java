@@ -6,6 +6,7 @@ import kr.co.ultari.chatbot.utils.StringUtilsCustom;
 import kr.co.ultari.chatbot.utils.WebUtilsCustom;
 import lombok.extern.slf4j.Slf4j;
 import lombok.var;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -24,6 +25,7 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 
 @Slf4j
@@ -179,7 +181,6 @@ public class AIRelayService {
                     .subscribe(
                             rawChunk -> {
                                 if (completed.get()) return;
-
                                 // rawChunk는 게이트웨이 구현에 따라
                                 // - 이미 "data: {...}\n\n" 같은 SSE 조각일 수도 있고
                                 // - 그냥 JSON 문자열 조각일 수도 있음
