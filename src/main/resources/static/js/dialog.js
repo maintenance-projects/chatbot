@@ -237,6 +237,15 @@ document.addEventListener("DOMContentLoaded", () => {
             .replaceAll("'", "&#039;");
     }
 
+    function escapeAttr(str) {
+        return String(str)
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#039;");
+    }
+
     function renderRichText(raw) {
         const esc = escapeHtml(raw || "");
         return esc.replace(/\*\*([^*]+?)\*\*/g, "<strong>$1</strong>");
@@ -275,10 +284,13 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function addUserMessage(text) {
         const now = formatTime(new Date());
+        const raw = String(text ?? "");
         const html = `
             <div class="cb-msg cb-msg--user">
                 <div class="cb-bubble">
-                    <div class="cb-bubble__text"><pre>${escapeHtml(text)}</pre></div>
+                    <div class="cb-bubble__text">
+                        <pre data-rawtext="${escapeAttr(raw)}">${escapeHtml(raw)}</pre>
+                    </div>
                     <div class="cb-meta">${now}</div>
                 </div>
             </div>
@@ -324,7 +336,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     <img class="cb-avatar__img" src="/img/ic-chatbot.png" alt="챗봇" />
                 </div>
                 <div class="cb-bubble">
-                    <div class="cb-bubble__text" data-raw="${escapeHtml(clean)}"><pre>${renderRichText(clean)}</pre></div>
+                    <div class="cb-bubble__text">
+                        <pre data-rawtext="${escapeAttr(clean)}">${renderRichText(clean)}</pre>
+                    </div>
                     <div class="cb-meta">${now}</div>
                 </div>
             </div>
@@ -349,9 +363,9 @@ document.addEventListener("DOMContentLoaded", () => {
                     <img class="cb-avatar__img" src="/img/ic-chatbot.png" alt="챗봇" />
                 </div>
                 <div class="cb-bubble">
-                    <div class="cb-bubble__text" data-raw="">
+                    <div class="cb-bubble__text">
                         <span class="cb-typing"><i></i><i></i><i></i></span>
-                        <pre style="display:none" data-raw=""></pre>
+                        <pre style="display:none" data-rawtext=""></pre>
                     </div>
                     <div class="cb-meta"></div>
                 </div>
@@ -359,12 +373,11 @@ document.addEventListener("DOMContentLoaded", () => {
         `;
         body.insertAdjacentHTML("beforeend", html);
         const msgEl = body.querySelector(`.cb-msg[data-stream-id="${id}"]`);
-        const textEl = msgEl ? msgEl.querySelector(".cb-bubble__text") : null;
         const preEl = msgEl ? msgEl.querySelector(".cb-bubble__text pre") : null;
         const metaEl = msgEl ? msgEl.querySelector(".cb-meta") : null;
         const typingEl = msgEl ? msgEl.querySelector(".cb-typing") : null;
         scrollToBottom();
-        return { msgEl, textEl, preEl, metaEl, typingEl, started: false };
+        return { msgEl, preEl, metaEl, typingEl, started: false };
     }
 
     function startStreaming(handle) {
@@ -372,20 +385,16 @@ document.addEventListener("DOMContentLoaded", () => {
         handle.started = true;
         if (handle.typingEl) handle.typingEl.style.display = "none";
         if (handle.preEl) handle.preEl.style.display = "block";
-        if (handle.preEl && handle.preEl.getAttribute("data-raw") == null) handle.preEl.setAttribute("data-raw", "");
-        if (handle.textEl && handle.textEl.getAttribute("data-raw") == null) handle.textEl.setAttribute("data-raw", "");
+        if (handle.preEl && handle.preEl.getAttribute("data-rawtext") == null) handle.preEl.setAttribute("data-rawtext", "");
         scrollToBottom();
     }
 
     function appendStreamText(handle, chunk) {
         if (!handle || !handle.preEl) return;
 
-        const prev = handle.preEl.getAttribute("data-raw") || "";
+        const prev = handle.preEl.getAttribute("data-rawtext") || "";
         const next = prev + String(chunk || "");
-        handle.preEl.setAttribute("data-raw", next);
-
-        if (handle.textEl) handle.textEl.setAttribute("data-raw", renderRichText(next));
-
+        handle.preEl.setAttribute("data-rawtext", next);
         handle.preEl.innerHTML = renderRichText(next);
 
         scrollToBottom();
@@ -395,10 +404,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function finalizeStream(handle) {
         if (!handle || !handle.metaEl) return;
         if (!handle.metaEl.textContent) handle.metaEl.textContent = formatTime(new Date());
-
-        if (handle && handle.msgEl) {
-            handle.msgEl.classList.remove("cb-msg--streaming");
-        }
+        if (handle && handle.msgEl) handle.msgEl.classList.remove("cb-msg--streaming");
     }
 
     function parseSseFrame(frame) {
@@ -577,7 +583,7 @@ document.addEventListener("DOMContentLoaded", () => {
             .then(() => {
                 startStreaming(handle);
                 finalizeStream(handle);
-                const raw = handle.preEl ? (handle.preEl.getAttribute("data-raw") || "") : "";
+                const raw = handle.preEl ? (handle.preEl.getAttribute("data-rawtext") || "") : "";
                 if (!raw.trim()) appendStreamText(handle, "응답을 받았지만 표시할 내용이 없습니다.");
             })
             .catch((err) => {
@@ -633,7 +639,7 @@ document.addEventListener("DOMContentLoaded", () => {
             .then(() => {
                 startStreaming(handle);
                 finalizeStream(handle);
-                const raw = handle.preEl ? (handle.preEl.getAttribute("data-raw") || "") : "";
+                const raw = handle.preEl ? (handle.preEl.getAttribute("data-rawtext") || "") : "";
                 if (!raw.trim()) appendStreamText(handle, "파일 업로드 완료");
             })
             .catch((err) => {
@@ -871,12 +877,30 @@ document.addEventListener("DOMContentLoaded", () => {
         if (open && searchInput) searchInput.focus();
     }
 
+    function highlightHtmlKeepTags(html, re) {
+        const parts = String(html || "").split(/(<[^>]+>)/g);
+        return parts
+            .map((p) => {
+                if (!p) return "";
+                if (p.startsWith("<") && p.endsWith(">")) return p;
+                return p.replace(re, (m) => `<mark class="cb-mark">${m}</mark>`);
+            })
+            .join("");
+    }
+
     function clearHighlights() {
         body.querySelectorAll(".cb-hit").forEach((el) => el.classList.remove("cb-hit"));
-        body.querySelectorAll(".cb-bubble__text").forEach((el) => {
-            const raw = el.getAttribute("data-raw");
-            if (raw != null) el.innerHTML = raw;
-        });
+
+        const pres = Array.from(body.querySelectorAll(".cb-bubble__text pre"));
+        for (const pre of pres) {
+            const raw = pre.getAttribute("data-rawtext");
+            if (raw == null) continue;
+
+            const msg = pre.closest(".cb-msg");
+            const isBot = !!(msg && msg.classList.contains("cb-msg--bot"));
+
+            pre.innerHTML = isBot ? renderRichText(raw) : escapeHtml(raw);
+        }
     }
 
     function rebuildHighlights(keyword) {
@@ -893,21 +917,23 @@ document.addEventListener("DOMContentLoaded", () => {
         const safe = escapeRegExp(k);
         const re = new RegExp(safe, "gi");
 
-        const texts = Array.from(body.querySelectorAll(".cb-bubble__text"));
+        const pres = Array.from(body.querySelectorAll(".cb-bubble__text pre"));
 
-        for (const el of texts) {
-            const raw = el.getAttribute("data-raw");
-            if (raw == null) el.setAttribute("data-raw", el.innerHTML);
+        for (const pre of pres) {
+            const raw = pre.getAttribute("data-rawtext");
+            if (raw == null) continue;
 
-            const plain = el.textContent || "";
+            const msg = pre.closest(".cb-msg");
+            const isBot = !!(msg && msg.classList.contains("cb-msg--bot"));
+
+            const plain = String(raw || "");
             re.lastIndex = 0;
             if (!re.test(plain)) continue;
 
-            const base = el.getAttribute("data-raw") || el.innerHTML;
+            const base = isBot ? renderRichText(plain) : escapeHtml(plain);
             re.lastIndex = 0;
-            el.innerHTML = base.replace(re, (m) => `<mark class="cb-mark">${m}</mark>`);
+            pre.innerHTML = highlightHtmlKeepTags(base, re);
 
-            const msg = el.closest(".cb-msg");
             if (msg) searchHits.push(msg);
         }
 
