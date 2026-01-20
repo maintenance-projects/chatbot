@@ -45,11 +45,39 @@ public class AIRelayClientService {
         return response;
     }
 
+    public String callAI(String requestUrl, MultipartBodyBuilder builder) {
+
+        String response = webClient.post()
+                .uri(requestUrl)
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(BodyInserters.fromMultipartData(builder.build()))
+                .retrieve()
+                .bodyToMono(String.class)
+                .block(); // 여기서만 block 허용
+
+        if(log.isDebugEnabled())
+            log.debug(response);
+
+        return response;
+    }
+
     /** AI Gateway가 text/event-stream(SSE)로 내려주는 응답을 Flux로 받는다 */
     public Flux<String> callAIStream(String requestUrl, String sessionId, MultipartBodyBuilder builder) {
 
         return webClient.post()
                 .uri(requestUrl + "/" + sessionId)
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .accept(MediaType.TEXT_EVENT_STREAM) // 핵심
+                .header(HttpHeaders.CACHE_CONTROL, "no-cache")
+                .body(BodyInserters.fromMultipartData(builder.build()))
+                .retrieve()
+                .bodyToFlux(String.class);
+    }
+
+    public Flux<String> callAIStream(String requestUrl, MultipartBodyBuilder builder) {
+
+        return webClient.post()
+                .uri(requestUrl)
                 .contentType(MediaType.MULTIPART_FORM_DATA)
                 .accept(MediaType.TEXT_EVENT_STREAM) // 핵심
                 .header(HttpHeaders.CACHE_CONTROL, "no-cache")

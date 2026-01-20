@@ -10,6 +10,7 @@ import lombok.Data;
 public class RequestDTO {
     private String sessionId;
     private String message;
+    private String templateKey;
 
     @Builder.Default
     private boolean deepResearch = false;

@@ -445,9 +445,9 @@ public class AIRelayService {
         SseEmitter emitter = new SseEmitter(0L); // timeout 없음
         AtomicBoolean completed = new AtomicBoolean(false);
 
-        String originalFileName = file.getOriginalFilename();
+        /*String originalFileName = file.getOriginalFilename();
         String fileName = originalFileName.substring(0,originalFileName.lastIndexOf("."));
-        String ext = originalFileName.substring(originalFileName.lastIndexOf(".")+1);
+        String ext = originalFileName.substring(originalFileName.lastIndexOf(".")+1);*/
 
         aiUsageService.increase(
                 sessionId,
@@ -534,7 +534,7 @@ public class AIRelayService {
         // 진짜 스트리밍: AI Gateway 스트림(Flux)을 subscribe 해서 emitter로 바로 흘림
         try {
             disposableHolder[0] = aiClientService
-                    .callAIStream("http://10.0.0.92:8000/documents/generate-hwpx", sessionId, builder)
+                    .callAIStream("http://10.0.0.92:8000/documents/generate-hwpx", builder)
                     .subscribe(
                             rawChunk -> {
                                 if (completed.get()) return;
@@ -578,5 +578,84 @@ public class AIRelayService {
         }
 
         return emitter;
+    }
+
+    public String DocumentRelayTemplateService(String sessionId, String message, boolean deep, MultipartFile file, String templateKey) {
+        String templateJson = "{\n" +
+                "    \"doc_number\": \"신사복지 제2026-0042호\",\n" +
+                "    \"draft_date\": \"2026. 01. 20.\",\n" +
+                "    \"exec_date\": \"2026. 01. 21.\",\n" +
+                "    \"via\": \"\",\n" +
+                "    \"recipient\": \"내부결재\",\n" +
+                "    \"reference\": \"\",\n" +
+                "    \"title\": \"2026년 상반기 직원 교육 계획 보고\",\n" +
+                "    \"retention\": \"3년\",\n" +
+                "    \"sign_manager\": \"김철수\",\n" +
+                "    \"sign_drafter\": \"이영희\",\n" +
+                "    \"sign_coop\": \"\",\n" +
+                "    \"doc_number_2\": \"신사복지 제2026-0042호\",\n" +
+                "    \"exec_date_2\": \"2026. 01. 21.\",\n" +
+                "    \"via_2\": \"\",\n" +
+                "    \"recipient_2\": \"내부결재\",\n" +
+                "    \"reference_2\": \"\",\n" +
+                "    \"title_2\": \"2026년 상반기 직원 교육 계획 보고\",\n" +
+                "    \"items\": [\n" +
+                "      {\"text\": \"1. 교육 목적\", \"level\": 1},\n" +
+                "      {\"text\": \"직원 역량 강화 및 서비스 품질 향상을 위한 정기 교육 실시\", \"level\": 2},\n" +
+                "      {\"text\": \"2. 교육 일정\", \"level\": 1},\n" +
+                "      {\"text\": \"2026년 2월 15일 ~ 2월 17일 (3일간)\", \"level\": 2},\n" +
+                "      {\"text\": \"3. 교육 대상: 전 직원\", \"level\": 1}\n" +
+                "    ],\n" +
+                "    \"has_attachment\": false\n" +
+                "  }";
+
+        String templateJson2 = "{\n" +
+                "    \"recipient\": \"각 부서장\",\n" +
+                "    \"via\": \"경영지원팀\",\n" +
+                "    \"title\": \"회의실 사용 안내\",\n" +
+                "    \"attachment\": \"\",\n" +
+                "    \"content_lines\": [\n" +
+                "      \"안녕하십니까.\",\n" +
+                "      \"\",\n" +
+                "      \"2026년 1월 25일부터 3층 대회의실 리모델링 공사로 인해\",\n" +
+                "      \"약 2주간 해당 회의실 사용이 제한됨을 알려드립니다.\"\n" +
+                "    ]\n" +
+                "  }";
+
+        //요청 횟수 증가
+        aiUsageService.increase(
+                sessionId,
+                sessionId,
+                "DOCUMENT"
+        );
+
+        CompletableFuture<String> future =
+                CompletableFuture.supplyAsync(() -> {
+                    MultipartBodyBuilder builder = new MultipartBodyBuilder();
+                    if(templateKey.equals("A001")) {
+                        builder.part("template_name", "template.hwpx");
+                        builder.part("context_data", templateJson);
+                    } else if(templateKey.equals("A002")) {
+                        builder.part("template_name", "template2.hwpx");
+                        builder.part("context_data", templateJson2);
+                    }
+
+                    try {
+                        String response = aiClientService.callAI("http://10.0.0.92:8000/documents/generate-hwpx", builder);
+                        JSONObject res = new JSONObject(response);
+                        return res.toString();
+                    } catch (Exception e) {
+                        log.error("",e);
+                        return "AI 서버 연결에 실패하였습니다... 😥";
+                    }
+
+                }, aiExecutor);
+
+        try {
+            return future.get(120, TimeUnit.SECONDS);
+        } catch (Exception e) {
+            log.error("", e);
+            return "AI 서버 응답이 지연되고 있습니다. 다시 시도해 주시기 바랍니다... 😥";
+        }
     }
 }

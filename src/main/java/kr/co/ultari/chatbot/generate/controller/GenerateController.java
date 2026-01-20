@@ -4,14 +4,17 @@ import lombok.extern.slf4j.Slf4j;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -104,6 +107,31 @@ public class GenerateController {
         json.put("name",name);
         json.put("sort",sort);
         return json;
+    }
+
+    @RequestMapping("/documents/download/{key}")
+    public ResponseEntity<Resource> download(@PathVariable String key) {
+
+        String targetUrl = "http://10.0.0.92:8000/documents/download/" + key;
+
+        RestTemplate restTemplate = new RestTemplate();
+
+        ResponseEntity<byte[]> response =
+                restTemplate.getForEntity(targetUrl, byte[].class);
+
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(
+                response.getHeaders().getContentType()
+        );
+        headers.setContentDisposition(
+                response.getHeaders().getContentDisposition()
+        );
+
+        return new ResponseEntity<>(
+                new ByteArrayResource(response.getBody()),
+                headers,
+                HttpStatus.OK
+        );
     }
 
     /*@RequestMapping("/dialog")
