@@ -1,9 +1,14 @@
 document.addEventListener("DOMContentLoaded", () => {
+    const shell = document.getElementById("cbShell");
     const widget = document.getElementById("cbWidget");
     const body = document.getElementById("cbBody");
     const input = document.getElementById("cbInput");
     const sendBtn = document.getElementById("cbSend");
     const inputWrap = document.getElementById("cbInputWrap");
+
+    const viewer = document.getElementById("cbViewer");
+    const viewerFrame = document.getElementById("cbViewerFrame");
+    const viewerClose = document.getElementById("cbViewerClose");
 
     if (!body || !input || !sendBtn || !inputWrap) return;
 
@@ -218,43 +223,6 @@ document.addEventListener("DOMContentLoaded", () => {
         return String(n).padStart(2, "0");
     }
 
-    if (!trayBody) return;
-
-    const list = Array.isArray(window.templateList) ? window.templateList : [];
-
-    if (list.length === 0) {
-        trayBody.innerHTML = `<div>템플릿이 없습니다.</div>`;
-        return;
-    }
-
-    trayBody.innerHTML = list.map((t) => {
-        const key = escapeHtml(t.key);
-        const name = escapeHtml(t.name);
-        const fileName = escapeHtml(t.fileName);
-
-        return `
-            <button class="cb-tpl" type="button" data-template="${key}" data-template-name="${name}" data-template-file="${fileName}">
-                <div class="cb-tpl__top">
-                    <span style="display:none;">${key}</span>
-                    <div class="cb-tpl__name">${name}</div>
-                </div>
-                <div class="cb-tpl__desc">${fileName}</div>
-            </button>
-        `;
-    }).join("");
-
-    function formatTime(d) {
-        const h = d.getHours();
-        const m = d.getMinutes();
-        const ampm = h < 12 ? "오전" : "오후";
-        const hh = h % 12 === 0 ? 12 : h % 12;
-        return `${ampm} ${hh}:${pad2(m)}`;
-    }
-
-    function scrollToBottom() {
-        body.scrollTop = body.scrollHeight;
-    }
-
     function escapeHtml(str) {
         return String(str)
             .replaceAll("&", "&amp;")
@@ -274,6 +242,18 @@ document.addEventListener("DOMContentLoaded", () => {
         s = s.replace(/\r\n/g, "\n");
         s = s.replace(/^[ \t]*\n+/, "");
         return s;
+    }
+
+    function formatTime(d) {
+        const h = d.getHours();
+        const m = d.getMinutes();
+        const ampm = h < 12 ? "오전" : "오후";
+        const hh = h % 12 === 0 ? 12 : h % 12;
+        return `${ampm} ${hh}:${pad2(m)}`;
+    }
+
+    function scrollToBottom() {
+        body.scrollTop = body.scrollHeight;
     }
 
     function autoResizeInput() {
@@ -300,6 +280,113 @@ document.addEventListener("DOMContentLoaded", () => {
         return allowedExt.has(ext);
     }
 
+    function openViewer(url) {
+        if (!url) return;
+        const isMobile = window.matchMedia && window.matchMedia("(max-width: 900px)").matches;
+        if (isMobile) {
+            window.open(url, "_blank");
+            return;
+        }
+        if (!shell || !viewer || !viewerFrame) {
+            window.open(url, "_blank");
+            return;
+        }
+        shell.classList.add("has-viewer");
+        viewer.classList.add("is-open");
+        viewer.setAttribute("aria-hidden", "false");
+        viewerFrame.src = url;
+        scrollToBottom();
+    }
+
+    function closeViewer() {
+        if (!shell || !viewer || !viewerFrame) return;
+        shell.classList.remove("has-viewer");
+        viewer.classList.remove("is-open");
+        viewer.setAttribute("aria-hidden", "true");
+        viewerFrame.src = "about:blank";
+    }
+
+    if (viewerClose) {
+        viewerClose.addEventListener("click", (e) => {
+            e.preventDefault();
+            closeViewer();
+        });
+    }
+
+    function actionsHtml(opts) {
+        const canCopy = opts && opts.copy !== false;
+        const downloadUrl = opts && opts.downloadUrl ? String(opts.downloadUrl) : "";
+        const viewUrl = opts && opts.viewUrl ? String(opts.viewUrl) : "";
+
+        let html = `<div class="cb-msg__actions">`;
+        if (canCopy) {
+            html += `
+                <button class="cb-actbtn cb-actbtn--copy" type="button" aria-label="복사">
+                    <img src="/img/ic-copy.png" alt="복사" />
+                </button>
+            `;
+        }
+        if (downloadUrl) {
+            html += `
+                <button class="cb-actbtn cb-actbtn--download" type="button" aria-label="다운로드" data-url="${escapeHtml(downloadUrl)}">
+                    <img src="/img/ic-download.png" alt="다운로드" />
+                </button>
+            `;
+        }
+        if (viewUrl) {
+            html += `
+                <button class="cb-actbtn cb-actbtn--view" type="button" aria-label="미리보기" data-url="${escapeHtml(viewUrl)}">
+                    <img src="/img/ic-link.png" alt="미리보기" />
+                </button>
+            `;
+        }
+        html += `</div>`;
+        return html;
+    }
+
+    async function copyToClipboard(text) {
+        const t = String(text ?? "");
+        if (!t.trim()) return false;
+
+        try {
+            if (navigator.clipboard && typeof navigator.clipboard.writeText === "function") {
+                await navigator.clipboard.writeText(t);
+                return true;
+            }
+        } catch (e) { }
+
+        try {
+            const ta = document.createElement("textarea");
+            ta.value = t;
+            ta.setAttribute("readonly", "");
+            ta.style.position = "fixed";
+            ta.style.left = "-9999px";
+            ta.style.top = "0";
+            document.body.appendChild(ta);
+            ta.focus();
+            ta.select();
+            const ok = document.execCommand("copy");
+            ta.remove();
+            return !!ok;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function getCopyTextFromMsg(msgEl) {
+        if (!msgEl) return "";
+        const direct = msgEl.getAttribute("data-copytext");
+        if (direct != null) return String(direct || "");
+
+        const pre = msgEl.querySelector(".cb-bubble__text pre[data-rawtext]");
+        if (pre) return pre.getAttribute("data-rawtext") || "";
+
+        const bubbleText = msgEl.querySelector(".cb-bubble__text");
+        if (bubbleText) return bubbleText.innerText || bubbleText.textContent || "";
+
+        return msgEl.innerText || "";
+    }
+
     function addUserMessage(text) {
         const now = formatTime(new Date());
         const raw = String(text ?? "");
@@ -311,6 +398,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     </div>
                     <div class="cb-meta">${now}</div>
                 </div>
+                ${actionsHtml({ copy: true })}
             </div>
         `;
         body.insertAdjacentHTML("beforeend", html);
@@ -325,7 +413,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const badge = ext ? ext.toUpperCase() : "FILE";
 
         const html = `
-            <div class="cb-msg cb-msg--user">
+            <div class="cb-msg cb-msg--user" data-copytext="${escapeHtml(name)}">
                 <div class="cb-bubble--new cb-bubble--card">
                     <div class="cb-bubble__text">
                         <div class="cb-filecard" role="group" aria-label="첨부파일">
@@ -336,7 +424,9 @@ document.addEventListener("DOMContentLoaded", () => {
                             </div>
                         </div>
                     </div>
+                    <div class="cb-meta">${now}</div>
                 </div>
+                ${actionsHtml({ copy: true })}
             </div>
         `;
         body.insertAdjacentHTML("beforeend", html);
@@ -349,7 +439,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const name = tpl && tpl.name ? String(tpl.name) : "양식";
         const key = tpl && tpl.key ? String(tpl.key) : "";
         const html = `
-            <div class="cb-msg cb-msg--user">
+            <div class="cb-msg cb-msg--user" data-copytext="${escapeHtml(name)}">
                 <div class="cb-bubble--new cb-bubble--card">
                     <div class="cb-bubble__text">
                         <div class="cb-tplcard" role="group" aria-label="양식 선택">
@@ -360,7 +450,9 @@ document.addEventListener("DOMContentLoaded", () => {
                             </div>
                         </div>
                     </div>
+                    <div class="cb-meta">${now}</div>
                 </div>
+                ${actionsHtml({ copy: true })}
             </div>
         `;
         body.insertAdjacentHTML("beforeend", html);
@@ -383,9 +475,48 @@ document.addEventListener("DOMContentLoaded", () => {
                     </div>
                     <div class="cb-meta">${now}</div>
                 </div>
+                ${actionsHtml({ copy: true })}
             </div>
         `;
 
+        body.insertAdjacentHTML("beforeend", html);
+        scrollToBottom();
+        if (isSearchOpen() && searchInput && searchInput.value.trim()) rebuildHighlights(searchInput.value);
+    }
+
+    function addBotAttachmentMessage(fileInfo) {
+        const now = formatTime(new Date());
+        const filename = fileInfo && fileInfo.filename ? String(fileInfo.filename) : "파일";
+        const downloadUrl = fileInfo && fileInfo.download_url ? String(fileInfo.download_url) : "";
+        const ext = getExt(filename);
+        const badge = ext ? ext.toUpperCase() : "FILE";
+
+        let viewUrl = "";
+        if (ext === "pdf") {
+            const page = Number.isFinite(Number(fileInfo && fileInfo.page)) ? Number(fileInfo.page) : 1;
+            viewUrl = `/document/view/${encodeURIComponent(filename)}#page=${page}`;
+        }
+
+        const html = `
+            <div class="cb-msg cb-msg--bot" data-copytext="${escapeHtml(filename)}">
+                <div class="cb-avatar">
+                    <img class="cb-avatar__img" src="/img/ic-chatbot.png" alt="챗봇" />
+                </div>
+                <div class="cb-bubble cb-bubble--card">
+                    <div class="cb-bubble__text">
+                        <div class="cb-filecard" role="group" aria-label="첨부파일">
+                            <img src="/img/ic-file.png" class="cb-filecard__icon" alt="" />
+                            <div class="cb-filecard__meta">
+                                <div class="cb-filecard__name">${escapeHtml(filename)}</div>
+                                <div class="cb-filecard__badge">${escapeHtml(badge)}</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="cb-meta">${now}</div>
+                </div>
+                ${actionsHtml({ copy: true, downloadUrl, viewUrl })}
+            </div>
+        `;
         body.insertAdjacentHTML("beforeend", html);
         scrollToBottom();
         if (isSearchOpen() && searchInput && searchInput.value.trim()) rebuildHighlights(searchInput.value);
@@ -411,6 +542,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     </div>
                     <div class="cb-meta"></div>
                 </div>
+                ${actionsHtml({ copy: true })}
             </div>
         `;
         body.insertAdjacentHTML("beforeend", html);
@@ -699,6 +831,56 @@ document.addEventListener("DOMContentLoaded", () => {
             });
     }
 
+    async function requestTemplateDownload(messageText, templateKey) {
+        const msg = String(messageText || "").trim();
+
+        setSending(true);
+        const handle = addBotStreamLoadingMessage();
+
+        try {
+            const payload = {
+                sessionId: sessionId,
+                message: msg,
+                deepResearch: String(isResearchMode ? "true" : "false"),
+                templateKey: String(templateKey || "")
+            };
+
+            const res = await fetch("/api/chat/template", {
+                method: "POST",
+                headers: { "Content-Type": "application/json; charset=UTF-8" },
+                body: JSON.stringify(payload),
+                credentials: "same-origin"
+            });
+
+            if (!res.ok) {
+                let t = "";
+                try { t = await res.text(); } catch (e) { }
+                throw new Error(t || "요청 처리 중 오류가 발생했습니다.");
+            }
+
+            const data = await res.json();
+
+            if (handle && handle.msgEl) handle.msgEl.remove();
+
+            if (!data || data.success !== true || !data.download_url) {
+                addBotMessage("양식 생성에 실패했습니다.");
+                return;
+            }
+
+            addBotAttachmentMessage({
+                filename: data.filename || "generated_template",
+                download_url: data.download_url
+            });
+        } catch (err) {
+            if (handle && handle.msgEl) handle.msgEl.remove();
+            addBotMessage(err && err.message ? String(err.message) : "요청 처리 중 오류가 발생했습니다.");
+        } finally {
+            setSending(false);
+            input.focus();
+            autoResizeInput();
+        }
+    }
+
     function sendMessage() {
         const msg = String(input.value || "").trim();
         const hasFile = !!pendingFile;
@@ -726,7 +908,16 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        sendTextMessage(msg, tplKey);
+        input.value = "";
+        autoResizeInput();
+
+        if (tplKey) {
+            if (msg) addUserMessage(msg);
+            requestTemplateDownload(msg, tplKey);
+            return;
+        }
+
+        sendTextMessage(msg, null);
     }
 
     sendBtn.addEventListener("click", (e) => {
@@ -744,20 +935,6 @@ document.addEventListener("DOMContentLoaded", () => {
     input.addEventListener("input", () => {
         autoResizeInput();
     });
-
-    const firstMeta = body.querySelector(".cb-msg--bot .cb-meta");
-    if (firstMeta && !firstMeta.textContent) firstMeta.textContent = formatTime(new Date());
-
-    ensureResearchTag();
-    ensureTemplateTag();
-    ensureFileTag();
-    setResearchMode(false);
-    setTemplate(null);
-    setPendingFile(null);
-
-    input.focus();
-    scrollToBottom();
-    autoResizeInput();
 
     if (fileInput) {
         fileInput.setAttribute("accept", ".pdf,.hwp,.hwpx,.xls,.xlsx,.ppt,.pptx,.csv,.doc,.docx,.txt,.m4a");
@@ -809,6 +986,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (e.key === "Escape") {
                 closePop();
                 closeTray();
+                closeViewer();
             }
         });
     }
@@ -847,6 +1025,28 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     if (trayBody) {
+        const list = Array.isArray(window.templateList) ? window.templateList : [];
+
+        if (list.length === 0) {
+            trayBody.innerHTML = `<div>템플릿이 없습니다.</div>`;
+        } else {
+            trayBody.innerHTML = list.map((t) => {
+                const key = escapeHtml(t.key);
+                const name = escapeHtml(t.name);
+                const fileName = escapeHtml(t.fileName);
+
+                return `
+                    <button class="cb-tpl" type="button" data-template="${key}" data-template-name="${name}" data-template-file="${fileName}">
+                        <div class="cb-tpl__top">
+                            <span style="display:none;">${key}</span>
+                            <div class="cb-tpl__name">${name}</div>
+                        </div>
+                        <div class="cb-tpl__desc">${fileName}</div>
+                    </button>
+                `;
+            }).join("");
+        }
+
         trayBody.addEventListener("click", (e) => {
             const btn = e.target && e.target.closest ? e.target.closest(".cb-tpl") : null;
             if (!btn) return;
@@ -878,15 +1078,17 @@ document.addEventListener("DOMContentLoaded", () => {
                   <title>Chat Print</title>
                   <style>
                     body{ font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 24px; background:#fff; color:#111; }
-                    .wrap{ max-width: 720px; margin: 0 auto; }
+                    pre { margin:0; white-space:pre-wrap; word-break:break-word; }
+                    .wrap{ max-width: 820px; margin: 0 auto; }
                     .cb-divider{ text-align:center; margin: 12px 0; color:#666; font-size:12px; }
-                    .cb-msg{ display:flex; gap:10px; margin:10px 0; }
+                    .cb-msg{ display:flex; gap:10px; margin:10px 0; align-items:flex-start; }
                     .cb-msg--user{ justify-content:flex-end; }
                     .cb-avatar{ width:34px; height:34px; display:grid; place-items:center; border:1px solid #ddd; border-radius:12px; }
                     .cb-bubble{ max-width:74%; border:1px solid #ddd; border-radius:16px; padding:10px 12px; background:#f3f4f6; }
                     .cb-msg--user .cb-bubble{ background:#2f3a4f; color:#fff; border-color:#2f3a4f; }
-                    .cb-bubble__text{ font-size:14px; line-height:1.45; white-space:pre-wrap; word-break:break-word; overflow-wrap:anywhere; }
+                    .cb-bubble__text{ font-size:13px; line-height:1.45; }
                     .cb-meta{ margin-top:6px; font-size:11px; opacity:.7; }
+                    .cb-msg__actions{ display:none !important; }
                     .cb-msg--loading{ display:none !important; }
                   </style>
                 </head>
@@ -1064,6 +1266,54 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
     }
+
+    body.addEventListener("click", async (e) => {
+        const copyBtn = e.target && e.target.closest ? e.target.closest(".cb-actbtn--copy") : null;
+        if (copyBtn) {
+            const msgEl = copyBtn.closest(".cb-msg");
+            const text = getCopyTextFromMsg(msgEl);
+            const ok = await copyToClipboard(text);
+            copyBtn.classList.toggle("is-done", ok);
+            window.setTimeout(() => copyBtn.classList.remove("is-done"), 900);
+            return;
+        }
+
+        const dlBtn = e.target && e.target.closest ? e.target.closest(".cb-actbtn--download") : null;
+        if (dlBtn) {
+            const url = dlBtn.getAttribute("data-url") || "";
+            if (!url) return;
+            const a = document.createElement("a");
+            a.href = url;
+            a.target = "_blank";
+            a.rel = "noopener";
+            document.body.appendChild(a);
+            a.click();
+            a.remove();
+            return;
+        }
+
+        const viewBtn = e.target && e.target.closest ? e.target.closest(".cb-actbtn--view") : null;
+        if (viewBtn) {
+            const url = viewBtn.getAttribute("data-url") || "";
+            if (!url) return;
+            openViewer(url);
+            return;
+        }
+    });
+
+    const firstMeta = body.querySelector(".cb-msg--bot .cb-meta");
+    if (firstMeta && !firstMeta.textContent) firstMeta.textContent = formatTime(new Date());
+
+    ensureResearchTag();
+    ensureTemplateTag();
+    ensureFileTag();
+    setResearchMode(false);
+    setTemplate(null);
+    setPendingFile(null);
+
+    input.focus();
+    scrollToBottom();
+    autoResizeInput();
 
     const inputField = document.getElementById("cbInput");
     const popup = document.getElementById("cbPop--new");

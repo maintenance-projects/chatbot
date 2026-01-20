@@ -22,7 +22,7 @@
 
 <body>
     <main class="cb-page">
-        <section class="cb-shell" aria-label="챗봇 상담">
+        <section class="cb-shell" id="cbShell" aria-label="챗봇 상담">
             <aside class="cb-widget is-open" id="cbWidget" aria-hidden="false">
                 <header class="cb-header">
                     <div class="cb-header__left">
@@ -67,8 +67,15 @@
                             <img class="cb-avatar__img" src="/img/ic-chatbot.png" alt="챗봇" />
                         </div>
                         <div class="cb-bubble">
-                            <div class="cb-bubble__text">안녕하세요! 무엇을 도와드릴까요?</div>
+                            <div class="cb-bubble__text">
+                                <pre data-rawtext="안녕하세요! 무엇을 도와드릴까요?">안녕하세요! 무엇을 도와드릴까요?</pre>
+                            </div>
                             <div class="cb-meta"></div>
+                        </div>
+                        <div class="cb-msg__actions">
+                            <button class="cb-actbtn cb-actbtn--copy" type="button" aria-label="복사">
+                                <img src="/img/ic-copy.png" alt="복사" />
+                            </button>
                         </div>
                     </div>
                 </section>
@@ -122,6 +129,14 @@
                     </section>
                 </footer>
             </aside>
+
+            <section class="cb-viewer" id="cbViewer" aria-hidden="true">
+                <header class="cb-viewer__head">
+                    <div class="cb-viewer__title">미리보기</div>
+                    <button class="cb-viewer__close" id="cbViewerClose" type="button" aria-label="닫기">×</button>
+                </header>
+                <iframe class="cb-viewer__frame" id="cbViewerFrame" title="문서 미리보기"></iframe>
+            </section>
         </section>
     </main>
 </body>
