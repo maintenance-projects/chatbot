@@ -280,6 +280,16 @@ document.addEventListener("DOMContentLoaded", () => {
         return allowedExt.has(ext);
     }
 
+    function safeEncodePathSegment(value) {
+        const s = String(value ?? "").trim();
+        if (!s) return "";
+        try {
+            return encodeURIComponent(decodeURIComponent(s));
+        } catch (e) {
+            return encodeURIComponent(s);
+        }
+    }
+
     function openViewer(url) {
         if (!url) return;
         const isMobile = window.matchMedia && window.matchMedia("(max-width: 900px)").matches;
@@ -439,8 +449,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 <div class="cb-bubble cb-bubble--card">
                     <div class="cb-bubble__text">
                         <div class="cb-filecard" role="group" aria-label="첨부파일">
-                            <img src="/img/ic-file.png" class="cb-filecard__icon" alt="" />
-                            <div class="cb-filecard__meta">
+                            <img src="/img/ic-file-w.png" class="cb-filecard__icon" alt="" />
+                            <div class="cb-filecard__meta_w">
                                 <div class="cb-filecard__name">${escapeHtml(name)}</div>
                                 <div class="cb-filecard__badge">${escapeHtml(badge)}</div>
                             </div>
@@ -465,11 +475,11 @@ document.addEventListener("DOMContentLoaded", () => {
             <div class="cb-msg cb-msg--user cb-msg--card" data-copytext="${escapeHtml(name)}">
                 <div class="cb-bubble cb-bubble--card">
                     <div class="cb-bubble__text">
-                        <div class="cb-tplcard" role="group" aria-label="양식 선택">
-                            <img src="/img/ic-select.png" class="cb-tplcard__icon" alt="" />
-                            <div class="cb-tplcard__meta">
-                                <div class="cb-tplcard__name">${escapeHtml(name)}</div>
-                                <div class="cb-tplcard__badge">${escapeHtml(key ? key : "TEMPLATE")}</div>
+                        <div class="cb-filecard" role="group" aria-label="양식 선택">
+                            <img src="/img/ic-select-w.png" class="cb-filecard__icon" alt="" />
+                            <div class="cb-filecard__meta_w">
+                                <div class="cb-filecard__name">${escapeHtml(name)}</div>
+                                <div class="cb-filecard__badge">양식</div>
                             </div>
                         </div>
                     </div>
@@ -482,6 +492,7 @@ document.addEventListener("DOMContentLoaded", () => {
         scrollToBottom();
         if (isSearchOpen() && searchInput && searchInput.value.trim()) rebuildHighlights(searchInput.value);
     }
+
 
     function addBotMessage(text) {
         endUserCardStack();
@@ -520,7 +531,8 @@ document.addEventListener("DOMContentLoaded", () => {
         let viewUrl = "";
         if (allowView && ext) {
             const page = Number.isFinite(Number(fileInfo && fileInfo.page)) ? Number(fileInfo.page) : 1;
-            viewUrl = `/document/view/${encodeURIComponent(filename)}${ext === "pdf" ? `#page=${page}` : ""}`;
+            const encodedName = safeEncodePathSegment(filename);
+            viewUrl = `/document/view/${encodedName}${ext === "pdf" ? `#page=${page}` : ""}`;
         }
 
         const html = `
@@ -560,7 +572,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const ext = getExt(s);
         if (ext !== "pdf") return "";
         const p = Number.isFinite(Number(page)) ? Number(page) : 1;
-        return `/document/view/${encodeURIComponent(s)}#page=${p}`;
+        const encodedName = safeEncodePathSegment(s);
+        return `/document/view/${encodedName}#page=${p}`;
     }
 
     function filterPdfDocs(docs) {
@@ -580,15 +593,17 @@ document.addEventListener("DOMContentLoaded", () => {
         const list = filterPdfDocs(docs);
         if (!list.length) return "";
 
-        const items = list.map((d) => {
-            const meta = `${d.page} 페이지`;
-            return `
+        const items = list
+            .map((d) => {
+                const meta = `${d.page} 페이지`;
+                return `
                 <button class="cb-ref" type="button" data-url="${escapeHtml(d.url)}">
                     <div class="cb-ref__name">${escapeHtml(d.source || "문서")}</div>
                     <div class="cb-ref__meta">${escapeHtml(meta)}</div>
                 </button>
             `;
-        }).join("");
+            })
+            .join("");
 
         return `
             <div class="cb-refs__title">
@@ -843,7 +858,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         setSending(true);
 
-        const handle = addBotStreamLoadingMessage(false);
+        const handle = addBotStreamLoadingMessage(true);
 
         const payload = {
             sessionId,
@@ -861,12 +876,13 @@ document.addEventListener("DOMContentLoaded", () => {
             body: JSON.stringify(payload),
             credentials: "same-origin"
         }, {
-            acceptRefs: false,
+            acceptRefs: true,
             onText: (t) => {
                 startStreaming(handle);
                 appendStreamText(handle, t);
             },
-            onFirstToken: () => startStreaming(handle)
+            onFirstToken: () => startStreaming(handle),
+            onRefs: (docs) => applyStreamRefs(handle, docs)
         })
             .then(() => {
                 startStreaming(handle);
@@ -1198,12 +1214,13 @@ document.addEventListener("DOMContentLoaded", () => {
         if (list.length === 0) {
             trayBody.innerHTML = `<div>템플릿이 없습니다.</div>`;
         } else {
-            trayBody.innerHTML = list.map((t) => {
-                const key = escapeHtml(t.key);
-                const name = escapeHtml(t.name);
-                const fileName = escapeHtml(t.fileName);
+            trayBody.innerHTML = list
+                .map((t) => {
+                    const key = escapeHtml(t.key);
+                    const name = escapeHtml(t.name);
+                    const fileName = escapeHtml(t.fileName);
 
-                return `
+                    return `
                     <button class="cb-tpl" type="button" data-template="${key}" data-template-name="${name}" data-template-file="${fileName}">
                         <div class="cb-tpl__top">
                             <span style="display:none;">${key}</span>
@@ -1212,7 +1229,8 @@ document.addEventListener("DOMContentLoaded", () => {
                         <div class="cb-tpl__desc">${fileName}</div>
                     </button>
                 `;
-            }).join("");
+                })
+                .join("");
         }
 
         trayBody.addEventListener("click", (e) => {
