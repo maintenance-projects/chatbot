@@ -263,7 +263,7 @@ pre {
 }
 
 .cb-bubble {
-    max-width: 80%;
+    max-width: 76%;
     padding: clamp(10px, 1.3vw, 12px) clamp(12px, 1.4vw, 14px);
     border: 1px solid var(--cb-line);
     background: var(--cb-bot);

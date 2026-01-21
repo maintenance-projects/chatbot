@@ -290,22 +290,57 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    function withCacheBuster(absUrl) {
+        try {
+            const u = new URL(String(absUrl), window.location.href);
+            const hash = u.hash || "";
+            u.hash = "";
+            u.searchParams.set("_v", String(Date.now()));
+            return u.toString() + hash;
+        } catch (e) {
+            const raw = String(absUrl);
+            const parts = raw.split("#");
+            const base = parts[0] || "";
+            const hash = parts.length > 1 ? `#${parts.slice(1).join("#")}` : "";
+            const sep = base.includes("?") ? "&" : "?";
+            return `${base}${sep}_v=${Date.now()}${hash}`;
+        }
+    }
+
     function openViewer(url) {
         if (!url) return;
+
         const isMobile = window.matchMedia && window.matchMedia("(max-width: 900px)").matches;
         if (isMobile) {
             window.open(url, "_blank");
             return;
         }
+
         if (!shell || !viewer || !viewerFrame) {
             window.open(url, "_blank");
             return;
         }
+
+        const targetAbs = new URL(String(url), window.location.href).href;
+
         shell.classList.add("has-viewer");
         viewer.classList.add("is-open");
         viewer.setAttribute("aria-hidden", "false");
-        viewerFrame.src = url;
-        scrollToBottom();
+
+        const currentAbs = viewerFrame.src ? new URL(viewerFrame.src, window.location.href).href : "";
+        const curBase = currentAbs ? currentAbs.split("#")[0] : "";
+        const tarBase = targetAbs.split("#")[0];
+
+        if (currentAbs && curBase === tarBase) {
+            const busted = withCacheBuster(targetAbs);
+            viewerFrame.src = "about:blank";
+            requestAnimationFrame(() => {
+                viewerFrame.src = busted;
+            });
+            return;
+        }
+
+        viewerFrame.src = targetAbs;
     }
 
     function closeViewer() {
@@ -439,7 +474,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function addUserFileMessage(file) {
-        const now = formatTime(new Date());
         const name = file && file.name ? String(file.name) : "파일";
         const ext = getExt(name);
         const badge = ext ? ext.toUpperCase() : "FILE";
@@ -467,9 +501,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function addUserTemplateMessage(tpl) {
-        const now = formatTime(new Date());
         const name = tpl && tpl.name ? String(tpl.name) : "양식";
-        const key = tpl && tpl.key ? String(tpl.key) : "";
 
         const html = `
             <div class="cb-msg cb-msg--user cb-msg--card" data-copytext="${escapeHtml(name)}">
@@ -492,7 +524,6 @@ document.addEventListener("DOMContentLoaded", () => {
         scrollToBottom();
         if (isSearchOpen() && searchInput && searchInput.value.trim()) rebuildHighlights(searchInput.value);
     }
-
 
     function addBotMessage(text) {
         endUserCardStack();
@@ -1467,6 +1498,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const dlBtn = e.target && e.target.closest ? e.target.closest(".cb-actbtn--download") : null;
         if (dlBtn) {
+            e.preventDefault();
+            e.stopPropagation();
             const url = dlBtn.getAttribute("data-url") || "";
             if (!url) return;
             const a = document.createElement("a");
@@ -1481,6 +1514,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const viewBtn = e.target && e.target.closest ? e.target.closest(".cb-actbtn--view") : null;
         if (viewBtn) {
+            e.preventDefault();
+            e.stopPropagation();
             const url = viewBtn.getAttribute("data-url") || "";
             if (!url) return;
             openViewer(url);
@@ -1489,6 +1524,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const refBtn = e.target && e.target.closest ? e.target.closest(".cb-ref") : null;
         if (refBtn) {
+            e.preventDefault();
+            e.stopPropagation();
             const url = refBtn.getAttribute("data-url") || "";
             if (!url) return;
             openViewer(url);
