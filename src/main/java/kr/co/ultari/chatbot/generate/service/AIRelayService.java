@@ -6,7 +6,6 @@ import kr.co.ultari.chatbot.utils.StringUtilsCustom;
 import kr.co.ultari.chatbot.utils.WebUtilsCustom;
 import lombok.extern.slf4j.Slf4j;
 import lombok.var;
-import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -19,21 +18,23 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import reactor.core.Disposable;
 
 import java.io.IOException;
-import java.io.PrintWriter;
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicBoolean;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Consumer;
 
 @Slf4j
 @Service
 public class AIRelayService {
 
-    @Value("${ultari.ai-gateway.url:}")
-    private String AI_GATE_URL;
+    @Value("${ultari.ai-gateway.chat-url:}")
+    private String AI_CHAT_URL;
+
+    @Value("${ultari.ai-gateway.template-url:}")
+    private String AI_TEMPLATE_URL;
+
+    @Value("${ultari.ai-gateway.call-summary-url:}")
+    private String AI_CALL_SUMMARY_URL;
 
     @Autowired
     AIUsageService aiUsageService;
@@ -65,7 +66,7 @@ public class AIRelayService {
         CompletableFuture<String> future =
                 CompletableFuture.supplyAsync(() -> {
                     try {
-                        return WebUtilsCustom.requestMultipart(AI_GATE_URL, requestDTO.getSessionId(), body);
+                        return WebUtilsCustom.requestMultipart(AI_CHAT_URL, requestDTO.getSessionId(), body);
                     } catch (Exception e) {
                         log.error("",e);
                         return "AI 서버 연결에 실패하였습니다... 😥";
@@ -110,7 +111,7 @@ public class AIRelayService {
                     builder.part("deepResearch", deep);
 
                     try {
-                        String response = aiClientService.callAI(AI_GATE_URL, sessionId, builder);
+                        String response = aiClientService.callAI(AI_CHAT_URL, sessionId, builder);
                         JSONObject res = new JSONObject(response);
                         return StringUtilsCustom.removeThinkTag(res.getJSONArray("choices")
                                 .getJSONObject(0)
@@ -177,7 +178,7 @@ public class AIRelayService {
         // 진짜 스트리밍: AI Gateway 스트림(Flux)을 subscribe 해서 emitter로 바로 흘림
         try {
             disposableHolder[0] = aiClientService
-                    .callAIStream(AI_GATE_URL, sessionId, builder)
+                    .callAIStream(AI_CHAT_URL, sessionId, builder)
                     .subscribe(
                             rawChunk -> {
                                 if (completed.get()) return;
@@ -258,7 +259,7 @@ public class AIRelayService {
         // 진짜 스트리밍: AI Gateway 스트림(Flux)을 subscribe 해서 emitter로 바로 흘림
         try {
             disposableHolder[0] = aiClientService
-                    .callAIStream("http://10.0.0.92:8000/call-summary", sessionId, builder)
+                    .callAIStream(AI_CALL_SUMMARY_URL, sessionId, builder)
                     .subscribe(
                             rawChunk -> {
                                 if (completed.get()) return;
@@ -345,7 +346,7 @@ public class AIRelayService {
         // 진짜 스트리밍: AI Gateway 스트림(Flux)을 subscribe 해서 emitter로 바로 흘림
         try {
             disposableHolder[0] = aiClientService
-                    .callAIStream(AI_GATE_URL, requestDTO.getSessionId(), builder)
+                    .callAIStream(AI_CHAT_URL, requestDTO.getSessionId(), builder)
                     .subscribe(
                             rawChunk -> {
                                 if (completed.get()) return;
@@ -452,7 +453,7 @@ public class AIRelayService {
         aiUsageService.increase(
                 sessionId,
                 sessionId,
-                "DOCUMENT"
+                "TEMPLATE"
         );
 
         // AI Gateway로 보낼 multipart 구성 (기존 ChatRelayService의 JSON과 동일 필드)
@@ -534,7 +535,7 @@ public class AIRelayService {
         // 진짜 스트리밍: AI Gateway 스트림(Flux)을 subscribe 해서 emitter로 바로 흘림
         try {
             disposableHolder[0] = aiClientService
-                    .callAIStream("http://10.0.0.92:8000/documents/generate-hwpx", builder)
+                    .callAIStream(AI_TEMPLATE_URL, builder)
                     .subscribe(
                             rawChunk -> {
                                 if (completed.get()) return;
@@ -626,7 +627,7 @@ public class AIRelayService {
         aiUsageService.increase(
                 sessionId,
                 sessionId,
-                "DOCUMENT"
+                "TEMPLATE"
         );
 
         CompletableFuture<String> future =
@@ -642,7 +643,7 @@ public class AIRelayService {
                     builder.part("one_time",false);
 
                     try {
-                        String response = aiClientService.callAI("http://10.0.0.92:8000/documents/generate-hwpx", builder);
+                        String response = aiClientService.callAI(AI_TEMPLATE_URL, builder);
                         JSONObject res = new JSONObject(response);
                         return res.toString();
                     } catch (Exception e) {
