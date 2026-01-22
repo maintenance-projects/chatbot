@@ -990,6 +990,11 @@ textarea {
     background: #fff;
 }
 
+.cb-actbtn--copy,
+.cb-actbtn--download {
+    outline: none !important;
+}
+
 @keyframes cbDot {
 
     0%,
