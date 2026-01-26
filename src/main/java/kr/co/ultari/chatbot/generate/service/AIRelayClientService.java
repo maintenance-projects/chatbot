@@ -67,7 +67,10 @@ public class AIRelayClientService {
         String sessionId = requestDTO.getSessionId();
         boolean isContinue = requestDTO.isContinue();
 
-        if(isContinue) requestUrl = requestUrl.substring(0,requestUrl.lastIndexOf("/")) + "/" + sessionId + "/continue";
+        if(isContinue) {
+            if(requestUrl.contains("open") || requestUrl.contains("private"))
+                requestUrl = requestUrl.substring(0,requestUrl.lastIndexOf("/")) + "/" + sessionId + "/continue";
+        }
         else requestUrl = requestUrl + "/" +sessionId;
 
         return webClient.post()
