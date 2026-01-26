@@ -60,7 +60,9 @@ public class RelayController {
     }
 
     @PostMapping(value = "/upload/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter uploadStream(@RequestParam(value = "file") MultipartFile file, @RequestParam("message") String message, @RequestParam("deepResearch") boolean deepRsrch, @RequestParam("sessionId") String sessionId, @RequestParam(value="templateKey", required = false) String templateKey) {
+    public SseEmitter uploadStream(@RequestParam(value = "file") MultipartFile file, @RequestParam("message") String message, @RequestParam("deepResearch") boolean deepRsrch
+            , @RequestParam("sessionId") String sessionId, @RequestParam(value="templateKey", required = false) String templateKey
+            , @RequestParam(value="isContinue", required = false) boolean isContinue) {
         log.info(file.getOriginalFilename());
         log.info(sessionId);
         //return relayService.ChatRelayServiceAudioStream(sessionId, file);
@@ -89,12 +91,19 @@ public class RelayController {
 
         }
 
-        return relayService.ChatRelayServiceStream(sessionId, message, deepRsrch, file);
+        return relayService.ChatRelayServiceStream(sessionId, message, deepRsrch, file, isContinue);
     }
 
     @PostMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter chatStream(@RequestBody RequestDTO req) {
         log.info(req.toString());
+        return relayService.ChatRelayServiceStream(req);
+    }
+
+    @PostMapping(value = "/stream/continue", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter chatStreamContinue(@RequestBody RequestDTO req) {
+        log.info(req.toString());
+
         return relayService.ChatRelayServiceStream(req);
     }
 }

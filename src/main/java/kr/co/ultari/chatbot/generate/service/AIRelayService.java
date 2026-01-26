@@ -132,7 +132,7 @@ public class AIRelayService {
         }
     }
 
-    public SseEmitter ChatRelayServiceStream(String sessionId, String message, boolean deep, MultipartFile file) {
+    public SseEmitter ChatRelayServiceStream(String sessionId, String message, boolean deep, MultipartFile file, boolean isContinue) {
         SseEmitter emitter = new SseEmitter(0L); // timeout 없음
         AtomicBoolean completed = new AtomicBoolean(false);
 
@@ -178,7 +178,7 @@ public class AIRelayService {
         // 진짜 스트리밍: AI Gateway 스트림(Flux)을 subscribe 해서 emitter로 바로 흘림
         try {
             disposableHolder[0] = aiClientService
-                    .callAIStream(AI_CHAT_URL, sessionId, builder)
+                    .callAIStream(AI_CHAT_URL, sessionId, builder, isContinue)
                     .subscribe(
                             rawChunk -> {
                                 if (completed.get()) return;
@@ -223,7 +223,7 @@ public class AIRelayService {
         return emitter;
     }
 
-    public SseEmitter ChatRelayServiceAudioStream(String sessionId, MultipartFile file) {
+    public SseEmitter ChatRelayServiceAudioStream(String sessionId, MultipartFile file, boolean isContinue) {
         SseEmitter emitter = new SseEmitter(0L); // timeout 없음
         AtomicBoolean completed = new AtomicBoolean(false);
 
@@ -259,7 +259,7 @@ public class AIRelayService {
         // 진짜 스트리밍: AI Gateway 스트림(Flux)을 subscribe 해서 emitter로 바로 흘림
         try {
             disposableHolder[0] = aiClientService
-                    .callAIStream(AI_CALL_SUMMARY_URL, sessionId, builder)
+                    .callAIStream(AI_CALL_SUMMARY_URL, sessionId, builder, isContinue)
                     .subscribe(
                             rawChunk -> {
                                 if (completed.get()) return;
@@ -346,7 +346,7 @@ public class AIRelayService {
         // 진짜 스트리밍: AI Gateway 스트림(Flux)을 subscribe 해서 emitter로 바로 흘림
         try {
             disposableHolder[0] = aiClientService
-                    .callAIStream(AI_CHAT_URL, requestDTO.getSessionId(), builder)
+                    .callAIStream(AI_CHAT_URL, requestDTO.getSessionId(), builder, requestDTO.isContinue())
                     .subscribe(
                             rawChunk -> {
                                 if (completed.get()) return;

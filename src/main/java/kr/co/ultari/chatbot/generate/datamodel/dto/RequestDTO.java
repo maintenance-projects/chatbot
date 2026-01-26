@@ -14,4 +14,7 @@ public class RequestDTO {
 
     @Builder.Default
     private boolean deepResearch = false;
+
+    @Builder.Default
+    private boolean isContinue = false;
 }

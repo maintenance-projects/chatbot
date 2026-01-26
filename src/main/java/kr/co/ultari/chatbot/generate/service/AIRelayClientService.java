@@ -62,10 +62,13 @@ public class AIRelayClientService {
     }
 
     /** AI Gateway가 text/event-stream(SSE)로 내려주는 응답을 Flux로 받는다 */
-    public Flux<String> callAIStream(String requestUrl, String sessionId, MultipartBodyBuilder builder) {
+    public Flux<String> callAIStream(String requestUrl, String sessionId, MultipartBodyBuilder builder, boolean isContinue) {
+
+        requestUrl = requestUrl + "/" +sessionId;
+        if(isContinue) requestUrl = requestUrl + "/continue";
 
         return webClient.post()
-                .uri(requestUrl + "/" + sessionId)
+                .uri(requestUrl)
                 .contentType(MediaType.MULTIPART_FORM_DATA)
                 .accept(MediaType.TEXT_EVENT_STREAM) // 핵심
                 .header(HttpHeaders.CACHE_CONTROL, "no-cache")
