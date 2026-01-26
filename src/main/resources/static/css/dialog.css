@@ -429,7 +429,6 @@ pre {
 }
 
 .cb-cardstack {
-    /* display: flex; */
     flex-direction: column;
     align-items: flex-end;
     gap: 8px;
@@ -692,6 +691,11 @@ pre {
     height: 18px;
 }
 
+/* 여기 */
+.cb-typing {
+    display: none !important;
+}
+
 .cb-typing i {
     width: 6px;
     height: 6px;
@@ -844,7 +848,6 @@ textarea {
     display: flex;
     gap: 10px;
     align-items: center;
-    /* background: #eef2ff; */
     color: #111;
     border-radius: 12px;
     padding: 10px 12px;
@@ -855,11 +858,7 @@ textarea {
     display: flex;
     gap: 10px;
     align-items: center;
-    /* background: #eef2ff; */
     color: #111;
-    /* border-radius: 12px; */
-    /* padding: 10px 12px; */
-    /* max-width: 360px;*/
 }
 
 .cb-filecard__icon {
@@ -901,7 +900,6 @@ textarea {
     display: flex;
     gap: 10px;
     align-items: center;
-    /* background: #ecfeff; */
     color: #111;
     border-radius: 12px;
     padding: 10px 12px;
@@ -994,6 +992,61 @@ textarea {
 .cb-actbtn--download {
     outline: none !important;
 }
+
+.cb-progress {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 20px;
+}
+
+.cb-progress__text {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: -0.01em;
+    background: linear-gradient(90deg, rgba(68, 77, 91, 0.6), rgba(210, 210, 210, 0.95), rgba(68, 77, 91, 0.6));
+    background-size: 220% 100%;
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    animation: cbShimmer 1.05s infinite linear;
+    user-select: none;
+}
+
+@keyframes cbShimmer {
+    0% {
+        background-position: 0% 0;
+    }
+
+    100% {
+        background-position: 220% 0;
+    }
+}
+
+@keyframes cbSpark {
+
+    0%,
+    100% {
+        transform: scale(1);
+        filter: brightness(1);
+    }
+
+    50% {
+        transform: scale(1.06);
+        filter: brightness(1.25);
+    }
+}
+
+@keyframes cbSpin {
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
 
 @keyframes cbDot {
 
