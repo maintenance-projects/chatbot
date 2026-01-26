@@ -48,6 +48,9 @@ document.addEventListener("DOMContentLoaded", () => {
     let pendingFile = null;
     let fileTag = null;
 
+    let continueNext = false;
+    let continueThreadId = null;
+
     const MAX_HEIGHT = 250;
 
     const allowedExt = new Set(["pdf", "hwp", "hwpx", "xls", "xlsx", "ppt", "pptx", "csv", "doc", "docx", "txt", "m4a"]);
@@ -658,7 +661,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 </div>
                 <div class="cb-bubble">
                     <div class="cb-bubble__text">
-                        <span class="cb-typing"><i></i><i></i><i></i></span>
+                        <div class="cb-progress" style="display:none">
+                            <span class="cb-sparkle" aria-hidden="true"></span>
+                            <span class="cb-progress__text"></span>
+                        </div>
                         <pre style="display:none" data-rawtext=""></pre>
                         ${refsHtml}
                     </div>
@@ -672,15 +678,31 @@ document.addEventListener("DOMContentLoaded", () => {
         const preEl = msgEl ? msgEl.querySelector(".cb-bubble__text pre") : null;
         const metaEl = msgEl ? msgEl.querySelector(".cb-meta") : null;
         const typingEl = msgEl ? msgEl.querySelector(".cb-typing") : null;
+        const progressEl = msgEl ? msgEl.querySelector(".cb-progress") : null;
+        const progressTextEl = progressEl ? progressEl.querySelector(".cb-progress__text") : null;
         const refsEl = enableRefs && msgEl ? msgEl.querySelector(".cb-refs") : null;
+        if (refsEl) {
+            refsEl.classList.remove("is-open");
+            refsEl.innerHTML = "";
+        }
         scrollToBottom();
-        return { msgEl, preEl, metaEl, typingEl, refsEl, started: false, refs: [] };
+        return { msgEl, preEl, metaEl, typingEl, progressEl, progressTextEl, refsEl, started: false, done: false, pendingRefs: [], hasProgress: false };
+    }
+
+    function showProgress(handle, stepText) {
+        if (!handle) return;
+        handle.hasProgress = true;
+        if (handle.typingEl) handle.typingEl.style.display = "none";
+        if (handle.progressEl) handle.progressEl.style.display = "flex";
+        if (handle.progressTextEl) handle.progressTextEl.textContent = String(stepText || "");
+        scrollToBottom();
     }
 
     function startStreaming(handle) {
         if (!handle || handle.started) return;
         handle.started = true;
         if (handle.typingEl) handle.typingEl.style.display = "none";
+        if (handle.progressEl) handle.progressEl.style.display = "none";
         if (handle.preEl) handle.preEl.style.display = "block";
         if (handle.preEl && handle.preEl.getAttribute("data-rawtext") == null) handle.preEl.setAttribute("data-rawtext", "");
         scrollToBottom();
@@ -699,10 +721,18 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function applyStreamRefs(handle, docs) {
-        if (!handle || !handle.refsEl) return;
+        if (!handle) return;
 
         const pdfDocs = filterPdfDocs(docs);
-        handle.refs = pdfDocs;
+        handle.pendingRefs = pdfDocs;
+
+        if (!handle.refsEl) return;
+
+        if (!handle.done) {
+            handle.refsEl.classList.remove("is-open");
+            handle.refsEl.innerHTML = "";
+            return;
+        }
 
         if (!pdfDocs.length) {
             handle.refsEl.classList.remove("is-open");
@@ -717,11 +747,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function finalizeStream(handle) {
         if (!handle || !handle.metaEl) return;
+
+        handle.done = true;
+
         if (!handle.metaEl.textContent) handle.metaEl.textContent = formatTime(new Date());
         if (handle && handle.msgEl) handle.msgEl.classList.remove("cb-msg--streaming");
-        if (handle && handle.refsEl && Array.isArray(handle.refs) && handle.refs.length) {
-            handle.refsEl.classList.add("is-open");
+
+        if (handle.refsEl) {
+            const list = Array.isArray(handle.pendingRefs) ? handle.pendingRefs : [];
+            if (list.length) {
+                handle.refsEl.innerHTML = renderRefs(list);
+                handle.refsEl.classList.add("is-open");
+            } else {
+                handle.refsEl.classList.remove("is-open");
+                handle.refsEl.innerHTML = "";
+            }
         }
+
+        scrollToBottom();
     }
 
     function parseSseFrame(frame) {
@@ -743,6 +786,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const onText = handlers && typeof handlers.onText === "function" ? handlers.onText : null;
         const onFirstToken = handlers && typeof handlers.onFirstToken === "function" ? handlers.onFirstToken : null;
         const onRefs = handlers && typeof handlers.onRefs === "function" ? handlers.onRefs : null;
+        const onProgress = handlers && typeof handlers.onProgress === "function" ? handlers.onProgress : null;
+        const onClarification = handlers && typeof handlers.onClarification === "function" ? handlers.onClarification : null;
         const acceptRefs = !!(handlers && handlers.acceptRefs);
 
         const res = await fetch(url, options);
@@ -805,8 +850,35 @@ document.addEventListener("DOMContentLoaded", () => {
                         continue;
                     }
 
+                    if (j && j.type === "progress") {
+                        if (typeof onProgress === "function") onProgress(j.step || "");
+                        continue;
+                    }
+
                     if (acceptRefs && j && j.type === "references" && Array.isArray(j.docs)) {
                         if (typeof onRefs === "function") onRefs(j.docs);
+                        continue;
+                    }
+
+                    if (j && j.type === "clarification_needed") {
+                        if (typeof onClarification === "function") onClarification(j.message || "", j.thread_id || null);
+                        if (first) {
+                            first = false;
+                            if (typeof onFirstToken === "function") onFirstToken();
+                        }
+                        if (typeof onText === "function") onText(String(j.message || ""));
+                        continue;
+                    }
+
+                    if (j && j.type === "answer") {
+                        const content = String(j.content || "");
+                        if (content) {
+                            if (first) {
+                                first = false;
+                                if (typeof onFirstToken === "function") onFirstToken();
+                            }
+                            if (typeof onText === "function") onText(content);
+                        }
                         continue;
                     }
 
@@ -878,6 +950,13 @@ document.addEventListener("DOMContentLoaded", () => {
         else openTray();
     }
 
+    function consumeContinueFlag() {
+        const isContinue = !!continueNext;
+        const threadId = continueThreadId ? String(continueThreadId) : "";
+        continueNext = false;
+        return { isContinue, threadId };
+    }
+
     function sendTextMessage(msg) {
         closeTray();
 
@@ -890,13 +969,16 @@ document.addEventListener("DOMContentLoaded", () => {
         setSending(true);
 
         const handle = addBotStreamLoadingMessage(true);
+        const cont = consumeContinueFlag();
 
         const payload = {
             sessionId,
             message: m,
             deepResearch: isResearchMode ? true : false,
-            templateKey: null
+            templateKey: null,
+            isContinue: cont.isContinue
         };
+        if (cont.threadId) payload.threadId = cont.threadId;
 
         streamEventText("/api/chat/stream", {
             method: "POST",
@@ -908,12 +990,17 @@ document.addEventListener("DOMContentLoaded", () => {
             credentials: "same-origin"
         }, {
             acceptRefs: true,
+            onProgress: (step) => showProgress(handle, step),
             onText: (t) => {
                 startStreaming(handle);
                 appendStreamText(handle, t);
             },
             onFirstToken: () => startStreaming(handle),
-            onRefs: (docs) => applyStreamRefs(handle, docs)
+            onRefs: (docs) => applyStreamRefs(handle, docs),
+            onClarification: (message, threadId) => {
+                continueNext = true;
+                if (threadId) continueThreadId = threadId;
+            }
         })
             .then(() => {
                 startStreaming(handle);
@@ -951,12 +1038,16 @@ document.addEventListener("DOMContentLoaded", () => {
         addUserFileMessage(file);
         if (msg) addUserMessage(msg);
 
+        const cont = consumeContinueFlag();
+
         const formData = new FormData();
         formData.append("file", file);
         formData.append("sessionId", sessionId);
         formData.append("deepResearch", isResearchMode ? true : false);
         formData.append("templateKey", templateKey || "");
         formData.append("message", msg);
+        formData.append("isContinue", cont.isContinue ? "true" : "false");
+        if (cont.threadId) formData.append("threadId", cont.threadId);
 
         setSending(true);
 
@@ -969,12 +1060,17 @@ document.addEventListener("DOMContentLoaded", () => {
             credentials: "same-origin"
         }, {
             acceptRefs: true,
+            onProgress: (step) => showProgress(handle, step),
             onText: (t) => {
                 startStreaming(handle);
                 appendStreamText(handle, t);
             },
             onFirstToken: () => startStreaming(handle),
-            onRefs: (docs) => applyStreamRefs(handle, docs)
+            onRefs: (docs) => applyStreamRefs(handle, docs),
+            onClarification: (message, threadId) => {
+                continueNext = true;
+                if (threadId) continueThreadId = threadId;
+            }
         })
             .then(() => {
                 startStreaming(handle);
@@ -1000,13 +1096,17 @@ document.addEventListener("DOMContentLoaded", () => {
         setSending(true);
         const handle = addBotStreamLoadingMessage(false);
 
+        const cont = consumeContinueFlag();
+
         try {
             const payload = {
                 sessionId: sessionId,
                 message: msg,
                 deepResearch: String(isResearchMode ? "true" : "false"),
-                templateKey: String(templateKey || "")
+                templateKey: String(templateKey || ""),
+                isContinue: cont.isContinue
             };
+            if (cont.threadId) payload.threadId = cont.threadId;
 
             const res = await fetch("/api/chat/template", {
                 method: "POST",
@@ -1307,6 +1407,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     .cb-meta{ margin-top:6px; font-size:11px; opacity:.7; }
                     .cb-actionsbar{ display:none !important; }
                     .cb-typing{ display:none !important; }
+                    .cb-progress{ display:none !important; }
                     .cb-cardstack{ display:none !important; }
                   </style>
                 </head>
