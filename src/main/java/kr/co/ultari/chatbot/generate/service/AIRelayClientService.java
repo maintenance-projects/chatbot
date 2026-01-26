@@ -67,8 +67,8 @@ public class AIRelayClientService {
         String sessionId = requestDTO.getSessionId();
         boolean isContinue = requestDTO.isContinue();
 
-        requestUrl = requestUrl + "/" +sessionId;
-        if(isContinue) requestUrl = requestUrl + "/continue";
+        if(isContinue) requestUrl = requestUrl.substring(0,requestUrl.lastIndexOf("/")) + "/" + sessionId + "/continue";
+        else requestUrl = requestUrl + "/" +sessionId;
 
         return webClient.post()
                 .uri(requestUrl)
