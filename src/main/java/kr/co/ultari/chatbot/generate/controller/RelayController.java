@@ -4,6 +4,7 @@ import kr.co.ultari.chatbot.generate.datamodel.dto.RequestDTO;
 import kr.co.ultari.chatbot.generate.datamodel.dto.ResponseDTO;
 import kr.co.ultari.chatbot.generate.service.AIRelayService;
 import lombok.extern.slf4j.Slf4j;
+import org.json.JSONArray;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
@@ -19,6 +20,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import java.util.List;
 
 @Profile("relay")
 @Slf4j
@@ -67,6 +69,7 @@ public class RelayController {
         log.info(sessionId);
         //return relayService.ChatRelayServiceAudioStream(sessionId, file);
 
+        RequestDTO req = new RequestDTO(sessionId, message, templateKey, null, deepRsrch, isContinue, null);
         if(StringUtils.hasText(file.getOriginalFilename())) {
             String safeFilename = Paths.get(file.getOriginalFilename()).getFileName().toString();
 
@@ -91,7 +94,7 @@ public class RelayController {
 
         }
 
-        return relayService.ChatRelayServiceStream(sessionId, message, deepRsrch, file, isContinue);
+        return relayService.ChatRelayServiceStream(req, file);
     }
 
     @PostMapping(value = "/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
@@ -105,5 +108,11 @@ public class RelayController {
         log.info(req.toString());
 
         return relayService.ChatRelayServiceStream(req);
+    }
+
+    @RequestMapping("/files")
+    public List<String> requestFileList(@RequestParam("sessionId") String sessionId) {
+        log.debug(sessionId);
+        return relayService.requestFileList(sessionId);
     }
 }

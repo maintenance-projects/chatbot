@@ -114,6 +114,27 @@ public class WebUtilsCustom {
         );
     }
 
+    public static String requestGet(String requestUrl, String sessionId) throws Exception {
+        URL url = new URL(requestUrl+"/"+ sessionId);
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+
+        conn.setRequestMethod("GET");
+        conn.setDoOutput(true);
+        conn.setRequestProperty("Content-Type", "application/json; charset=utf-8");
+
+        InputStream is = conn.getInputStream();
+        BufferedReader br = new BufferedReader(
+                new InputStreamReader(is, StandardCharsets.UTF_8));
+
+        StringBuilder sb = new StringBuilder();
+        String line;
+        while ((line = br.readLine()) != null) {
+            sb.append(line);
+        }
+
+        return sb.toString();
+    }
+
     public static Map<String, Object> jsonToMap(String json) throws Exception
     {
         ObjectMapper objectMapper = new ObjectMapper();

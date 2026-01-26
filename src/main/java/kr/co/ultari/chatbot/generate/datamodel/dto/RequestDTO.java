@@ -13,8 +13,14 @@ public class RequestDTO {
     private String templateKey;
 
     @Builder.Default
+    private String threadId = "";
+
+    @Builder.Default
     private boolean deepResearch = false;
 
     @Builder.Default
     private boolean isContinue = false;
+
+    @Builder.Default
+    private String targetFileName = "";
 }

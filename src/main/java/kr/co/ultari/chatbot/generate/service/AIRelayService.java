@@ -1,11 +1,13 @@
 package kr.co.ultari.chatbot.generate.service;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import kr.co.ultari.chatbot.database.service.AIUsageService;
 import kr.co.ultari.chatbot.generate.datamodel.dto.RequestDTO;
 import kr.co.ultari.chatbot.utils.StringUtilsCustom;
 import kr.co.ultari.chatbot.utils.WebUtilsCustom;
 import lombok.extern.slf4j.Slf4j;
 import lombok.var;
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
@@ -13,11 +15,15 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import reactor.core.Disposable;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Executor;
 import java.util.concurrent.TimeUnit;
@@ -30,11 +36,17 @@ public class AIRelayService {
     @Value("${ultari.ai-gateway.chat-url:}")
     private String AI_CHAT_URL;
 
+    @Value("${ultari.ai-gateway.upload-url:}")
+    private String AI_UPLOAD_URL;
+
     @Value("${ultari.ai-gateway.template-url:}")
     private String AI_TEMPLATE_URL;
 
     @Value("${ultari.ai-gateway.call-summary-url:}")
     private String AI_CALL_SUMMARY_URL;
+
+    @Value("${ultari.ai-gateway.files-url:}")
+    private String AI_FILES_URL;
 
     @Autowired
     AIUsageService aiUsageService;
@@ -132,29 +144,18 @@ public class AIRelayService {
         }
     }
 
-    public SseEmitter ChatRelayServiceStream(String sessionId, String message, boolean deep, MultipartFile file, boolean isContinue) {
+    public SseEmitter ChatRelayServiceStream(RequestDTO requestDTO, MultipartFile file) {
         SseEmitter emitter = new SseEmitter(0L); // timeout 없음
         AtomicBoolean completed = new AtomicBoolean(false);
 
-        String originalFileName = file.getOriginalFilename();
-        String fileName = originalFileName.substring(0,originalFileName.lastIndexOf("."));
-        String ext = originalFileName.substring(originalFileName.lastIndexOf(".")+1);
-
         aiUsageService.increase(
-                sessionId,
-                sessionId,
+                requestDTO.getSessionId(),
+                requestDTO.getSessionId(),
                 "DOCUMENT"
         );
 
         // AI Gateway로 보낼 multipart 구성 (기존 ChatRelayService의 JSON과 동일 필드)
-        MultipartBodyBuilder builder = new MultipartBodyBuilder();
-        builder.part("message", fileName + "\n" + message);
-        builder.part("attachFile_name", fileName);
-        builder.part("attachFile_extension", ext);
-        builder.part("attachFile_bin", file.getResource())
-                .filename(originalFileName)
-                .contentType(MediaType.APPLICATION_OCTET_STREAM);
-        builder.part("deepResearch", deep);
+        MultipartBodyBuilder builder = setMultiPartBuilder(requestDTO, file);
 
         // 클라이언트가 끊으면 subscription 정리
         final Disposable[] disposableHolder = new Disposable[1];
@@ -178,7 +179,7 @@ public class AIRelayService {
         // 진짜 스트리밍: AI Gateway 스트림(Flux)을 subscribe 해서 emitter로 바로 흘림
         try {
             disposableHolder[0] = aiClientService
-                    .callAIStream(AI_CHAT_URL, sessionId, builder, isContinue)
+                    .callAIStream(AI_UPLOAD_URL, requestDTO, builder)
                     .subscribe(
                             rawChunk -> {
                                 if (completed.get()) return;
@@ -223,13 +224,13 @@ public class AIRelayService {
         return emitter;
     }
 
-    public SseEmitter ChatRelayServiceAudioStream(String sessionId, MultipartFile file, boolean isContinue) {
+    public SseEmitter ChatRelayServiceAudioStream(RequestDTO requestDTO, MultipartFile file) {
         SseEmitter emitter = new SseEmitter(0L); // timeout 없음
         AtomicBoolean completed = new AtomicBoolean(false);
 
         aiUsageService.increase(
-                sessionId,
-                sessionId,
+                requestDTO.getSessionId(),
+                requestDTO.getSessionId(),
                 "AUDIO"
         );
 
@@ -259,7 +260,7 @@ public class AIRelayService {
         // 진짜 스트리밍: AI Gateway 스트림(Flux)을 subscribe 해서 emitter로 바로 흘림
         try {
             disposableHolder[0] = aiClientService
-                    .callAIStream(AI_CALL_SUMMARY_URL, sessionId, builder, isContinue)
+                    .callAIStream(AI_CALL_SUMMARY_URL, requestDTO, builder)
                     .subscribe(
                             rawChunk -> {
                                 if (completed.get()) return;
@@ -317,12 +318,7 @@ public class AIRelayService {
         );
 
         // AI Gateway로 보낼 multipart 구성 (기존 ChatRelayService의 JSON과 동일 필드)
-        MultipartBodyBuilder builder = new MultipartBodyBuilder();
-        builder.part("message", requestDTO.getMessage());
-        builder.part("attachFile_name", "");
-        builder.part("attachFile_extension", "");
-        builder.part("attachFile_bin", "");
-        builder.part("deepResearch", requestDTO.isDeepResearch());
+        MultipartBodyBuilder builder = setBuilder(requestDTO);
 
         // 클라이언트가 끊으면 subscription 정리
         final Disposable[] disposableHolder = new Disposable[1];
@@ -346,7 +342,7 @@ public class AIRelayService {
         // 진짜 스트리밍: AI Gateway 스트림(Flux)을 subscribe 해서 emitter로 바로 흘림
         try {
             disposableHolder[0] = aiClientService
-                    .callAIStream(AI_CHAT_URL, requestDTO.getSessionId(), builder, requestDTO.isContinue())
+                    .callAIStream(AI_CHAT_URL, requestDTO, builder)
                     .subscribe(
                             rawChunk -> {
                                 if (completed.get()) return;
@@ -658,6 +654,65 @@ public class AIRelayService {
         } catch (Exception e) {
             log.error("", e);
             return "AI 서버 응답이 지연되고 있습니다. 다시 시도해 주시기 바랍니다... 😥";
+        }
+    }
+
+    public MultipartBodyBuilder setBuilder(RequestDTO requestDTO) {
+        MultipartBodyBuilder builder = new MultipartBodyBuilder();
+        if(requestDTO.isContinue()) {
+            builder.part("thread_id",requestDTO.getThreadId());
+            builder.part("response", requestDTO.getMessage());
+        } else if(StringUtils.hasText(requestDTO.getTargetFileName())) {
+            builder.part("message", requestDTO.getMessage());
+            builder.part("target_filename", requestDTO.getTargetFileName());
+        } else {
+            builder.part("message", requestDTO.getMessage());
+        }
+
+        return builder;
+    }
+
+    public MultipartBodyBuilder setMultiPartBuilder(RequestDTO requestDTO, MultipartFile file) {
+        String originalFileName = file.getOriginalFilename();
+        String fileName = originalFileName.substring(0,originalFileName.lastIndexOf("."));
+        String ext = originalFileName.substring(originalFileName.lastIndexOf(".")+1);
+
+        MultipartBodyBuilder builder = new MultipartBodyBuilder();
+        builder.part("attachFile_name", originalFileName);
+        builder.part("attachFile_bin", file.getResource())
+                .filename(originalFileName)
+                .contentType(MediaType.APPLICATION_OCTET_STREAM);
+
+        return builder;
+    }
+
+    public List<String> requestFileList(String sessionId) {
+        try {
+            String response = WebUtilsCustom.requestGet(AI_FILES_URL, sessionId);
+            // 1. 응답값 비었는지 체크
+            if (response.isEmpty()) {
+                return Collections.emptyList();
+            }
+
+            JSONObject json = new JSONObject(response);
+
+            // 2. 키 존재 여부 및 null 체크
+            if (!json.has("files") || json.isNull("files")) {
+                return Collections.emptyList();
+            }
+
+            // 3. JSONArray를 안전하게 List<String>으로 변환
+            JSONArray jsonArray = json.getJSONArray("files");
+            List<String> fileList = new ArrayList<>();
+
+            for (int i = 0; i < jsonArray.length(); i++) {
+                fileList.add(jsonArray.getString(i));
+            }
+
+            return fileList;
+        } catch (Exception e) {
+            log.error("파일 목록 요청 중 오류 발생: sessionId={}", sessionId, e);
+            return Collections.emptyList(); // 혹은 예외를 다시 던짐
         }
     }
 }

@@ -1,6 +1,7 @@
 package kr.co.ultari.chatbot.generate.service;
 
 import io.netty.channel.ChannelOption;
+import kr.co.ultari.chatbot.generate.datamodel.dto.RequestDTO;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -62,7 +63,9 @@ public class AIRelayClientService {
     }
 
     /** AI Gateway가 text/event-stream(SSE)로 내려주는 응답을 Flux로 받는다 */
-    public Flux<String> callAIStream(String requestUrl, String sessionId, MultipartBodyBuilder builder, boolean isContinue) {
+    public Flux<String> callAIStream(String requestUrl, RequestDTO requestDTO, MultipartBodyBuilder builder) {
+        String sessionId = requestDTO.getSessionId();
+        boolean isContinue = requestDTO.isContinue();
 
         requestUrl = requestUrl + "/" +sessionId;
         if(isContinue) requestUrl = requestUrl + "/continue";
