@@ -664,30 +664,36 @@ document.addEventListener("DOMContentLoaded", () => {
         const list = filterPdfDocs(docs);
         if (!list.length) return "";
 
-        const limit = 3;
-        const hiddenCount = Math.max(0, list.length - limit);
+        const maxPreview = 3;
 
-        const items = list
-            .map((d, idx) => {
-                const meta = `${d.page} 페이지`;
-                const hidden = idx >= limit ? " is-hidden" : "";
-                return `
-          <button class="cb-ref${hidden}" type="button" data-url="${escapeHtml(d.url)}">
+        const itemHtml = (d) => {
+            const meta = `${d.page} 페이지`;
+            return `
+          <button class="cb-ref" type="button" data-url="${escapeHtml(d.url)}">
             <div class="cb-ref__name">${escapeHtml(d.source || "문서")}</div>
             <div class="cb-ref__meta">${escapeHtml(meta)}</div>
           </button>
         `;
-            })
-            .join("");
+        };
 
-        const toggleBtn = hiddenCount > 0
-            ? `<button type="button" class="cb-refs__toggle" data-open="false">+ ${hiddenCount}개 더보기</button>`
-            : "";
+        if (list.length <= maxPreview) {
+            const items = list.map(itemHtml).join("");
+            return `
+      <div class="cb-refs__title"><span>출처</span></div>
+      <div class="cb-refs__list">${items}</div>
+    `;
+        }
+
+        const first = list.slice(0, maxPreview);
+        const rest = list.slice(maxPreview);
+        const items1 = first.map(itemHtml).join("");
+        const items2 = rest.map(itemHtml).join("");
 
         return `
       <div class="cb-refs__title"><span>출처</span></div>
-      <div class="cb-refs__list">${items}</div>
-      ${toggleBtn}
+      <div class="cb-refs__list">${items1}</div>
+      <div class="cb-refs__more" style="display:none">${items2}</div>
+      <button class="cb-refs__toggle" type="button" data-open="false" data-morecount="${rest.length}">+${rest.length}개 더보기</button>
     `;
     }
 
@@ -731,9 +737,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function showProgress(handle, stepText) {
         if (!handle) return;
-        if (handle.done) return;
-        if (handle.started) return;
-
         handle.hasProgress = true;
         if (handle.progressEl) handle.progressEl.style.display = "flex";
         if (handle.progressTextEl) handle.progressTextEl.textContent = String(stepText || "");
@@ -756,7 +759,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const next = prev + String(chunk || "");
         handle.preEl.setAttribute("data-rawtext", next);
         handle.preEl.innerHTML = renderRichText(next);
-        scrollToBottom();
+        // scrollToBottom();
         if (isSearchOpen() && searchInput && searchInput.value.trim()) rebuildHighlights(searchInput.value);
     }
 
@@ -804,7 +807,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         }
 
-        scrollToBottom();
+        // scrollToBottom();
     }
 
     function parseSseFrame(frame) {
@@ -917,6 +920,27 @@ document.addEventListener("DOMContentLoaded", () => {
                         continue;
                     }
 
+                    if (j && j.type === "answer_start") {
+                        continue;
+                    }
+
+                    if (j && j.type === "answer_token") {
+                        const content = String(j.content || "");
+                        if (content) {
+                            if (first) {
+                                first = false;
+                                if (typeof onFirstToken === "function") onFirstToken();
+                            }
+                            if (typeof onText === "function") onText(content);
+                        } else {
+                            if (first) {
+                                first = false;
+                                if (typeof onFirstToken === "function") onFirstToken();
+                            }
+                        }
+                        continue;
+                    }
+
                     if (j && j.type === "clarification_needed") {
                         if (typeof onClarification === "function") onClarification(j.message || "", j.thread_id || null);
                         if (first) {
@@ -935,11 +959,6 @@ document.addEventListener("DOMContentLoaded", () => {
                                 if (typeof onFirstToken === "function") onFirstToken();
                             }
                             if (typeof onText === "function") onText(content);
-                        } else {
-                            if (first) {
-                                first = false;
-                                if (typeof onFirstToken === "function") onFirstToken();
-                            }
                         }
                         continue;
                     }
@@ -1346,9 +1365,9 @@ document.addEventListener("DOMContentLoaded", () => {
         summaryBusy = true;
 
         const handle = addBotStreamLoadingMessage(true);
-        const titlePrefix = `**요약**`;
-        startStreaming(handle);
-        appendStreamText(handle, titlePrefix);
+
+        const prefix = `**요약**\n\n`;
+        let prefixInjected = false;
 
         const payload = {
             sessionId,
@@ -1376,9 +1395,17 @@ document.addEventListener("DOMContentLoaded", () => {
                 },
                 onFirstToken: () => {
                     startStreaming(handle);
+                    if (!prefixInjected) {
+                        appendStreamText(handle, prefix);
+                        prefixInjected = true;
+                    }
                 },
                 onText: (t) => {
                     startStreaming(handle);
+                    if (!prefixInjected) {
+                        appendStreamText(handle, prefix);
+                        prefixInjected = true;
+                    }
                     appendStreamText(handle, t);
                 },
                 onRefs: (docs) => applyStreamRefs(handle, docs),
@@ -1387,6 +1414,10 @@ document.addEventListener("DOMContentLoaded", () => {
         )
             .then(() => {
                 startStreaming(handle);
+                if (!prefixInjected) {
+                    appendStreamText(handle, prefix);
+                    prefixInjected = true;
+                }
                 finalizeStream(handle);
                 const raw = handle.preEl ? handle.preEl.getAttribute("data-rawtext") || "" : "";
                 if (!raw.trim()) appendStreamText(handle, "요약 결과가 없습니다.");
@@ -1953,7 +1984,6 @@ document.addEventListener("DOMContentLoaded", () => {
             .cb-fileqbar{ display:none !important; }
             .cb-cardstack{ display:none !important; }
             .cb-msg--upload-progress{ display:none !important; }
-            .cb-refs__toggle{ display:none !important; }
           </style>
         </head>
         <body>
@@ -2132,35 +2162,6 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     body.addEventListener("click", async (e) => {
-        const refsToggle = e.target && e.target.closest ? e.target.closest(".cb-refs__toggle") : null;
-        if (refsToggle) {
-            e.preventDefault();
-            e.stopPropagation();
-            const refs = refsToggle.closest(".cb-refs");
-            if (!refs) return;
-
-            const open = refsToggle.getAttribute("data-open") === "true";
-            const nextOpen = !open;
-
-            refsToggle.setAttribute("data-open", nextOpen ? "true" : "false");
-
-            const hiddenItems = Array.from(refs.querySelectorAll(".cb-ref.is-hidden"));
-            if (nextOpen) {
-                hiddenItems.forEach((x) => x.classList.remove("is-hidden"));
-                refsToggle.textContent = "접기";
-            } else {
-                const all = Array.from(refs.querySelectorAll(".cb-ref"));
-                all.forEach((x, idx) => {
-                    if (idx >= 3) x.classList.add("is-hidden");
-                });
-
-                const total = all.length;
-                const hiddenCount = Math.max(0, total - 3);
-                refsToggle.textContent = hiddenCount > 0 ? `+ ${hiddenCount}개 더보기` : "";
-            }
-            return;
-        }
-
         const copyBtn = e.target && e.target.closest ? e.target.closest(".cb-actbtn--copy") : null;
         if (copyBtn) {
             const msgEl = copyBtn.closest(".cb-msg");
@@ -2204,6 +2205,31 @@ document.addEventListener("DOMContentLoaded", () => {
             const url = refBtn.getAttribute("data-url") || "";
             if (!url) return;
             openViewer(url);
+            return;
+        }
+
+        const refsToggle = e.target && e.target.closest ? e.target.closest(".cb-refs__toggle") : null;
+        if (refsToggle) {
+            e.preventDefault();
+            e.stopPropagation();
+            const wrap = refsToggle.closest(".cb-refs");
+            if (!wrap) return;
+            const more = wrap.querySelector(".cb-refs__more");
+            if (!more) return;
+
+            const open = refsToggle.getAttribute("data-open") === "true";
+            const nextOpen = !open;
+            refsToggle.setAttribute("data-open", nextOpen ? "true" : "false");
+
+            if (nextOpen) {
+                more.style.display = "flex";
+                refsToggle.textContent = "접기";
+            } else {
+                more.style.display = "none";
+                const n = Number(refsToggle.getAttribute("data-morecount") || "0") || 0;
+                refsToggle.textContent = `+${n}개 더보기`;
+            }
+            scrollToBottom();
             return;
         }
 

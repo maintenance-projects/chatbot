@@ -363,17 +363,21 @@ textarea {
 }
 
 .cb-fileqbar {
-    position: static;
-    transform: none;
-    display: flex;
+    display: none;
     justify-content: flex-end;
     gap: 6px;
     margin-top: 8px;
-    z-index: 1;
-    opacity: 1;
-    visibility: visible;
-    pointer-events: auto;
-    transition: none;
+}
+
+.cb-msg--card:hover .cb-fileqbar,
+.cb-msg--card:focus-within .cb-fileqbar {
+    display: flex;
+}
+
+@media (hover: none) {
+    .cb-fileqbar {
+        display: flex;
+    }
 }
 
 .cb-fileqbtn {
@@ -424,6 +428,30 @@ textarea {
     gap: 6px;
 }
 
+.cb-refs__more {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    margin-top: 6px;
+}
+
+.cb-refs__toggle {
+    margin-top: 8px;
+    width: 100%;
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    background: rgba(248, 250, 252, 0.92);
+    color: #0f172a;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 8px 10px;
+    border-radius: 12px;
+    cursor: pointer;
+}
+
+.cb-refs__toggle:active {
+    transform: scale(0.99);
+}
+
 .cb-ref {
     width: 100%;
     border: 1px solid rgba(15, 23, 42, 0.1);
@@ -434,10 +462,6 @@ textarea {
     text-align: left;
     display: grid;
     gap: 4px;
-}
-
-.cb-ref.is-hidden {
-    display: none;
 }
 
 .cb-ref:active {
@@ -456,23 +480,6 @@ textarea {
 .cb-ref__meta {
     font-size: 11px;
     color: #64748b;
-}
-
-.cb-refs__toggle {
-    margin-top: 8px;
-    width: 100%;
-    border: 1px solid rgba(15, 23, 42, 0.12);
-    background: rgba(248, 250, 252, 0.92);
-    color: #0f172a;
-    font-size: 11px;
-    font-weight: 800;
-    padding: 8px 10px;
-    border-radius: 12px;
-    cursor: pointer;
-}
-
-.cb-refs__toggle:active {
-    transform: scale(0.99);
 }
 
 .cb-cardstack {
