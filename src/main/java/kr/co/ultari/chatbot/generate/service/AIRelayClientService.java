@@ -70,9 +70,11 @@ public class AIRelayClientService {
         if(isContinue) {
             if(requestUrl.contains("open") || requestUrl.contains("private"))
                 requestUrl = requestUrl.substring(0,requestUrl.lastIndexOf("/")) + "/" + sessionId + "/continue";
+            else requestUrl = requestUrl + "/" +sessionId;
         }
         else requestUrl = requestUrl + "/" +sessionId;
 
+        log.debug("request url = {}",requestUrl);
         return webClient.post()
                 .uri(requestUrl)
                 .contentType(MediaType.MULTIPART_FORM_DATA)
