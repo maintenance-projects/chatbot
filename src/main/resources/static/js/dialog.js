@@ -18,9 +18,7 @@ document.addEventListener("DOMContentLoaded", () => {
         chipRow.className = "cb-chiprow";
         chipRow.id = "cbChipRow";
         chipRow.setAttribute("aria-hidden", "true");
-        const inputbar = inputWrap.querySelector(".cb-inputbar");
-        if (inputbar) inputbar.insertAdjacentElement("afterend", chipRow);
-        else inputWrap.appendChild(chipRow);
+        inputWrap.appendChild(chipRow);
     }
 
     const defaultPlaceholder = (input.getAttribute("placeholder") || input.placeholder || "").trim();
@@ -37,6 +35,14 @@ document.addEventListener("DOMContentLoaded", () => {
     const trayClose = document.getElementById("cbTplTrayClose");
     const trayBody = document.getElementById("cbTplTrayBody");
 
+    const docsBtn = document.getElementById("cbDocsBtn");
+
+    const documentListPopup = document.createElement("div");
+    documentListPopup.className = "document-list-popup";
+    documentListPopup.style.display = "none";
+    documentListPopup.setAttribute("aria-hidden", "true");
+    inputWrap.appendChild(documentListPopup);
+
     const sessionId = window.sessionId || "";
 
     let isResearchMode = false;
@@ -45,8 +51,8 @@ document.addEventListener("DOMContentLoaded", () => {
     let selectedTemplate = null;
     let templateTag = null;
 
-    let pendingFile = null;
-    let fileTag = null;
+    let selectedDocument = null;
+    let documentTag = null;
 
     let continueNext = false;
     let continueThreadId = null;
@@ -56,171 +62,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const allowedExt = new Set(["pdf", "hwp", "hwpx", "xls", "xlsx", "ppt", "pptx", "csv", "doc", "docx", "txt", "m4a"]);
     const blockedExt = new Set(["png", "jpg", "jpeg", "gif", "webp", "bmp", "heic", "svg"]);
 
-    function updateChipRow() {
-        const hasAny =
-            (researchTag && researchTag.style.display !== "none") ||
-            (templateTag && templateTag.style.display !== "none") ||
-            (fileTag && fileTag.style.display !== "none");
+    let uploadedFilesCache = null;
+    let uploadedFilesPromise = null;
 
-        chipRow.classList.toggle("is-open", !!hasAny);
-        chipRow.setAttribute("aria-hidden", hasAny ? "false" : "true");
-    }
-
-    function mountChip(el) {
-        if (!el) return;
-        if (el.parentElement !== chipRow) chipRow.appendChild(el);
-        updateChipRow();
-    }
-
-    function ensureResearchTag() {
-        if (researchTag) return researchTag;
-
-        researchTag = document.createElement("button");
-        researchTag.type = "button";
-        researchTag.id = "cbResearchTag";
-        researchTag.setAttribute("aria-pressed", "false");
-        researchTag.innerHTML = `
-            <img src="/img/ic-research-mini.png" class="cb-tag__icon" />
-            <span class="cb-rch__label">리서치</span>
-            <span class="cb-rch__x" aria-hidden="true">×</span>
-        `;
-
-        researchTag.addEventListener("click", (e) => {
-            e.preventDefault();
-            setResearchMode(false);
-            input.focus();
-        });
-
-        mountChip(researchTag);
-        researchTag.style.display = "none";
-        updateChipRow();
-        return researchTag;
-    }
-
-    function ensureTemplateTag() {
-        if (templateTag) return templateTag;
-
-        templateTag = document.createElement("button");
-        templateTag.type = "button";
-        templateTag.id = "cbTemplateTag";
-        templateTag.setAttribute("aria-pressed", "false");
-        templateTag.innerHTML = `
-            <img src="/img/ic-select.png" class="cb-tag__icon" />
-            <span class="cb-tpltag__label"></span>
-            <span class="cb-tpltag__x" aria-hidden="true">×</span>
-        `;
-
-        templateTag.addEventListener("click", (e) => {
-            e.preventDefault();
-            setTemplate(null);
-            input.focus();
-        });
-
-        ensureResearchTag();
-        mountChip(templateTag);
-        templateTag.style.display = "none";
-        updateChipRow();
-        return templateTag;
-    }
-
-    function ensureFileTag() {
-        if (fileTag) return fileTag;
-
-        fileTag = document.createElement("button");
-        fileTag.type = "button";
-        fileTag.id = "cbFileTag";
-        fileTag.setAttribute("aria-pressed", "false");
-        fileTag.innerHTML = `
-            <img src="/img/ic-file.png" class="cb-tag__icon" />
-            <span class="cb-filetag__label"></span>
-            <span class="cb-filetag__x" aria-hidden="true">×</span>
-        `;
-
-        fileTag.addEventListener("click", (e) => {
-            e.preventDefault();
-            setPendingFile(null);
-            input.focus();
-        });
-
-        ensureTemplateTag();
-        mountChip(fileTag);
-        fileTag.style.display = "none";
-        updateChipRow();
-        return fileTag;
-    }
-
-    function setTemplate(tpl) {
-        if (tpl && isResearchMode) setResearchMode(false);
-
-        selectedTemplate = tpl ? { ...tpl } : null;
-
-        const tag = ensureTemplateTag();
-        if (!tag) return;
-
-        if (!selectedTemplate) {
-            tag.style.display = "none";
-            tag.setAttribute("aria-pressed", "false");
-            const labelEl = tag.querySelector(".cb-tpltag__label");
-            if (labelEl) labelEl.textContent = "";
-            updateChipRow();
-            return;
-        }
-
-        tag.style.display = "";
-        tag.setAttribute("aria-pressed", "true");
-        const labelEl = tag.querySelector(".cb-tpltag__label");
-        if (labelEl) labelEl.textContent = selectedTemplate.name || "양식";
-        updateChipRow();
-    }
-
-    function setPendingFile(file) {
-        if (file && isResearchMode) setResearchMode(false);
-
-        pendingFile = file || null;
-
-        const tag = ensureFileTag();
-        if (!tag) return;
-
-        if (!pendingFile) {
-            tag.style.display = "none";
-            tag.setAttribute("aria-pressed", "false");
-            const labelEl = tag.querySelector(".cb-filetag__label");
-            if (labelEl) labelEl.textContent = "";
-            updateChipRow();
-            return;
-        }
-
-        tag.style.display = "";
-        tag.setAttribute("aria-pressed", "true");
-        const labelEl = tag.querySelector(".cb-filetag__label");
-        if (labelEl) labelEl.textContent = pendingFile.name || "파일";
-        updateChipRow();
-    }
-
-    function setResearchMode(on) {
-        const next = !!on;
-
-        if (next) {
-            setTemplate(null);
-            setPendingFile(null);
-        }
-
-        isResearchMode = next;
-
-        const tag = ensureResearchTag();
-
-        if (tag) {
-            tag.style.display = isResearchMode ? "" : "none";
-            tag.setAttribute("aria-pressed", isResearchMode ? "true" : "false");
-        }
-
-        if (input) {
-            input.placeholder = isResearchMode ? "디테일한 보고서를 작성해 주세요." : defaultPlaceholder;
-        }
-
-        updateChipRow();
-        autoResizeInput();
-    }
+    let summaryBusy = false;
 
     function pad2(n) {
         return String(n).padStart(2, "0");
@@ -263,7 +108,6 @@ document.addEventListener("DOMContentLoaded", () => {
         input.style.height = "auto";
         const nextHeight = Math.min(input.scrollHeight, MAX_HEIGHT);
         input.style.height = `${nextHeight}px`;
-
         if (input.scrollHeight > MAX_HEIGHT) input.style.overflowY = "auto";
         else input.style.overflowY = "hidden";
     }
@@ -310,6 +154,12 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    function setViewerTitle(text) {
+        if (!viewer) return;
+        const t = viewer.querySelector(".cb-viewer__title");
+        if (t) t.textContent = String(text || "");
+    }
+
     function openViewer(url) {
         if (!url) return;
 
@@ -346,12 +196,77 @@ document.addEventListener("DOMContentLoaded", () => {
         viewerFrame.src = targetAbs;
     }
 
+    function openViewerHtml(title, htmlBody) {
+        const isMobile = window.matchMedia && window.matchMedia("(max-width: 900px)").matches;
+
+        const doc = `<!doctype html>
+                        <html lang="ko">
+                        <head>
+                        <meta charset="utf-8" />
+                        <meta name="viewport" content="width=device-width, initial-scale=1" />
+                        <title>${escapeHtml(title || "내용")}</title>
+                        <style>
+                        :root{ color-scheme: light; }
+                        body{ margin:0; font-family: PretendardVariable, system-ui, -apple-system, Segoe UI, Roboto, Arial; background:#fff; color:#0f172a; }
+                        .wrap{ padding: 18px 18px 22px; }
+                        .h{ font-size: 14px; font-weight: 900; margin: 0 0 10px; }
+                        .sub{ font-size: 12px; color:#64748b; margin: 0 0 14px; }
+                        pre{ margin:0; white-space: pre-wrap; word-break: break-word; font-size: 12px; line-height: 1.6; }
+                        .box{ border:1px solid rgba(15,23,42,.10); border-radius: 14px; background: #f8fafc; padding: 14px; }
+                        strong{ font-weight: 900; }
+                        </style>
+                        </head>
+                        <body>
+                        <div class="wrap">
+                            ${htmlBody || ""}
+                        </div>
+                        </body>
+                        </html>
+                    `;
+
+        if (isMobile) {
+            const w = window.open("", "_blank");
+            if (!w) return;
+            w.document.open();
+            w.document.write(doc);
+            w.document.close();
+            return;
+        }
+
+        if (!shell || !viewer || !viewerFrame) {
+            const w = window.open("", "_blank");
+            if (!w) return;
+            w.document.open();
+            w.document.write(doc);
+            w.document.close();
+            return;
+        }
+
+        shell.classList.add("has-viewer");
+        viewer.classList.add("is-open");
+        viewer.setAttribute("aria-hidden", "false");
+        setViewerTitle(title || "내용");
+
+        viewerFrame.src = "about:blank";
+        try {
+            viewerFrame.srcdoc = doc;
+        } catch (e) {
+            const blob = new Blob([doc], { type: "text/html;charset=utf-8" });
+            const blobUrl = URL.createObjectURL(blob);
+            viewerFrame.src = blobUrl;
+            window.setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
+        }
+    }
+
     function closeViewer() {
         if (!shell || !viewer || !viewerFrame) return;
         shell.classList.remove("has-viewer");
         viewer.classList.remove("is-open");
         viewer.setAttribute("aria-hidden", "true");
         viewerFrame.src = "about:blank";
+        try {
+            viewerFrame.srcdoc = "";
+        } catch (e) { }
     }
 
     if (viewerClose) {
@@ -371,27 +286,37 @@ document.addEventListener("DOMContentLoaded", () => {
         let html = `<div class="cb-actionsbar" aria-hidden="true">`;
         if (canCopy) {
             html += `
-                <button class="cb-actbtn cb-actbtn--copy" type="button" aria-label="복사">
-                    <img src="/img/ic-copy.png" alt="복사" />
-                </button>
-            `;
+        <button class="cb-actbtn cb-actbtn--copy" type="button" aria-label="복사">
+          <img src="/img/ic-copy.png" alt="복사" />
+        </button>
+      `;
         }
         if (downloadUrl) {
             html += `
-                <button class="cb-actbtn cb-actbtn--download" type="button" aria-label="다운로드" data-url="${escapeHtml(downloadUrl)}">
-                    <img src="/img/ic-download.png" alt="다운로드" />
-                </button>
-            `;
+        <button class="cb-actbtn cb-actbtn--download" type="button" aria-label="다운로드" data-url="${escapeHtml(downloadUrl)}">
+          <img src="/img/ic-download.png" alt="다운로드" />
+        </button>
+      `;
         }
         if (viewUrl) {
             html += `
-                <button class="cb-actbtn cb-actbtn--view" type="button" aria-label="미리보기" data-url="${escapeHtml(viewUrl)}">
-                    <img src="/img/ic-link.png" alt="미리보기" />
-                </button>
-            `;
+        <button class="cb-actbtn cb-actbtn--view" type="button" aria-label="미리보기" data-url="${escapeHtml(viewUrl)}">
+          <img src="/img/ic-link.png" alt="미리보기" />
+        </button>
+      `;
         }
         html += `</div>`;
         return html;
+    }
+
+    function fileQuickActionsHtml(disabled) {
+        const dis = disabled ? ` disabled` : ``;
+        return `
+      <div class="cb-fileqbar" aria-hidden="true">
+        <button type="button" class="cb-fileqbtn" data-action="summary"${dis}>요약</button>
+        <button type="button" class="cb-fileqbtn" data-action="question"${dis}>질문</button>
+      </div>
+    `;
     }
 
     async function copyToClipboard(text) {
@@ -461,16 +386,16 @@ document.addEventListener("DOMContentLoaded", () => {
         const now = formatTime(new Date());
         const raw = String(text ?? "");
         const html = `
-            <div class="cb-msg cb-msg--user">
-                <div class="cb-bubble">
-                    <div class="cb-bubble__text">
-                        <pre data-rawtext="${escapeHtml(raw)}">${escapeHtml(raw)}</pre>
-                    </div>
-                    <div class="cb-meta">${now}</div>
-                    ${actionsHtml({ copy: true })}
-                </div>
-            </div>
-        `;
+      <div class="cb-msg cb-msg--user">
+        <div class="cb-bubble">
+          <div class="cb-bubble__text">
+            <pre data-rawtext="${escapeHtml(raw)}">${escapeHtml(raw)}</pre>
+          </div>
+          <div class="cb-meta">${now}</div>
+          ${actionsHtml({ copy: true })}
+        </div>
+      </div>
+    `;
         body.insertAdjacentHTML("beforeend", html);
         scrollToBottom();
         if (isSearchOpen() && searchInput && searchInput.value.trim()) rebuildHighlights(searchInput.value);
@@ -482,21 +407,134 @@ document.addEventListener("DOMContentLoaded", () => {
         const badge = ext ? ext.toUpperCase() : "FILE";
 
         const html = `
-            <div class="cb-msg cb-msg--user cb-msg--card" data-copytext="${escapeHtml(name)}">
-                <div class="cb-bubble cb-bubble--card">
-                    <div class="cb-bubble__text">
-                        <div class="cb-filecard" role="group" aria-label="첨부파일">
-                            <img src="/img/ic-file-w.png" class="cb-filecard__icon" alt="" />
-                            <div class="cb-filecard__meta_w">
-                                <div class="cb-filecard__name">${escapeHtml(name)}</div>
-                                <div class="cb-filecard__badge">${escapeHtml(badge)}</div>
-                            </div>
-                        </div>
-                    </div>
-                    ${actionsHtml({ copy: false })}
-                </div>
+      <div class="cb-msg cb-msg--user cb-msg--card" data-copytext="${escapeHtml(name)}" data-filename="${escapeHtml(name)}">
+        <div class="cb-bubble cb-bubble--card">
+          <div class="cb-bubble__text">
+            <div class="cb-filecard" role="group" aria-label="첨부파일">
+              <img src="/img/ic-file-w.png" class="cb-filecard__icon" alt="" />
+              <div class="cb-filecard__meta_w">
+                <div class="cb-filecard__name">${escapeHtml(name)}</div>
+                <div class="cb-filecard__badge">${escapeHtml(badge)}</div>
+              </div>
             </div>
-        `;
+          </div>
+          ${fileQuickActionsHtml(false)}
+          ${actionsHtml({ copy: false })}
+        </div>
+      </div>
+    `;
+        const stack = ensureUserCardStack();
+        stack.insertAdjacentHTML("beforeend", html);
+        scrollToBottom();
+        if (isSearchOpen() && searchInput && searchInput.value.trim()) rebuildHighlights(searchInput.value);
+    }
+
+    function addUserFileMessageWithProgress(file) {
+        const name = file && file.name ? String(file.name) : "파일";
+        const ext = getExt(name);
+        const badge = ext ? ext.toUpperCase() : "FILE";
+        const id = `cbUpload_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+
+        const html = `
+      <div class="cb-msg cb-msg--user cb-msg--card cb-msg--upload-progress" data-upload-id="${id}" data-copytext="${escapeHtml(name)}" data-filename="${escapeHtml(name)}" data-upload-done="false">
+        <div class="cb-bubble cb-bubble--card">
+          <div class="cb-bubble__text">
+            <div class="cb-upload-card">
+              <div class="cb-upload-card__header">
+                <img src="/img/ic-file-w.png" class="cb-upload-card__icon" alt="" />
+                <div class="cb-upload-card__meta_w">
+                  <div class="cb-upload-card__name">${escapeHtml(name)}</div>
+                  <div class="cb-upload-card__badge">${escapeHtml(badge)}</div>
+                </div>
+              </div>
+
+              <div class="cb-upload-status">업로드 준비 중...</div>
+
+              <div class="cb-upload-progress-wrap">
+                <div class="cb-upload-progress-bar">
+                  <div class="cb-upload-progress-fill" style="width: 0%"></div>
+                </div>
+                <div class="cb-upload-progress-text">0%</div>
+              </div>
+            </div>
+          </div>
+          ${fileQuickActionsHtml(true)}
+          ${actionsHtml({ copy: false })}
+        </div>
+      </div>
+    `;
+        const stack = ensureUserCardStack();
+        stack.insertAdjacentHTML("beforeend", html);
+
+        const msgEl = body.querySelector(`.cb-msg[data-upload-id="${id}"]`);
+        const progressFill = msgEl ? msgEl.querySelector(".cb-upload-progress-fill") : null;
+        const progressText = msgEl ? msgEl.querySelector(".cb-upload-progress-text") : null;
+        const statusText = msgEl ? msgEl.querySelector(".cb-upload-status") : null;
+
+        scrollToBottom();
+
+        return { msgEl, progressFill, progressText, statusText, id };
+    }
+
+    function updateUploadProgress(handle, percent, message) {
+        if (!handle) return;
+
+        const p = Math.max(0, Math.min(100, Number(percent) || 0));
+        handle._lastPercent = p;
+
+        if (handle.progressFill) handle.progressFill.style.width = `${p}%`;
+        if (handle.progressText) handle.progressText.textContent = `${Math.round(p)}%`;
+
+        const m = String(message || "").trim();
+        if (handle.statusText && m) handle.statusText.textContent = m;
+
+        scrollToBottom();
+    }
+
+    function finalizeUploadProgress(handle) {
+        if (!handle || !handle.msgEl) return;
+
+        handle.msgEl.classList.remove("cb-msg--upload-progress");
+        handle.msgEl.setAttribute("data-upload-done", "true");
+
+        const qbar = handle.msgEl.querySelector(".cb-fileqbar");
+        if (qbar) {
+            const btns = Array.from(qbar.querySelectorAll(".cb-fileqbtn"));
+            btns.forEach((b) => b.removeAttribute("disabled"));
+        }
+
+        const progressWrap = handle.msgEl.querySelector(".cb-upload-progress-wrap");
+        if (progressWrap) progressWrap.remove();
+
+        const uploadCard = handle.msgEl.querySelector(".cb-upload-card");
+        if (uploadCard) uploadCard.classList.add("cb-upload-card--complete");
+
+        const status = handle.msgEl.querySelector(".cb-upload-status");
+        if (status && !status.textContent.trim()) status.textContent = "업로드 완료";
+    }
+
+    function addUserDocMessageByName(name) {
+        const filename = String(name || "파일");
+        const ext = getExt(filename);
+        const badge = ext ? ext.toUpperCase() : "FILE";
+
+        const html = `
+      <div class="cb-msg cb-msg--user cb-msg--card" data-copytext="${escapeHtml(filename)}" data-filename="${escapeHtml(filename)}">
+        <div class="cb-bubble cb-bubble--card">
+          <div class="cb-bubble__text">
+            <div class="cb-filecard" role="group" aria-label="첨부파일">
+              <img src="/img/ic-file-w.png" class="cb-filecard__icon" alt="" />
+              <div class="cb-filecard__meta_w">
+                <div class="cb-filecard__name">${escapeHtml(filename)}</div>
+                <div class="cb-filecard__badge">${escapeHtml(badge)}</div>
+              </div>
+            </div>
+          </div>
+          ${fileQuickActionsHtml(false)}
+          ${actionsHtml({ copy: false })}
+        </div>
+      </div>
+    `;
         const stack = ensureUserCardStack();
         stack.insertAdjacentHTML("beforeend", html);
         scrollToBottom();
@@ -507,21 +545,21 @@ document.addEventListener("DOMContentLoaded", () => {
         const name = tpl && tpl.name ? String(tpl.name) : "양식";
 
         const html = `
-            <div class="cb-msg cb-msg--user cb-msg--card" data-copytext="${escapeHtml(name)}">
-                <div class="cb-bubble cb-bubble--card">
-                    <div class="cb-bubble__text">
-                        <div class="cb-filecard" role="group" aria-label="양식 선택">
-                            <img src="/img/ic-select-w.png" class="cb-filecard__icon" alt="" />
-                            <div class="cb-filecard__meta_w">
-                                <div class="cb-filecard__name">${escapeHtml(name)}</div>
-                                <div class="cb-filecard__badge">양식</div>
-                            </div>
-                        </div>
-                    </div>
-                    ${actionsHtml({ copy: false })}
-                </div>
+      <div class="cb-msg cb-msg--user cb-msg--card" data-copytext="${escapeHtml(name)}">
+        <div class="cb-bubble cb-bubble--card">
+          <div class="cb-bubble__text">
+            <div class="cb-filecard" role="group" aria-label="양식 선택">
+              <img src="/img/ic-select-w.png" class="cb-filecard__icon" alt="" />
+              <div class="cb-filecard__meta_w">
+                <div class="cb-filecard__name">${escapeHtml(name)}</div>
+                <div class="cb-filecard__badge">양식</div>
+              </div>
             </div>
-        `;
+          </div>
+          ${actionsHtml({ copy: false })}
+        </div>
+      </div>
+    `;
         const stack = ensureUserCardStack();
         stack.insertAdjacentHTML("beforeend", html);
         scrollToBottom();
@@ -534,20 +572,19 @@ document.addEventListener("DOMContentLoaded", () => {
         const clean = normalizeBubbleText(text);
 
         const html = `
-            <div class="cb-msg cb-msg--bot">
-                <div class="cb-avatar">
-                    <img class="cb-avatar__img" src="/img/ic-chatbot.png" alt="챗봇" />
-                </div>
-                <div class="cb-bubble">
-                    <div class="cb-bubble__text">
-                        <pre data-rawtext="${escapeHtml(clean)}">${renderRichText(clean)}</pre>
-                    </div>
-                    <div class="cb-meta">${now}</div>
-                    ${actionsHtml({ copy: true })}
-                </div>
-            </div>
-        `;
-
+      <div class="cb-msg cb-msg--bot">
+        <div class="cb-avatar">
+          <img class="cb-avatar__img" src="/img/ic-chatbot.png" alt="챗봇" />
+        </div>
+        <div class="cb-bubble">
+          <div class="cb-bubble__text">
+            <pre data-rawtext="${escapeHtml(clean)}">${renderRichText(clean)}</pre>
+          </div>
+          <div class="cb-meta">${now}</div>
+          ${actionsHtml({ copy: true })}
+        </div>
+      </div>
+    `;
         body.insertAdjacentHTML("beforeend", html);
         scrollToBottom();
         if (isSearchOpen() && searchInput && searchInput.value.trim()) rebuildHighlights(searchInput.value);
@@ -570,25 +607,25 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         const html = `
-            <div class="cb-msg cb-msg--bot cb-msg--card" data-copytext="${escapeHtml(filename)}">
-                <div class="cb-avatar">
-                    <img class="cb-avatar__img" src="/img/ic-chatbot.png" alt="챗봇" />
-                </div>
-                <div class="cb-bubble cb-bubble--card">
-                    <div class="cb-bubble__text">
-                        <div class="cb-filecard--new" role="group" aria-label="첨부파일">
-                            <img src="/img/ic-file.png" class="cb-filecard__icon" alt="" />
-                            <div class="cb-filecard__meta">
-                                <div class="cb-filecard__name">${escapeHtml(filename)}</div>
-                                <div class="cb-filecard__badge">${escapeHtml(badge)}</div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="cb-meta">${now}</div>
-                    ${actionsHtml({ copy: false, downloadUrl, viewUrl })}
-                </div>
+      <div class="cb-msg cb-msg--bot cb-msg--card" data-copytext="${escapeHtml(filename)}">
+        <div class="cb-avatar">
+          <img class="cb-avatar__img" src="/img/ic-chatbot.png" alt="챗봇" />
+        </div>
+        <div class="cb-bubble cb-bubble--card">
+          <div class="cb-bubble__text">
+            <div class="cb-filecard--new" role="group" aria-label="첨부파일">
+              <img src="/img/ic-file.png" class="cb-filecard__icon" alt="" />
+              <div class="cb-filecard__meta">
+                <div class="cb-filecard__name">${escapeHtml(filename)}</div>
+                <div class="cb-filecard__badge">${escapeHtml(badge)}</div>
+              </div>
             </div>
-        `;
+          </div>
+          <div class="cb-meta">${now}</div>
+          ${actionsHtml({ copy: false, downloadUrl, viewUrl })}
+        </div>
+      </div>
+    `;
         body.insertAdjacentHTML("beforeend", html);
         scrollToBottom();
         if (isSearchOpen() && searchInput && searchInput.value.trim()) rebuildHighlights(searchInput.value);
@@ -631,22 +668,18 @@ document.addEventListener("DOMContentLoaded", () => {
             .map((d) => {
                 const meta = `${d.page} 페이지`;
                 return `
-                <button class="cb-ref" type="button" data-url="${escapeHtml(d.url)}">
-                    <div class="cb-ref__name">${escapeHtml(d.source || "문서")}</div>
-                    <div class="cb-ref__meta">${escapeHtml(meta)}</div>
-                </button>
-            `;
+          <button class="cb-ref" type="button" data-url="${escapeHtml(d.url)}">
+            <div class="cb-ref__name">${escapeHtml(d.source || "문서")}</div>
+            <div class="cb-ref__meta">${escapeHtml(meta)}</div>
+          </button>
+        `;
             })
             .join("");
 
         return `
-            <div class="cb-refs__title">
-                <span>출처</span>
-            </div>
-            <div class="cb-refs__list">
-                ${items}
-            </div>
-        `;
+      <div class="cb-refs__title"><span>출처</span></div>
+      <div class="cb-refs__list">${items}</div>
+    `;
     }
 
     function addBotStreamLoadingMessage(enableRefs) {
@@ -655,29 +688,27 @@ document.addEventListener("DOMContentLoaded", () => {
         const refsHtml = enableRefs ? `<div class="cb-refs" aria-label="출처"></div>` : ``;
 
         const html = `
-            <div class="cb-msg cb-msg--bot cb-msg--streaming" data-stream-id="${id}">
-                <div class="cb-avatar">
-                    <img class="cb-avatar__img" src="/img/ic-chatbot.png" alt="챗봇" />
-                </div>
-                <div class="cb-bubble">
-                    <div class="cb-bubble__text">
-                        <div class="cb-progress" style="display:none">
-                            <span class="cb-sparkle" aria-hidden="true"></span>
-                            <span class="cb-progress__text"></span>
-                        </div>
-                        <pre style="display:none" data-rawtext=""></pre>
-                        ${refsHtml}
-                    </div>
-                    <div class="cb-meta"></div>
-                    ${actionsHtml({ copy: true })}
-                </div>
+      <div class="cb-msg cb-msg--bot cb-msg--streaming" data-stream-id="${id}">
+        <div class="cb-avatar">
+          <img class="cb-avatar__img" src="/img/ic-chatbot.png" alt="챗봇" />
+        </div>
+        <div class="cb-bubble">
+          <div class="cb-bubble__text">
+            <div class="cb-progress" style="display:none">
+              <span class="cb-progress__text"></span>
             </div>
-        `;
+            <pre style="display:none" data-rawtext=""></pre>
+            ${refsHtml}
+          </div>
+          <div class="cb-meta"></div>
+          ${actionsHtml({ copy: true })}
+        </div>
+      </div>
+    `;
         body.insertAdjacentHTML("beforeend", html);
         const msgEl = body.querySelector(`.cb-msg[data-stream-id="${id}"]`);
         const preEl = msgEl ? msgEl.querySelector(".cb-bubble__text pre") : null;
         const metaEl = msgEl ? msgEl.querySelector(".cb-meta") : null;
-        const typingEl = msgEl ? msgEl.querySelector(".cb-typing") : null;
         const progressEl = msgEl ? msgEl.querySelector(".cb-progress") : null;
         const progressTextEl = progressEl ? progressEl.querySelector(".cb-progress__text") : null;
         const refsEl = enableRefs && msgEl ? msgEl.querySelector(".cb-refs") : null;
@@ -686,22 +717,21 @@ document.addEventListener("DOMContentLoaded", () => {
             refsEl.innerHTML = "";
         }
         scrollToBottom();
-        return { msgEl, preEl, metaEl, typingEl, progressEl, progressTextEl, refsEl, started: false, done: false, pendingRefs: [], hasProgress: false };
+        return { msgEl, preEl, metaEl, progressEl, progressTextEl, refsEl, started: false, done: false, pendingRefs: [], hasProgress: false };
     }
 
     function showProgress(handle, stepText) {
         if (!handle) return;
         handle.hasProgress = true;
-        if (handle.typingEl) handle.typingEl.style.display = "none";
         if (handle.progressEl) handle.progressEl.style.display = "flex";
         if (handle.progressTextEl) handle.progressTextEl.textContent = String(stepText || "");
+        if (handle.preEl) handle.preEl.style.display = "none";
         scrollToBottom();
     }
 
     function startStreaming(handle) {
         if (!handle || handle.started) return;
         handle.started = true;
-        if (handle.typingEl) handle.typingEl.style.display = "none";
         if (handle.progressEl) handle.progressEl.style.display = "none";
         if (handle.preEl) handle.preEl.style.display = "block";
         if (handle.preEl && handle.preEl.getAttribute("data-rawtext") == null) handle.preEl.setAttribute("data-rawtext", "");
@@ -710,12 +740,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function appendStreamText(handle, chunk) {
         if (!handle || !handle.preEl) return;
-
         const prev = handle.preEl.getAttribute("data-rawtext") || "";
         const next = prev + String(chunk || "");
         handle.preEl.setAttribute("data-rawtext", next);
         handle.preEl.innerHTML = renderRichText(next);
-
         scrollToBottom();
         if (isSearchOpen() && searchInput && searchInput.value.trim()) rebuildHighlights(searchInput.value);
     }
@@ -788,13 +816,16 @@ document.addEventListener("DOMContentLoaded", () => {
         const onRefs = handlers && typeof handlers.onRefs === "function" ? handlers.onRefs : null;
         const onProgress = handlers && typeof handlers.onProgress === "function" ? handlers.onProgress : null;
         const onClarification = handlers && typeof handlers.onClarification === "function" ? handlers.onClarification : null;
+        const onPercent = handlers && typeof handlers.onPercent === "function" ? handlers.onPercent : null;
         const acceptRefs = !!(handlers && handlers.acceptRefs);
 
         const res = await fetch(url, options);
 
         if (!res.ok) {
             let t = "";
-            try { t = await res.text(); } catch (e) { }
+            try {
+                t = await res.text();
+            } catch (e) { }
             const err = new Error(t || "요청 처리 중 오류가 발생했습니다.");
             err.status = res.status;
             throw err;
@@ -802,7 +833,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (!res.body) {
             let t = "";
-            try { t = await res.text(); } catch (e) { }
+            try {
+                t = await res.text();
+            } catch (e) { }
             if (t) {
                 if (typeof onFirstToken === "function") onFirstToken();
                 if (typeof onText === "function") onText(t);
@@ -850,8 +883,20 @@ document.addEventListener("DOMContentLoaded", () => {
                         continue;
                     }
 
+                    const hasPercent = j && typeof j.percent !== "undefined";
+
+                    if (j && (j.type === "percent") && hasPercent) {
+                        if (typeof onPercent === "function") onPercent(j.percent, j.message || "");
+                        continue;
+                    }
+
                     if (j && j.type === "progress") {
-                        if (typeof onProgress === "function") onProgress(j.step || "");
+                        if (hasPercent && typeof onPercent === "function") {
+                            onPercent(j.percent, j.message || j.step || "");
+                            continue;
+                        }
+
+                        if (typeof onProgress === "function") onProgress(j.step || j.message || "");
                         continue;
                     }
 
@@ -882,9 +927,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         continue;
                     }
 
-                    const content = j && j.choices && j.choices[0] && j.choices[0].delta
-                        ? j.choices[0].delta.content
-                        : null;
+                    const content = j && j.choices && j.choices[0] && j.choices[0].delta ? j.choices[0].delta.content : null;
 
                     if (typeof content === "string" && content.length) {
                         if (first) {
@@ -914,6 +957,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function openPop() {
         if (!pop || !plusBtn) return;
         closeTray();
+        closeDocPopup();
         pop.classList.add("is-open");
         pop.setAttribute("aria-hidden", "false");
         plusBtn.setAttribute("aria-expanded", "true");
@@ -932,6 +976,7 @@ document.addEventListener("DOMContentLoaded", () => {
     function openTray() {
         if (!tray) return;
         closePop();
+        closeDocPopup();
         tray.classList.add("is-open");
         tray.setAttribute("aria-hidden", "false");
         setTimeout(() => {
@@ -957,7 +1002,428 @@ document.addEventListener("DOMContentLoaded", () => {
         return { isContinue, threadId };
     }
 
-    function sendTextMessage(msg) {
+    function updateChipRow() {
+        const hasAny =
+            (researchTag && researchTag.style.display !== "none") ||
+            (templateTag && templateTag.style.display !== "none") ||
+            (documentTag && documentTag.style.display !== "none");
+
+        chipRow.classList.toggle("is-open", !!hasAny);
+        chipRow.setAttribute("aria-hidden", hasAny ? "false" : "true");
+        inputWrap.classList.toggle("has-chips", !!hasAny);
+        autoResizeInput();
+    }
+
+    function mountChip(el) {
+        if (!el) return;
+        if (el.parentElement !== chipRow) chipRow.appendChild(el);
+        updateChipRow();
+    }
+
+    function ensureResearchTag() {
+        if (researchTag) return researchTag;
+
+        researchTag = document.createElement("button");
+        researchTag.type = "button";
+        researchTag.id = "cbResearchTag";
+        researchTag.setAttribute("aria-pressed", "false");
+        researchTag.innerHTML = `
+      <img src="/img/ic-research-mini.png" class="cb-tag__icon" />
+      <span class="cb-rch__label">리서치</span>
+      <span class="cb-rch__x" aria-hidden="true">×</span>
+    `;
+
+        researchTag.addEventListener("click", (e) => {
+            e.preventDefault();
+            setResearchMode(false);
+            input.focus();
+        });
+
+        mountChip(researchTag);
+        researchTag.style.display = "none";
+        updateChipRow();
+        return researchTag;
+    }
+
+    function ensureTemplateTag() {
+        if (templateTag) return templateTag;
+
+        templateTag = document.createElement("button");
+        templateTag.type = "button";
+        templateTag.id = "cbTemplateTag";
+        templateTag.setAttribute("aria-pressed", "false");
+        templateTag.innerHTML = `
+      <img src="/img/ic-select.png" class="cb-tag__icon" />
+      <span class="cb-tpltag__label"></span>
+      <span class="cb-tpltag__x" aria-hidden="true">×</span>
+    `;
+
+        templateTag.addEventListener("click", (e) => {
+            e.preventDefault();
+            setTemplate(null);
+            input.focus();
+        });
+
+        ensureResearchTag();
+        mountChip(templateTag);
+        templateTag.style.display = "none";
+        updateChipRow();
+        return templateTag;
+    }
+
+    function ensureDocTag() {
+        if (documentTag) return documentTag;
+
+        documentTag = document.createElement("button");
+        documentTag.type = "button";
+        documentTag.id = "cbDocumentTag";
+        documentTag.setAttribute("aria-pressed", "false");
+        documentTag.innerHTML = `
+      <span class="cb-taghash" aria-hidden="true">#</span>
+      <span class="cb-doctag__label"></span>
+      <span class="cb-doctag__x" aria-hidden="true">×</span>
+    `;
+
+        documentTag.addEventListener("click", (e) => {
+            e.preventDefault();
+            setSelectedDocument(null);
+            input.focus();
+        });
+
+        ensureTemplateTag();
+        mountChip(documentTag);
+        documentTag.style.display = "none";
+        updateChipRow();
+        return documentTag;
+    }
+
+    function setSelectedDocument(doc) {
+        selectedDocument = doc ? { ...doc } : null;
+
+        const tag = ensureDocTag();
+        if (!tag) return;
+
+        if (!selectedDocument) {
+            tag.style.display = "none";
+            tag.setAttribute("aria-pressed", "false");
+            const labelEl = tag.querySelector(".cb-doctag__label");
+            if (labelEl) labelEl.textContent = "";
+            updateChipRow();
+            return;
+        }
+
+        tag.style.display = "";
+        tag.setAttribute("aria-pressed", "true");
+        const labelEl = tag.querySelector(".cb-doctag__label");
+        if (labelEl) labelEl.textContent = selectedDocument.name || "문서";
+        updateChipRow();
+    }
+
+    function setTemplate(tpl) {
+        if (tpl && isResearchMode) setResearchMode(false);
+
+        selectedTemplate = tpl ? { ...tpl } : null;
+
+        const tag = ensureTemplateTag();
+        if (!tag) return;
+
+        if (!selectedTemplate) {
+            tag.style.display = "none";
+            tag.setAttribute("aria-pressed", "false");
+            const labelEl = tag.querySelector(".cb-tpltag__label");
+            if (labelEl) labelEl.textContent = "";
+            updateChipRow();
+            return;
+        }
+
+        tag.style.display = "";
+        tag.setAttribute("aria-pressed", "true");
+        const labelEl = tag.querySelector(".cb-tpltag__label");
+        if (labelEl) labelEl.textContent = selectedTemplate.name || "양식";
+        updateChipRow();
+    }
+
+    function setResearchMode(on) {
+        const next = !!on;
+        isResearchMode = next;
+
+        const tag = ensureResearchTag();
+        if (tag) {
+            tag.style.display = isResearchMode ? "" : "none";
+            tag.setAttribute("aria-pressed", isResearchMode ? "true" : "false");
+        }
+
+        if (input) {
+            input.placeholder = isResearchMode ? "디테일한 보고서를 작성해 주세요." : defaultPlaceholder;
+        }
+
+        updateChipRow();
+        autoResizeInput();
+    }
+
+    async function fetchUploadedFiles() {
+        if (uploadedFilesCache) return uploadedFilesCache;
+        if (uploadedFilesPromise) return uploadedFilesPromise;
+
+        uploadedFilesPromise = fetch("/api/chat/files", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" },
+            body: new URLSearchParams({ sessionId: String(sessionId || "") }).toString(),
+            credentials: "same-origin",
+        })
+            .then(async (res) => {
+                if (!res.ok) {
+                    let t = "";
+                    try {
+                        t = await res.text();
+                    } catch (e) { }
+                    throw new Error(t || "파일 목록을 불러오지 못했습니다.");
+                }
+                return res.json();
+            })
+            .then((list) => {
+                const arr = Array.isArray(list) ? list.map((x) => String(x || "").trim()).filter(Boolean) : [];
+                uploadedFilesCache = arr;
+                return arr;
+            })
+            .finally(() => {
+                uploadedFilesPromise = null;
+            });
+
+        return uploadedFilesPromise;
+    }
+
+    function getHashQuery(value) {
+        const v = String(value || "");
+        const m = v.match(/#([^\s#]*)$/);
+        if (!m) return null;
+        return m[1] || "";
+    }
+
+    function removeHashToken(value) {
+        return String(value || "").replace(/#[^\s#]*$/, "").replace(/[ \t]+$/, "");
+    }
+
+    function isDocPopOpen() {
+        return documentListPopup && documentListPopup.classList.contains("is-open");
+    }
+
+    function openDocPopup() {
+        if (!documentListPopup) return;
+        documentListPopup.style.display = "block";
+        documentListPopup.setAttribute("aria-hidden", "false");
+        documentListPopup.classList.add("is-open");
+    }
+
+    function closeDocPopup() {
+        if (!documentListPopup) return;
+        documentListPopup.style.display = "none";
+        documentListPopup.setAttribute("aria-hidden", "true");
+        documentListPopup.classList.remove("is-open");
+        documentListPopup.innerHTML = "";
+    }
+
+    function populateDocumentList(popup, list, keyword, loading, errorText) {
+        const k = String(keyword || "").trim();
+        const head = `
+      <div class="document-list-head">
+        <div class="document-list-title">업로드 파일 선택</div>
+        <div class="document-list-sub"># 입력 후 선택</div>
+      </div>
+    `;
+
+        if (errorText) {
+            popup.innerHTML = `${head}<div class="document-list-body"><div class="document-pop__empty">${escapeHtml(errorText)}</div></div>`;
+            return;
+        }
+
+        if (loading) {
+            popup.innerHTML = `${head}<div class="document-list-body"><div class="document-pop__empty">불러오는 중...</div></div>`;
+            return;
+        }
+
+        const arr = Array.isArray(list) ? list : [];
+        let filtered = arr;
+
+        if (k) {
+            const lower = k.toLowerCase();
+            filtered = arr.filter((name) => String(name || "").toLowerCase().includes(lower));
+        }
+
+        const shown = filtered;
+
+        if (!shown.length) {
+            popup.innerHTML = `${head}<div class="document-list-body"><div class="document-pop__empty">검색 결과가 없습니다.</div></div>`;
+            return;
+        }
+
+        const items = shown
+            .map((name) => {
+                const safe = escapeHtml(name);
+                return `
+          <div class="document-item" role="option" data-doc-name="${safe}" aria-selected="false">
+            <span class="document-item__title">${safe}</span>
+            <span class="document-item__actions">
+              <button type="button" class="document-item__btn" data-action="summary">요약</button>
+              <button type="button" class="document-item__btn" data-action="question">질문</button>
+            </span>
+          </div>
+        `;
+            })
+            .join("");
+
+        popup.innerHTML = `${head}<div class="document-list-body">${items}</div>`;
+    }
+
+    async function openDocsPopupFromButton() {
+        closePop();
+        closeTray();
+        openDocPopup();
+        populateDocumentList(documentListPopup, [], "", true, "");
+
+        try {
+            const files = await fetchUploadedFiles();
+            populateDocumentList(documentListPopup, files, "", false, "");
+        } catch (err) {
+            populateDocumentList(
+                documentListPopup,
+                [],
+                "",
+                false,
+                err && err.message ? String(err.message) : "파일 목록을 불러오지 못했습니다."
+            );
+        }
+    }
+
+    input.addEventListener("input", async (e) => {
+        const value = e && e.target ? String(e.target.value || "") : "";
+        const q = getHashQuery(value);
+
+        if (q == null) {
+            if (isDocPopOpen()) closeDocPopup();
+            return;
+        }
+
+        openDocPopup();
+        populateDocumentList(documentListPopup, [], q, true, "");
+
+        try {
+            const files = await fetchUploadedFiles();
+            populateDocumentList(documentListPopup, files, q, false, "");
+        } catch (err) {
+            populateDocumentList(
+                documentListPopup,
+                [],
+                q,
+                false,
+                err && err.message ? String(err.message) : "파일 목록을 불러오지 못했습니다."
+            );
+        }
+    });
+
+    function startSummaryToChat(docName) {
+        const name = String(docName || "").trim();
+        if (!name) return;
+        if (summaryBusy) return;
+
+        summaryBusy = true;
+
+        const handle = addBotStreamLoadingMessage(true);
+        const titlePrefix = `**요약 - ${name}**\n\n`;
+        startStreaming(handle);
+        appendStreamText(handle, titlePrefix);
+
+        const payload = {
+            sessionId,
+            message: "요약해줘",
+            deepResearch: false,
+            templateKey: null,
+            isContinue: false,
+            targetFileName: name,
+        };
+
+        streamEventText(
+            "/api/chat/stream",
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json; charset=UTF-8", Accept: "text/event-stream" },
+                body: JSON.stringify(payload),
+                credentials: "same-origin",
+            },
+            {
+                acceptRefs: true,
+                onProgress: (step) => {
+                    const s = String(step || "").trim();
+                    if (!s) return;
+                    showProgress(handle, s);
+                },
+                onFirstToken: () => {
+                    startStreaming(handle);
+                },
+                onText: (t) => {
+                    startStreaming(handle);
+                    appendStreamText(handle, t);
+                },
+                onRefs: (docs) => applyStreamRefs(handle, docs),
+                onClarification: () => { },
+            }
+        )
+            .then(() => {
+                startStreaming(handle);
+                finalizeStream(handle);
+                const raw = handle.preEl ? handle.preEl.getAttribute("data-rawtext") || "" : "";
+                if (!raw.trim()) appendStreamText(handle, "요약 결과가 없습니다.");
+            })
+            .catch((err) => {
+                if (handle && handle.msgEl) handle.msgEl.remove();
+                addBotMessage(err && err.message ? String(err.message) : "요약 처리 중 오류가 발생했습니다.");
+            })
+            .finally(() => {
+                summaryBusy = false;
+                input.focus();
+                autoResizeInput();
+            });
+    }
+
+    documentListPopup.addEventListener("click", (e) => {
+        const btn = e.target && e.target.closest ? e.target.closest(".document-item__btn") : null;
+        const item = e.target && e.target.closest ? e.target.closest(".document-item") : null;
+        if (!item) return;
+
+        const name = item.getAttribute("data-doc-name") || "";
+        if (!name) return;
+
+        if (btn) {
+            const action = btn.getAttribute("data-action") || "";
+            if (action === "summary") {
+                input.value = removeHashToken(input.value);
+                autoResizeInput();
+                closeDocPopup();
+
+                setSelectedDocument(null);
+
+                addUserDocMessageByName(name);
+                startSummaryToChat(name);
+                return;
+            }
+            if (action === "question") {
+                setSelectedDocument({ name });
+                input.value = removeHashToken(input.value);
+                autoResizeInput();
+                closeDocPopup();
+                input.focus();
+                return;
+            }
+        }
+
+        setSelectedDocument({ name });
+        input.value = removeHashToken(input.value);
+        autoResizeInput();
+        input.focus();
+        closeDocPopup();
+    });
+
+    function sendTextMessage(msg, targetNameOverride) {
         closeTray();
 
         const m = String(msg || "").trim();
@@ -971,41 +1437,45 @@ document.addEventListener("DOMContentLoaded", () => {
         const handle = addBotStreamLoadingMessage(true);
         const cont = consumeContinueFlag();
 
+        const targetName = String(targetNameOverride || "").trim();
+
         const payload = {
             sessionId,
             message: m,
-            deepResearch: isResearchMode ? true : false,
+            deepResearch: false,
             templateKey: null,
-            isContinue: cont.isContinue
+            isContinue: cont.isContinue,
+            targetFileName: targetName,
         };
         if (cont.threadId) payload.threadId = cont.threadId;
 
-        streamEventText("/api/chat/stream", {
-            method: "POST",
-            headers: {
-                "Content-Type": "application/json; charset=UTF-8",
-                "Accept": "text/event-stream"
+        streamEventText(
+            "/api/chat/stream",
+            {
+                method: "POST",
+                headers: { "Content-Type": "application/json; charset=UTF-8", Accept: "text/event-stream" },
+                body: JSON.stringify(payload),
+                credentials: "same-origin",
             },
-            body: JSON.stringify(payload),
-            credentials: "same-origin"
-        }, {
-            acceptRefs: true,
-            onProgress: (step) => showProgress(handle, step),
-            onText: (t) => {
-                startStreaming(handle);
-                appendStreamText(handle, t);
-            },
-            onFirstToken: () => startStreaming(handle),
-            onRefs: (docs) => applyStreamRefs(handle, docs),
-            onClarification: (message, threadId) => {
-                continueNext = true;
-                if (threadId) continueThreadId = threadId;
+            {
+                acceptRefs: true,
+                onProgress: (step) => showProgress(handle, step),
+                onText: (t) => {
+                    startStreaming(handle);
+                    appendStreamText(handle, t);
+                },
+                onFirstToken: () => startStreaming(handle),
+                onRefs: (docs) => applyStreamRefs(handle, docs),
+                onClarification: (message, threadId) => {
+                    continueNext = true;
+                    if (threadId) continueThreadId = threadId;
+                },
             }
-        })
+        )
             .then(() => {
                 startStreaming(handle);
                 finalizeStream(handle);
-                const raw = handle.preEl ? (handle.preEl.getAttribute("data-rawtext") || "") : "";
+                const raw = handle.preEl ? handle.preEl.getAttribute("data-rawtext") || "" : "";
                 if (!raw.trim()) appendStreamText(handle, "응답을 받았지만 표시할 내용이 없습니다.");
             })
             .catch((err) => {
@@ -1035,7 +1505,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const msg = String(messageText || "").trim();
 
-        addUserFileMessage(file);
+        const uploadHandle = addUserFileMessageWithProgress(file);
         if (msg) addUserMessage(msg);
 
         const cont = consumeContinueFlag();
@@ -1043,7 +1513,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const formData = new FormData();
         formData.append("file", file);
         formData.append("sessionId", sessionId);
-        formData.append("deepResearch", isResearchMode ? true : false);
+        formData.append("deepResearch", "false");
         formData.append("templateKey", templateKey || "");
         formData.append("message", msg);
         formData.append("isContinue", cont.isContinue ? "true" : "false");
@@ -1051,35 +1521,62 @@ document.addEventListener("DOMContentLoaded", () => {
 
         setSending(true);
 
-        const handle = addBotStreamLoadingMessage(true);
+        let botHandle = null;
+        let pendingRefs = [];
 
-        streamEventText("/api/chat/upload/stream", {
-            method: "POST",
-            headers: { "Accept": "text/event-stream" },
-            body: formData,
-            credentials: "same-origin"
-        }, {
-            acceptRefs: true,
-            onProgress: (step) => showProgress(handle, step),
-            onText: (t) => {
-                startStreaming(handle);
-                appendStreamText(handle, t);
-            },
-            onFirstToken: () => startStreaming(handle),
-            onRefs: (docs) => applyStreamRefs(handle, docs),
-            onClarification: (message, threadId) => {
-                continueNext = true;
-                if (threadId) continueThreadId = threadId;
+        const ensureBotHandle = () => {
+            if (botHandle) return botHandle;
+            botHandle = addBotStreamLoadingMessage(true);
+            if (pendingRefs.length) applyStreamRefs(botHandle, pendingRefs);
+            return botHandle;
+        };
+
+        streamEventText(
+            "/api/chat/upload/stream",
+            { method: "POST", headers: { Accept: "text/event-stream" }, body: formData, credentials: "same-origin" },
+            {
+                acceptRefs: true,
+                onPercent: (percent, message) => {
+                    updateUploadProgress(uploadHandle, percent, message);
+                },
+                onProgress: (step) => {
+                    const s = String(step || "").trim();
+                    if (!s) return;
+                    updateUploadProgress(uploadHandle, uploadHandle._lastPercent || 0, s);
+                },
+                onText: (t) => {
+                    ensureBotHandle();
+                    startStreaming(botHandle);
+                    appendStreamText(botHandle, t);
+                },
+                onFirstToken: () => {
+                    finalizeUploadProgress(uploadHandle);
+                    ensureBotHandle();
+                    startStreaming(botHandle);
+                },
+                onRefs: (docs) => {
+                    pendingRefs = filterPdfDocs(docs);
+                    if (botHandle) applyStreamRefs(botHandle, pendingRefs);
+                },
+                onClarification: (message, threadId) => {
+                    continueNext = true;
+                    if (threadId) continueThreadId = threadId;
+                },
             }
-        })
+        )
             .then(() => {
-                startStreaming(handle);
-                finalizeStream(handle);
-                const raw = handle.preEl ? (handle.preEl.getAttribute("data-rawtext") || "") : "";
-                if (!raw.trim()) appendStreamText(handle, "파일 업로드 완료");
+                finalizeUploadProgress(uploadHandle);
+
+                const h = ensureBotHandle();
+                startStreaming(h);
+                finalizeStream(h);
+
+                const raw = h.preEl ? h.preEl.getAttribute("data-rawtext") || "" : "";
+                if (!raw.trim()) appendStreamText(h, "파일 업로드 완료");
             })
             .catch((err) => {
-                if (handle && handle.msgEl) handle.msgEl.remove();
+                finalizeUploadProgress(uploadHandle);
+                if (botHandle && botHandle.msgEl) botHandle.msgEl.remove();
                 addBotMessage(err && err.message ? String(err.message) : "파일 업로드 중 오류가 발생했습니다.");
             })
             .finally(() => {
@@ -1102,9 +1599,9 @@ document.addEventListener("DOMContentLoaded", () => {
             const payload = {
                 sessionId: sessionId,
                 message: msg,
-                deepResearch: String(isResearchMode ? "true" : "false"),
+                deepResearch: "false",
                 templateKey: String(templateKey || ""),
-                isContinue: cont.isContinue
+                isContinue: cont.isContinue,
             };
             if (cont.threadId) payload.threadId = cont.threadId;
 
@@ -1112,12 +1609,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 method: "POST",
                 headers: { "Content-Type": "application/json; charset=UTF-8" },
                 body: JSON.stringify(payload),
-                credentials: "same-origin"
+                credentials: "same-origin",
             });
 
             if (!res.ok) {
                 let t = "";
-                try { t = await res.text(); } catch (e) { }
+                try {
+                    t = await res.text();
+                } catch (e) { }
                 throw new Error(t || "요청 처리 중 오류가 발생했습니다.");
             }
 
@@ -1130,10 +1629,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
 
-            addBotAttachmentMessage({
-                filename: data.filename || "generated_template",
-                download_url: data.download_url
-            }, { allowView: false });
+            addBotAttachmentMessage({ filename: data.filename || "generated_template", download_url: data.download_url }, { allowView: false });
         } catch (err) {
             if (handle && handle.msgEl) handle.msgEl.remove();
             addBotMessage(err && err.message ? String(err.message) : "요청 처리 중 오류가 발생했습니다.");
@@ -1144,31 +1640,30 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    function startImmediateUpload(file) {
+        const tplKey = selectedTemplate ? selectedTemplate.key || "" : "";
+        if (selectedTemplate) {
+            addUserTemplateMessage(selectedTemplate);
+            setTemplate(null);
+        }
+        uploadFile(file, "", tplKey, () => {
+            input.focus();
+            autoResizeInput();
+        });
+    }
+
     function sendMessage() {
         const msg = String(input.value || "").trim();
-        const hasFile = !!pendingFile;
         const tpl = selectedTemplate ? { ...selectedTemplate } : null;
-        const tplKey = tpl ? (tpl.key || "") : "";
+        const tplKey = tpl ? tpl.key || "" : "";
 
-        if (!msg && !hasFile && !tplKey) return;
+        const docName = selectedDocument && selectedDocument.name ? String(selectedDocument.name) : "";
+
+        if (!msg && !tplKey) return;
 
         if (tpl) {
             addUserTemplateMessage(tpl);
             setTemplate(null);
-        }
-
-        if (hasFile) {
-            const f = pendingFile;
-            setPendingFile(null);
-
-            input.value = "";
-            autoResizeInput();
-
-            uploadFile(f, msg, tplKey, () => {
-                input.focus();
-                autoResizeInput();
-            });
-            return;
         }
 
         input.value = "";
@@ -1180,18 +1675,30 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        sendTextMessage(msg);
+        if (docName) {
+            addUserDocMessageByName(docName);
+            setSelectedDocument(null);
+            sendTextMessage(msg, docName);
+            return;
+        }
+
+        sendTextMessage(msg, "");
     }
 
     sendBtn.addEventListener("click", (e) => {
         e.preventDefault();
+        closeDocPopup();
         sendMessage();
     });
 
     input.addEventListener("keydown", (e) => {
         if (e.key === "Enter" && !e.shiftKey) {
             e.preventDefault();
+            closeDocPopup();
             sendMessage();
+        }
+        if (e.key === "Escape") {
+            closeDocPopup();
         }
     });
 
@@ -1219,10 +1726,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
             if (!first) return;
 
-            setPendingFile(first);
             closePop();
             closeTray();
-            input.focus();
+            closeDocPopup();
+            startImmediateUpload(first);
         });
     }
 
@@ -1271,10 +1778,10 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
 
-            setPendingFile(f);
             closePop();
             closeTray();
-            input.focus();
+            closeDocPopup();
+            startImmediateUpload(f);
         });
     }
 
@@ -1282,6 +1789,7 @@ document.addEventListener("DOMContentLoaded", () => {
         plusBtn.addEventListener("click", (e) => {
             e.preventDefault();
             e.stopPropagation();
+            closeDocPopup();
             togglePop();
         });
 
@@ -1295,6 +1803,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 const insideTray = tray.contains(e.target) || inputWrap.contains(e.target);
                 if (!insideTray) closeTray();
             }
+
+            if (isDocPopOpen()) {
+                const insideDoc = documentListPopup.contains(e.target) || inputWrap.contains(e.target);
+                if (!insideDoc) closeDocPopup();
+            }
         });
 
         document.addEventListener("keydown", (e) => {
@@ -1302,7 +1815,17 @@ document.addEventListener("DOMContentLoaded", () => {
                 closePop();
                 closeTray();
                 closeViewer();
+                closeDocPopup();
             }
+        });
+    }
+
+    if (docsBtn) {
+        docsBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            closeDocPopup();
+            openDocsPopupFromButton();
         });
     }
 
@@ -1310,6 +1833,7 @@ document.addEventListener("DOMContentLoaded", () => {
         actionUpload.addEventListener("click", () => {
             closePop();
             closeTray();
+            closeDocPopup();
             fileInput.click();
         });
     }
@@ -1317,6 +1841,7 @@ document.addEventListener("DOMContentLoaded", () => {
     if (actionSelect) {
         actionSelect.addEventListener("click", () => {
             closePop();
+            closeDocPopup();
             toggleTray();
             if (!isTrayOpen()) input.focus();
         });
@@ -1327,6 +1852,7 @@ document.addEventListener("DOMContentLoaded", () => {
             e.preventDefault();
             closePop();
             closeTray();
+            closeDocPopup();
             setResearchMode(!isResearchMode);
             input.focus();
         });
@@ -1352,14 +1878,14 @@ document.addEventListener("DOMContentLoaded", () => {
                     const fileName = escapeHtml(t.fileName);
 
                     return `
-                    <button class="cb-tpl" type="button" data-template="${key}" data-template-name="${name}" data-template-file="${fileName}">
-                        <div class="cb-tpl__top">
-                            <span style="display:none;">${key}</span>
-                            <div class="cb-tpl__name">${name}</div>
-                        </div>
-                        <div class="cb-tpl__desc">${fileName}</div>
-                    </button>
-                `;
+            <button class="cb-tpl" type="button" data-template="${key}" data-template-name="${name}" data-template-file="${fileName}">
+              <div class="cb-tpl__top">
+                <span style="display:none;">${key}</span>
+                <div class="cb-tpl__name">${name}</div>
+              </div>
+              <div class="cb-tpl__desc">${fileName}</div>
+            </button>
+          `;
                 })
                 .join("");
         }
@@ -1381,42 +1907,43 @@ document.addEventListener("DOMContentLoaded", () => {
         actionPrint.addEventListener("click", () => {
             closePop();
             closeTray();
+            closeDocPopup();
             const chatHtml = body.innerHTML;
             const w = window.open("", "_blank", "width=900,height=700");
             if (!w) return;
 
             w.document.open();
             w.document.write(`
-                <!DOCTYPE html>
-                <html>
-                <head>
-                  <meta charset="utf-8" />
-                  <meta name="viewport" content="width=device-width, initial-scale=1" />
-                  <title>Chat Print</title>
-                  <style>
-                    body{ font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 24px; background:#fff; color:#111; }
-                    pre { margin:0; white-space:pre-wrap; word-break:break-word; }
-                    .wrap{ max-width: 820px; margin: 0 auto; }
-                    .cb-divider{ text-align:center; margin: 12px 0; color:#666; font-size:12px; }
-                    .cb-msg{ display:flex; gap:10px; margin:10px 0; align-items:flex-start; }
-                    .cb-msg--user{ justify-content:flex-end; }
-                    .cb-avatar{ width:34px; height:34px; display:grid; place-items:center; border:1px solid #ddd; border-radius:12px; }
-                    .cb-bubble{ max-width:74%; border:1px solid #ddd; border-radius:16px; padding:10px 12px; background:#f3f4f6; }
-                    .cb-msg--user .cb-bubble{ background:#2f3a4f; color:#fff; border-color:#2f3a4f; }
-                    .cb-bubble__text{ font-size:13px; line-height:1.45; }
-                    .cb-meta{ margin-top:6px; font-size:11px; opacity:.7; }
-                    .cb-actionsbar{ display:none !important; }
-                    .cb-typing{ display:none !important; }
-                    .cb-progress{ display:none !important; }
-                    .cb-cardstack{ display:none !important; }
-                  </style>
-                </head>
-                <body>
-                  <div class="wrap">${chatHtml}</div>
-                  <script>window.onload=()=>{window.focus();window.print();};<\/script>
-                </body>
-                </html>
-            `);
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8" />
+          <meta name="viewport" content="width=device-width, initial-scale=1" />
+          <title>Chat Print</title>
+          <style>
+            body{ font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial; margin: 24px; background:#fff; color:#111; }
+            pre { margin:0; white-space:pre-wrap; word-break:break-word; }
+            .wrap{ max-width: 820px; margin: 0 auto; }
+            .cb-divider{ text-align:center; margin: 12px 0; color:#666; font-size:12px; }
+            .cb-msg{ display:flex; gap:10px; margin:10px 0; align-items:flex-start; }
+            .cb-msg--user{ justify-content:flex-end; }
+            .cb-avatar{ width:34px; height:34px; display:grid; place-items:center; border:1px solid #ddd; border-radius:12px; }
+            .cb-bubble{ max-width:74%; border:1px solid #ddd; border-radius:16px; padding:10px 12px; background:#f3f4f6; }
+            .cb-msg--user .cb-bubble{ background:#2f3a4f; color:#fff; border-color:#2f3a4f; }
+            .cb-bubble__text{ font-size:13px; line-height:1.45; }
+            .cb-meta{ margin-top:6px; font-size:11px; opacity:.7; }
+            .cb-actionsbar{ display:none !important; }
+            .cb-fileqbar{ display:none !important; }
+            .cb-cardstack{ display:none !important; }
+            .cb-msg--upload-progress{ display:none !important; }
+          </style>
+        </head>
+        <body>
+          <div class="wrap">${chatHtml}</div>
+          <script>window.onload=()=>{window.focus();window.print();};<\/script>
+        </body>
+        </html>
+      `);
             w.document.close();
         });
     }
@@ -1632,6 +2159,32 @@ document.addEventListener("DOMContentLoaded", () => {
             openViewer(url);
             return;
         }
+
+        const qBtn = e.target && e.target.closest ? e.target.closest(".cb-fileqbtn") : null;
+        if (qBtn) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            if (qBtn.hasAttribute("disabled")) return;
+
+            const action = qBtn.getAttribute("data-action") || "";
+            const msgEl = qBtn.closest(".cb-msg");
+            const filename = msgEl ? (msgEl.getAttribute("data-filename") || msgEl.getAttribute("data-copytext") || "") : "";
+            const name = String(filename || "").trim();
+            if (!name) return;
+
+            if (msgEl && msgEl.classList.contains("cb-msg--upload-progress")) return;
+
+            if (action === "summary") {
+                startSummaryToChat(name);
+                return;
+            }
+            if (action === "question") {
+                setSelectedDocument({ name });
+                input.focus();
+                return;
+            }
+        }
     });
 
     const firstMeta = body.querySelector(".cb-msg--bot .cb-meta");
@@ -1639,10 +2192,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     ensureResearchTag();
     ensureTemplateTag();
-    ensureFileTag();
+    ensureDocTag();
+
     setResearchMode(false);
     setTemplate(null);
-    setPendingFile(null);
+    setSelectedDocument(null);
 
     input.focus();
     scrollToBottom();

@@ -27,15 +27,18 @@
                 <header class="cb-header">
                     <div class="cb-header__left">
                         <div class="cb-brand">
-                            <div class="cb-brand__logo">C</div>
+                            <div class="cb-brand__logo">U</div>
                             <div class="cb-brand__text">
                                 <div class="cb-brand__title">ULTARI</div>
-                                <div class="cb-brand__sub">챗봇 상담</div>
+                                <!-- <div class="cb-brand__sub">챗봇 상담</div> -->
                             </div>
                         </div>
                     </div>
 
                     <div class="cb-header__right">
+                        <button class="cb-iconbtn" id="cbDocsBtn" type="button" aria-label="문서함" aria-expanded="false">
+                            <img src="/img/ic-docs.png" alt="" />
+                        </button>
                         <button class="cb-iconbtn" id="cbSearchBtn" type="button" aria-label="검색" aria-expanded="false">
                             <img src="/img/ic-search.png" alt="" />
                         </button>
@@ -91,13 +94,13 @@
                                     aria-expanded="false">＋</button>
 
                                 <div class="cb-pop" id="cbPop" role="menu" aria-hidden="true">
-                                    <button class="cb-pop__item" id="cbActionUpload" type="button" role="menuitem">
-                                        <img class="cb-avatar__img" src="/img/ic-file.png" alt="첨부파일" />
-                                        <span class="cb-pop__text">문서 업로드</span>
-                                    </button>
                                     <button class="cb-pop__item" id="cbActionPrint" type="button" role="menuitem">
                                         <img class="cb-avatar__img" src="/img/ic-print.png" alt="인쇄" />
                                         <span class="cb-pop__text">대화 인쇄</span>
+                                    </button>
+                                    <button class="cb-pop__item" id="cbActionUpload" type="button" role="menuitem">
+                                        <img class="cb-avatar__img" src="/img/ic-file.png" alt="첨부파일" />
+                                        <span class="cb-pop__text">문서 업로드</span>
                                     </button>
                                     <!-- <button class="cb-pop__item" id="cbActionUpResearch" type="button" role="menuitem">
                                         <img class="cb-avatar__img" src="/img/ic-research.png" alt="광역 리서치" />
@@ -110,7 +113,9 @@
                                 </div>
                             </div>
 
-                            <button class="cb-send" id="cbSend" type="button" aria-label="전송">➤</button>
+                            <button class="cb-send" id="cbSend" type="button" aria-label="전송">
+                                <img src="/img/ic-send.png" alt="전송" />
+                            </button>
                         </div>
 
                         <input id="cbFileInput" type="file" hidden />
@@ -119,7 +124,6 @@
                     <section class="cb-tray" id="cbTplTray" aria-hidden="true">
                         <div class="cb-tray__head">
                             <div class="cb-tray__title">
-                                <img src="/img/ic-select.png" alt="" />
                                 <span>양식 선택</span>
                             </div>
                             <button class="cb-tray__close" id="cbTplTrayClose" type="button" aria-label="닫기">×</button>
