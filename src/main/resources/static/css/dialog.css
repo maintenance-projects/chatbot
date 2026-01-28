@@ -363,27 +363,17 @@ textarea {
 }
 
 .cb-fileqbar {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
+    position: static;
+    transform: none;
     display: flex;
+    justify-content: flex-end;
     gap: 6px;
-    z-index: 6;
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-    transition: opacity 0.14s ease, visibility 0.14s ease;
-}
-
-.cb-msg--user.cb-msg--card .cb-fileqbar {
-    left: -124px;
-}
-
-.cb-msg--user.cb-msg--card:hover .cb-fileqbar,
-.cb-msg--user.cb-msg--card:focus-within .cb-fileqbar {
+    margin-top: 8px;
+    z-index: 1;
     opacity: 1;
     visibility: visible;
     pointer-events: auto;
+    transition: none;
 }
 
 .cb-fileqbtn {
@@ -446,6 +436,10 @@ textarea {
     gap: 4px;
 }
 
+.cb-ref.is-hidden {
+    display: none;
+}
+
 .cb-ref:active {
     transform: scale(0.99);
 }
@@ -462,6 +456,23 @@ textarea {
 .cb-ref__meta {
     font-size: 11px;
     color: #64748b;
+}
+
+.cb-refs__toggle {
+    margin-top: 8px;
+    width: 100%;
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    background: rgba(248, 250, 252, 0.92);
+    color: #0f172a;
+    font-size: 11px;
+    font-weight: 800;
+    padding: 8px 10px;
+    border-radius: 12px;
+    cursor: pointer;
+}
+
+.cb-refs__toggle:active {
+    transform: scale(0.99);
 }
 
 .cb-cardstack {
@@ -1259,10 +1270,6 @@ textarea {
 
     .cb-msg--user .cb-actionsbar {
         left: -40px;
-    }
-
-    .cb-msg--user.cb-msg--card .cb-fileqbar {
-        left: -112px;
     }
 
     .document-list-popup {

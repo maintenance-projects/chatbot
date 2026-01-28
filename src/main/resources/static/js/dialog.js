@@ -664,11 +664,15 @@ document.addEventListener("DOMContentLoaded", () => {
         const list = filterPdfDocs(docs);
         if (!list.length) return "";
 
+        const limit = 3;
+        const hiddenCount = Math.max(0, list.length - limit);
+
         const items = list
-            .map((d) => {
+            .map((d, idx) => {
                 const meta = `${d.page} 페이지`;
+                const hidden = idx >= limit ? " is-hidden" : "";
                 return `
-          <button class="cb-ref" type="button" data-url="${escapeHtml(d.url)}">
+          <button class="cb-ref${hidden}" type="button" data-url="${escapeHtml(d.url)}">
             <div class="cb-ref__name">${escapeHtml(d.source || "문서")}</div>
             <div class="cb-ref__meta">${escapeHtml(meta)}</div>
           </button>
@@ -676,9 +680,14 @@ document.addEventListener("DOMContentLoaded", () => {
             })
             .join("");
 
+        const toggleBtn = hiddenCount > 0
+            ? `<button type="button" class="cb-refs__toggle" data-open="false">+ ${hiddenCount}개 더보기</button>`
+            : "";
+
         return `
       <div class="cb-refs__title"><span>출처</span></div>
       <div class="cb-refs__list">${items}</div>
+      ${toggleBtn}
     `;
     }
 
@@ -722,6 +731,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function showProgress(handle, stepText) {
         if (!handle) return;
+        if (handle.done) return;
+        if (handle.started) return;
+
         handle.hasProgress = true;
         if (handle.progressEl) handle.progressEl.style.display = "flex";
         if (handle.progressTextEl) handle.progressTextEl.textContent = String(stepText || "");
@@ -923,6 +935,11 @@ document.addEventListener("DOMContentLoaded", () => {
                                 if (typeof onFirstToken === "function") onFirstToken();
                             }
                             if (typeof onText === "function") onText(content);
+                        } else {
+                            if (first) {
+                                first = false;
+                                if (typeof onFirstToken === "function") onFirstToken();
+                            }
                         }
                         continue;
                     }
@@ -1329,7 +1346,7 @@ document.addEventListener("DOMContentLoaded", () => {
         summaryBusy = true;
 
         const handle = addBotStreamLoadingMessage(true);
-        const titlePrefix = `**요약 - ${name}**\n\n`;
+        const titlePrefix = `**요약**`;
         startStreaming(handle);
         appendStreamText(handle, titlePrefix);
 
@@ -1572,7 +1589,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 finalizeStream(h);
 
                 const raw = h.preEl ? h.preEl.getAttribute("data-rawtext") || "" : "";
-                if (!raw.trim()) appendStreamText(h, "파일 업로드 완료");
+                if (!raw.trim()) appendStreamText(h, "파일이 정상적으로 업로드 되었습니다.");
             })
             .catch((err) => {
                 finalizeUploadProgress(uploadHandle);
@@ -1936,6 +1953,7 @@ document.addEventListener("DOMContentLoaded", () => {
             .cb-fileqbar{ display:none !important; }
             .cb-cardstack{ display:none !important; }
             .cb-msg--upload-progress{ display:none !important; }
+            .cb-refs__toggle{ display:none !important; }
           </style>
         </head>
         <body>
@@ -2114,6 +2132,35 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     body.addEventListener("click", async (e) => {
+        const refsToggle = e.target && e.target.closest ? e.target.closest(".cb-refs__toggle") : null;
+        if (refsToggle) {
+            e.preventDefault();
+            e.stopPropagation();
+            const refs = refsToggle.closest(".cb-refs");
+            if (!refs) return;
+
+            const open = refsToggle.getAttribute("data-open") === "true";
+            const nextOpen = !open;
+
+            refsToggle.setAttribute("data-open", nextOpen ? "true" : "false");
+
+            const hiddenItems = Array.from(refs.querySelectorAll(".cb-ref.is-hidden"));
+            if (nextOpen) {
+                hiddenItems.forEach((x) => x.classList.remove("is-hidden"));
+                refsToggle.textContent = "접기";
+            } else {
+                const all = Array.from(refs.querySelectorAll(".cb-ref"));
+                all.forEach((x, idx) => {
+                    if (idx >= 3) x.classList.add("is-hidden");
+                });
+
+                const total = all.length;
+                const hiddenCount = Math.max(0, total - 3);
+                refsToggle.textContent = hiddenCount > 0 ? `+ ${hiddenCount}개 더보기` : "";
+            }
+            return;
+        }
+
         const copyBtn = e.target && e.target.closest ? e.target.closest(".cb-actbtn--copy") : null;
         if (copyBtn) {
             const msgEl = copyBtn.closest(".cb-msg");
