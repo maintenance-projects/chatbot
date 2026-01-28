@@ -35,8 +35,9 @@ public class GenerateController {
         return json;
     }
 
-    /*@RequestMapping("/dialog")
-    public String dialog() {
-        return "dialog";
-    }*/
+    // 테스트용
+    @RequestMapping("/summary")
+    public String summary() {
+        return "summary";
+    }
 }

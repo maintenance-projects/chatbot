@@ -564,15 +564,16 @@ textarea {
 }
 
 .cb-send {
-    width: 30px;
-    height: 30px;
+    /* width: 30px; */
+    /* height: 30px; */
     border: 0;
-    border-radius: 20px;
+    border-radius: 13px;
     color: #fff;
     cursor: pointer;
     background: #3d8def;
     flex: 0 0 auto;
-    padding: 7px 5px;
+    padding: 5px 8px 7px;
+    font-size: 10px;
 }
 
 .cb-send:disabled {
@@ -1165,7 +1166,7 @@ textarea {
 
 .cb-upload-card__name {
     font-size: 11px;
-    font-weight: 800;
+    /* font-weight: 800; */
     line-height: 1.2;
     white-space: nowrap;
     overflow: hidden;
@@ -1185,6 +1186,7 @@ textarea {
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    margin-left: 25px;
 }
 
 .cb-upload-progress-wrap {
