@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <title>대화 요약</title>
+
+    <link rel="stylesheet" th:href="@{/css/dialog.css}" href="/css/dialog.css" />
+    <link rel="stylesheet" th:href="@{/css/summary.css}" href="/css/summary.css" />
+</head>
+
+<body>
+    <main class="cb-page cb-summary-page">
+        <section class="cb-shell cb-summary-shell" id="cbShell" aria-label="요약">
+            <aside class="cb-widget is-open cb-summary-widget" id="cbWidget" aria-hidden="false">
+                <div class="cb-summary-wrap">
+                    <div class="cb-summary-head">
+                        <div class="cb-summary-meta">
+                            <div class="cb-summary-title">대화 요약</div>
+                            <div class="cb-summary-sub" id="sumSub"></div>
+                        </div>
+                        <div class="cb-summary-actions">
+                            <button type="button" class="cb-summary-btn" id="btnCopy" aria-label="복사">복사</button>
+                            <button type="button" class="cb-summary-btn cb-summary-btn-ghost" id="btnRetry"
+                                aria-label="저장">저장</button>
+
+                        </div>
+                    </div>
+
+                    <div class="cb-summary-body">
+                        <div class="cb-summary-status" id="sumStatus"></div>
+                        <div class="cb-summary-stream" id="sumStream" aria-live="polite"></div>
+
+                        <!-- <div class="cb-summary-footer">
+              <div class="cb-summary-progress" id="sumProgress" aria-hidden="true">
+                <span class="cb-summary-dot"></span>
+                <span class="cb-summary-dot"></span>
+                <span class="cb-summary-dot"></span>
+              </div>
+            </div> -->
+                    </div>
+                </div>
+            </aside>
+        </section>
+    </main>
+
+    <div class="cb-summary-toast" id="sumToast" role="status" aria-live="polite" aria-atomic="true"></div>
+
+    <script th:src="@{/js/summary.js}" src="/js/summary.js"></script>
+</body>
+
+</html>
