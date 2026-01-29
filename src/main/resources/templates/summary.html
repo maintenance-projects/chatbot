@@ -9,6 +9,11 @@
 
     <link rel="stylesheet" th:href="@{/css/dialog.css}" href="/css/dialog.css" />
     <link rel="stylesheet" th:href="@{/css/summary.css}" href="/css/summary.css" />
+    <script th:inline="javascript">
+        const sessionId = /*[[${sessionId}]]*/ "";
+        window.sessionId = sessionId;
+        console.log("Session ID:", sessionId);
+    </script>
 </head>
 
 <body>
@@ -34,12 +39,12 @@
                         <div class="cb-summary-stream" id="sumStream" aria-live="polite"></div>
 
                         <!-- <div class="cb-summary-footer">
-              <div class="cb-summary-progress" id="sumProgress" aria-hidden="true">
-                <span class="cb-summary-dot"></span>
-                <span class="cb-summary-dot"></span>
-                <span class="cb-summary-dot"></span>
-              </div>
-            </div> -->
+                            <div class="cb-summary-progress" id="sumProgress" aria-hidden="true">
+                                <span class="cb-summary-dot"></span>
+                                <span class="cb-summary-dot"></span>
+                                <span class="cb-summary-dot"></span>
+                            </div>
+                        </div> -->
                     </div>
                 </div>
             </aside>
@@ -47,7 +52,6 @@
     </main>
 
     <div class="cb-summary-toast" id="sumToast" role="status" aria-live="polite" aria-atomic="true"></div>
-
     <script th:src="@{/js/summary.js}" src="/js/summary.js"></script>
 </body>
 

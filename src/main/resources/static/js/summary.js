@@ -12,16 +12,31 @@
     if (!elStream) return;
 
     let running = false;
-    let currentTextPlain = "";
-    let currentTextHTML = "";
-    let timer = null;
+    let controller = null;
 
-    const escapeHTML = (s) => String(s ?? "")
-        .replaceAll("&", "&amp;")
-        .replaceAll("<", "&lt;")
-        .replaceAll(">", "&gt;")
-        .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#39;");
+    const defaultFileName = "톡DB.csv";
+    const defaultSessionId = "test";
+
+    const state = {
+        mode: "stream",
+        stream: { plain: "", html: "" },
+        parsed: null,
+        lastRaw: "",
+        ui: {
+            dailyDayKeys: [],
+            dailyGroups: new Map(),
+            activeTab: "overall",
+            activeDay: "",
+        },
+    };
+
+    const escapeHTML = (s) =>
+        String(s ?? "")
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#39;");
 
     const showToast = (msg) => {
         if (!toast) return;
@@ -42,8 +57,61 @@
         const sessionId = sp.get("sessionId") || sp.get("sid") || "";
         return {
             fileName: fileName ? decodeURIComponent(fileName) : "",
-            sessionId: sessionId ? decodeURIComponent(sessionId) : ""
+            sessionId: sessionId ? decodeURIComponent(sessionId) : "",
         };
+    };
+
+    const formatKoreanDate = (yyyymmddhhmmss) => {
+        const s = String(yyyymmddhhmmss || "");
+        if (!/^\d{14}$/.test(s)) return s || "";
+        const Y = s.slice(0, 4);
+        const M = s.slice(4, 6);
+        const D = s.slice(6, 8);
+        return `${Y}-${M}-${D}`;
+    };
+
+    const parseYMD = (ymd) => {
+        const s = String(ymd || "");
+        const m = s.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+        if (!m) return null;
+        return { y: +m[1], mo: +m[2], d: +m[3] };
+    };
+
+    const getWeekdayKorean = (ymd) => {
+        const p = parseYMD(ymd);
+        if (!p) return "";
+        const dt = new Date(p.y, p.mo - 1, p.d);
+        const w = dt.getDay();
+        return ["일", "월", "화", "수", "목", "금", "토"][w] || "";
+    };
+
+    const sanitizeSummaryText = (md) => {
+        let t = String(md || "");
+        t = t.replace(/^#{1,6}\s+.*?\n+/m, "");
+        t = t.replace(/\*\*(.*?)\*\*/g, "$1");
+        t = t.replace(/\r/g, "");
+        t = t.replace(/\n{3,}/g, "\n\n").trim();
+        return t;
+    };
+
+    const extractBullets = (md) => {
+        const t = sanitizeSummaryText(md);
+        const lines = t.split("\n").map((v) => v.trim()).filter(Boolean);
+        const out = [];
+        for (const line of lines) {
+            if (/^[-*]\s+/.test(line)) out.push(line.replace(/^[-*]\s+/, "").trim());
+            else if (/^\d+\.\s+/.test(line)) out.push(line.replace(/^\d+\.\s+/, "").trim());
+        }
+        if (out.length) return out;
+
+        const fallback = t
+            .split("\n")
+            .map((v) => v.trim())
+            .filter(Boolean)
+            .map((v) => v.replace(/^[-*]\s+/, "").replace(/^\d+\.\s+/, "").trim())
+            .filter(Boolean);
+
+        return fallback;
     };
 
     const renderStreamHTML = (html) => {
@@ -51,132 +119,328 @@
         elStream.scrollTop = elStream.scrollHeight;
     };
 
-    const appendTextChunk = (chunk) => {
-        const safe = escapeHTML(chunk);
-        currentTextPlain += chunk;
-        currentTextHTML += safe.replaceAll("\n", "<br/>");
-        renderStreamHTML(`<p>${currentTextHTML}</p>`);
-    };
-
-    const stop = () => {
-        running = false;
-        if (timer) {
-            window.clearInterval(timer);
-            timer = null;
+    const buildDailyGroups = (daily) => {
+        const groups = new Map();
+        for (const item of daily) {
+            const day = formatKoreanDate(item?.date ?? "");
+            if (!day) continue;
+            if (!groups.has(day)) groups.set(day, []);
+            const bullets = extractBullets(item?.summary || "");
+            for (const b of bullets) if (b) groups.get(day).push(b);
         }
-        setLoading(false, "대화 요약 완료!");
+        const keys = Array.from(groups.keys()).sort((a, b) => String(a).localeCompare(String(b)));
+        return { groups, keys };
     };
 
-    const startFakeStream = ({ fileName, sessionId }) => {
-        if (running) stop();
+    const renderDailyHeaderHTML = (dayKeys, activeDay) => {
+        if (!dayKeys.length) return `<div class="cb-summary-muted">날짜별 요약이 없습니다.</div>`;
+        const items = dayKeys
+            .map((ymd) => {
+                const p = parseYMD(ymd);
+                const mo = p ? String(p.mo).padStart(2, "0") : "";
+                const d = p ? String(p.d).padStart(2, "0") : "";
+                const wd = getWeekdayKorean(ymd);
+                const isActive = ymd === activeDay;
+                return `
+          <button type="button" class="cb-daypill ${isActive ? "is-active" : ""}" data-day="${escapeHTML(ymd)}">
+            <div class="cb-daypill-md">${escapeHTML(mo)}/${escapeHTML(d)}</div>
+            <div class="cb-daypill-wd">${escapeHTML(wd)}</div>
+          </button>
+        `;
+            })
+            .join("");
+        return `<div class="cb-daybar" role="tablist" aria-label="날짜 선택">${items}</div>`;
+    };
+
+    const renderDailyBodyHTML = (groups, activeDay) => {
+        if (!activeDay || !groups.has(activeDay)) return `<div class="cb-summary-muted">날짜를 선택해 주세요.</div>`;
+        const bullets = groups.get(activeDay) || [];
+        const body = bullets.length
+            ? `<ul class="cb-bullets">${bullets.map((b) => `<li>${escapeHTML(b)}</li>`).join("")}</ul>`
+            : `<div class="cb-summary-muted">요약 내용이 없습니다.</div>`;
+        return `
+      <div class="cb-day-content">
+        <div class="cb-day-content-title">${escapeHTML(activeDay)}</div>
+        <div class="cb-day-content-body">${body}</div>
+      </div>
+    `;
+    };
+
+    const renderTabsHTML = (payload) => {
+        const daily = Array.isArray(payload?.daily_summaries) ? payload.daily_summaries : [];
+        const overall = payload?.overall_summary ?? "";
+
+        const overallBullets = extractBullets(overall);
+        const overallHTML = overallBullets.length
+            ? `<ul class="cb-bullets">${overallBullets.map((b) => `<li>${escapeHTML(b)}</li>`).join("")}</ul>`
+            : `<div class="cb-summary-muted">요약 내용이 없습니다.</div>`;
+
+        const { groups, keys } = buildDailyGroups(daily);
+
+        state.ui.dailyGroups = groups;
+        state.ui.dailyDayKeys = keys;
+        state.ui.activeTab = "overall";
+        state.ui.activeDay = keys[0] || "";
+
+        const dailyHeader = renderDailyHeaderHTML(keys, state.ui.activeDay);
+        const dailyBody = renderDailyBodyHTML(groups, state.ui.activeDay);
+
+        renderStreamHTML(`
+      <div class="cb-tab-wrap">
+        <div class="cb-tabs" role="tablist" aria-label="요약 탭">
+          <button type="button" class="cb-tab is-active" data-tab="overall" role="tab" aria-selected="true">전체</button> |
+          <button type="button" class="cb-tab" data-tab="daily" role="tab" aria-selected="false">날짜별</button>
+        </div>
+
+        <div class="cb-tabpanels">
+          <section class="cb-panel is-active" data-panel="overall" role="tabpanel">
+            <div class="cb-panel-inner">${overallHTML}</div>
+          </section>
+
+          <section class="cb-panel" data-panel="daily" role="tabpanel">
+            <div class="cb-panel-inner">
+              <div class="cb-daily-wrap">
+                ${dailyHeader}
+                <div class="cb-daily-body">${dailyBody}</div>
+              </div>
+            </div>
+          </section>
+        </div>
+      </div>
+    `);
+
+        const tabs = elStream.querySelectorAll(".cb-tab");
+        const panels = elStream.querySelectorAll(".cb-panel");
+
+        const activateTab = (name) => {
+            state.ui.activeTab = name;
+            tabs.forEach((t) => {
+                const on = t.getAttribute("data-tab") === name;
+                t.classList.toggle("is-active", on);
+                t.setAttribute("aria-selected", on ? "true" : "false");
+            });
+            panels.forEach((p) => {
+                const on = p.getAttribute("data-panel") === name;
+                p.classList.toggle("is-active", on);
+            });
+            if (name === "daily") {
+                const daybar = elStream.querySelector(".cb-daybar");
+                if (daybar) daybar.scrollLeft = 0;
+            }
+        };
+
+        tabs.forEach((t) => {
+            t.addEventListener("click", () => activateTab(t.getAttribute("data-tab")));
+        });
+
+        const daybar = elStream.querySelector(".cb-daybar");
+        if (daybar) {
+            daybar.addEventListener("click", (e) => {
+                const btn = e.target.closest(".cb-daypill");
+                if (!btn) return;
+                const ymd = btn.getAttribute("data-day") || "";
+                if (!ymd) return;
+                state.ui.activeDay = ymd;
+
+                daybar.querySelectorAll(".cb-daypill").forEach((b) => {
+                    b.classList.toggle("is-active", b === btn);
+                });
+
+                const bodyEl = elStream.querySelector(".cb-daily-body");
+                if (bodyEl) bodyEl.innerHTML = renderDailyBodyHTML(state.ui.dailyGroups, state.ui.activeDay);
+
+                try {
+                    btn.scrollIntoView({ behavior: "smooth", inline: "center", block: "nearest" });
+                } catch { }
+            });
+        }
+    };
+
+    const appendTextChunk = (chunk) => {
+        if (!chunk) return;
+
+        state.lastRaw += chunk;
+
+        const safe = escapeHTML(chunk);
+        state.stream.plain += chunk;
+        state.stream.html += safe.replaceAll("\n", "<br/>");
+        renderStreamHTML(`<p>${state.stream.html}</p>`);
+    };
+
+    const tryFinalizeRender = () => {
+        const raw = String(state.lastRaw || "").trim();
+        if (!raw) return;
+
+        const start = raw.indexOf("{");
+        const end = raw.lastIndexOf("}");
+        if (start < 0 || end <= start) return;
+
+        const maybe = raw.slice(start, end + 1);
+        try {
+            const json = JSON.parse(maybe);
+            if (json && (json.daily_summaries || json.overall_summary)) {
+                state.mode = "parsed";
+                state.parsed = json;
+                renderTabsHTML(json);
+            }
+        } catch { }
+    };
+
+    const stop = (finalMsg) => {
+        running = false;
+        if (controller) {
+            try {
+                controller.abort();
+            } catch { }
+            controller = null;
+        }
+        setLoading(false, finalMsg || "대화 요약 완료!");
+    };
+
+    const startStream = async ({ fileName, sessionId }) => {
+        stop();
+
+        if (!sessionId) {
+            renderStreamHTML(`<div class="cb-summary-muted">아이디가 없음</div>`);
+            setLoading(false, "실패");
+            return;
+        }
 
         running = true;
-        currentTextPlain = "";
-        currentTextHTML = "";
-        renderStreamHTML(`<div class="cb-summary-muted">요약을 생성하고 있습니다…</div>`);
+        state.mode = "stream";
+        state.stream.plain = "";
+        state.stream.html = "";
+        state.parsed = null;
+        state.lastRaw = "";
+        state.ui.dailyDayKeys = [];
+        state.ui.dailyGroups = new Map();
+        state.ui.activeTab = "overall";
+        state.ui.activeDay = "";
+
         setLoading(true, "요약 생성 중…");
+        renderStreamHTML(`<div class="cb-summary-muted">요약을 생성하고 있습니다…</div>`);
 
-        const sample = [
-            `1) 데이터 구조 요약\n`,
-            `- 총 12개 컬럼, 1,248건 레코드로 구성되어 있습니다.\n`,
-            `- 주요 키 컬럼은 user_id / workdate / itemcode 조합으로 보입니다.\n\n`,
-            `2) 값 분포/특이점\n`,
-            `- 일부 컬럼은 NULL/빈 값이 혼재되어 있어 전처리가 필요합니다.\n`,
-            `- 날짜(workdate)는 YYYYMMDD 형태이며, 범위 필터링이 가능해 보입니다.\n\n`,
-            `3) 추천 처리 흐름\n`,
-            `- 로딩 시 스키마 추론 → 결측치 정리 → 그룹핑/집계 → 화면 표출 순서를 권장합니다.\n\n`,
-            `4) 다음 액션\n`,
-            `- 사용자 화면에서는 “필터/정렬/검색” 기본 제공\n`,
-            `- 서버에서는 페이징 + 그룹핑 API 분리 권장\n`
-        ];
-
-        let i = 0;
-        let j = 0;
-
-        timer = window.setInterval(() => {
-            if (!running) return;
-
-            const line = sample[i] || "";
-            if (j >= line.length) {
-                i += 1;
-                j = 0;
-
-                if (i >= sample.length) {
-                    stop();
-                } else {
-                    appendTextChunk("\n");
-                }
-                return;
-            }
-
-            const step = Math.min(3, line.length - j);
-            appendTextChunk(line.slice(j, j + step));
-            j += step;
-        }, 35);
-    };
-
-    const startRealStreamLater = async ({ fileName, sessionId }) => {
-        void fileName;
-        void sessionId;
-        startFakeStream({ fileName, sessionId });
-
-        /*
         const url = "/api/chat/csv/stream";
-        const params = new URLSearchParams({ fileName, sessionId });
-    
-        setLoading(true, "요약 생성 중…");
-        renderStreamHTML(`<div class="cb-summary-muted">요약을 생성하고 있습니다…</div>`);
-    
-        const res = await fetch(url + "?" + params.toString(), {
-          method: "GET"
-        });
-    
-        if (!res.ok || !res.body) {
-          renderStreamHTML(`<div class="cb-summary-muted">요약 스트림을 불러오지 못했습니다.</div>`);
-          setLoading(false, "실패");
-          return;
+        const params = new URLSearchParams();
+        params.set("sessionId", sessionId);
+        if (fileName) params.set("fileName", fileName);
+
+        controller = new AbortController();
+
+        let res;
+        try {
+            res = await fetch(url + "?" + params.toString(), {
+                method: "GET",
+                signal: controller.signal,
+                headers: { Accept: "text/plain, text/event-stream, application/json" },
+            });
+        } catch {
+            if (!running) return;
+            renderStreamHTML(`<div class="cb-summary-muted">서버 연결에 실패했습니다.</div>`);
+            setLoading(false, "실패");
+            running = false;
+            return;
         }
-    
+
+        if (!res.ok || !res.body) {
+            renderStreamHTML(`<div class="cb-summary-muted">요약 스트림을 불러오지 못했습니다.</div>`);
+            setLoading(false, "실패");
+            running = false;
+            return;
+        }
+
+        const ct = (res.headers.get("content-type") || "").toLowerCase();
+        const isSSE = ct.includes("text/event-stream");
+
         const reader = res.body.getReader();
         const decoder = new TextDecoder("utf-8");
-    
-        currentTextPlain = "";
-        currentTextHTML = "";
-    
-        while (true) {
-          const { value, done } = await reader.read();
-          if (done) break;
-    
-          const chunk = decoder.decode(value, { stream: true });
-          appendTextChunk(chunk);
+        let sseBuffer = "";
+
+        try {
+            while (true) {
+                const { value, done } = await reader.read();
+                if (done) break;
+
+                const chunk = decoder.decode(value, { stream: true });
+                if (!running) break;
+
+                if (!isSSE) {
+                    appendTextChunk(chunk);
+                    continue;
+                }
+
+                sseBuffer += chunk;
+
+                let idx;
+                while ((idx = sseBuffer.indexOf("\n\n")) >= 0) {
+                    const eventBlock = sseBuffer.slice(0, idx);
+                    sseBuffer = sseBuffer.slice(idx + 2);
+
+                    const lines = eventBlock.split("\n");
+                    for (const line of lines) {
+                        const trimmed = line.trimEnd();
+                        if (!trimmed.startsWith("data:")) continue;
+
+                        const data = trimmed.slice(5).trimStart();
+
+                        if (data === "[DONE]") {
+                            tryFinalizeRender();
+                            stop("대화 요약 완료!");
+                            try {
+                                reader.cancel();
+                            } catch { }
+                            return;
+                        }
+
+                        appendTextChunk(data);
+                    }
+                }
+            }
+
+            if (running) {
+                tryFinalizeRender();
+                stop("대화 요약 완료!");
+            }
+        } catch {
+            if (!running) return;
+            renderStreamHTML(`<div class="cb-summary-muted">스트림 수신 중 오류가 발생했습니다.</div>`);
+            setLoading(false, "실패");
+            running = false;
+        } finally {
+            try {
+                reader.releaseLock();
+            } catch { }
         }
-    
-        stop();
-        */
     };
 
     const init = () => {
-        const { fileName, sessionId } = parseQuery();
+        const q = parseQuery();
+        const fileName = q.fileName || defaultFileName;
+        const sessionId = q.sessionId || defaultSessionId;
 
-        const sub = [
-            fileName ? `파일: ${fileName}` : "",
-            sessionId ? `세션: ${sessionId}` : ""
-        ].filter(Boolean).join(" · ");
+        const sub = [fileName ? `파일: ${fileName}` : "", sessionId ? `ID: ${sessionId}` : ""]
+            .filter(Boolean)
+            .join(" · ");
 
-        if (elSub) {
-            elSub.textContent = sub || "대화방명 혹은 상대방명 · nynnnn";
-        }
+        if (elSub) elSub.textContent = sub || "";
 
         if (btnRetry) {
             btnRetry.addEventListener("click", () => {
-                startRealStreamLater({ fileName, sessionId });
+                startStream({ fileName, sessionId });
             });
         }
 
         if (btnCopy) {
             btnCopy.addEventListener("click", async () => {
-                const text = String(currentTextPlain || "").trim();
-                if (!text) {
+                const txt = $('#sumStream').val();
+                console.log('Txt: ', txt);
+
+                const text =
+                    state.mode === "parsed"
+                        ? JSON.stringify(state.parsed || {}, null, 2)
+                        : String(state.stream.plain || "").trim();
+
+                if (!text || !String(text).trim()) {
                     showToast("복사할 내용이 없습니다.");
                     return;
                 }
@@ -190,7 +454,7 @@
         }
 
         setLoading(true, "요약 생성 중…");
-        startRealStreamLater({ fileName, sessionId });
+        startStream({ fileName, sessionId });
     };
 
     if (document.readyState === "loading") {
