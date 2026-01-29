@@ -34,7 +34,6 @@ public class AICsvService {
         MultipartFile file = pathToMultipartFile(csvPath);
         MultipartBodyBuilder builder = new MultipartBodyBuilder();
         builder.part("csv_file",file.getResource());
-        //aiClientService.callAI("http://10.0.0.111:8000/convert/dialogue", builder);
 
         // 클라이언트가 끊으면 subscription 정리
         final Disposable[] disposableHolder = new Disposable[1];
