@@ -130,11 +130,11 @@ public class RelayController {
         log.debug(fileName);
         log.debug(sessionId);
 
-        return csvService.callAiServer(getCsvPath(fileName), sessionId);
+        return csvService.callAiServer(getCsvPath(fileName, sessionId), sessionId);
     }
 
-    protected Path getCsvPath(String fileKey) {
-        Path dirPath = Paths.get(tempPath);
+    protected Path getCsvPath(String fileKey, String sessionId) {
+        Path dirPath = Paths.get(tempPath + File.separator + sessionId + File.separator + "dialog");
         Path filePath = dirPath.resolve(fileKey);
         return filePath;
     }
