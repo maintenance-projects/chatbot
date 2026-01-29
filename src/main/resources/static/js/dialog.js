@@ -603,7 +603,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (allowView && ext) {
             const page = Number.isFinite(Number(fileInfo && fileInfo.page)) ? Number(fileInfo.page) : 1;
             const encodedName = safeEncodePathSegment(filename);
-            viewUrl = `/document/view/${encodedName}${ext === "pdf" ? `#page=${page}` : ""}`;
+            viewUrl = `/document/view/${sessionId}/${encodedName}${ext === "pdf" ? `#page=${page}` : ""}`;
         }
 
         const html = `
@@ -644,7 +644,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (ext !== "pdf") return "";
         const p = Number.isFinite(Number(page)) ? Number(page) : 1;
         const encodedName = safeEncodePathSegment(s);
-        return `/document/view/${encodedName}#page=${p}`;
+        return `/document/view/${sessionId}/${encodedName}#page=${p}`;
     }
 
     function filterPdfDocs(docs) {
