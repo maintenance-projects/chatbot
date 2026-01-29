@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -78,8 +79,11 @@ public class RelayController {
         if(StringUtils.hasText(file.getOriginalFilename())) {
             String safeFilename = Paths.get(file.getOriginalFilename()).getFileName().toString();
 
+            File f = new File(tempPath + File.separator + sessionId + File.separator + "document");
+            if(!f.exists()) f.mkdirs();
+
             // 2. 저장 경로
-            Path dirPath = Paths.get(tempPath);
+            Path dirPath = Paths.get(f.getPath());
             Path filePath = dirPath.resolve(safeFilename);
 
             try {

@@ -10,12 +10,10 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
+import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
@@ -36,7 +34,7 @@ public class DefaultController {
     public ResponseEntity<Resource> download(@PathVariable String key) {
 
         log.info(key);
-        String targetUrl = "http://10.0.0.92:8000/documents/download/" + key;
+        String targetUrl = "http://10.0.0.111:8000/documents/download/" + key;
 
         RestTemplate restTemplate = new RestTemplate();
 
@@ -58,13 +56,14 @@ public class DefaultController {
         );
     }
 
-    @GetMapping("/document/view/{fileName}")
-    public ResponseEntity<Resource> viewDocument(@PathVariable String fileName) {
+    @GetMapping("/document/view/{sessionId}/{fileName}")
+    public ResponseEntity<Resource> viewDocument(@PathVariable("fileName") String fileName, @PathVariable("sessionId") String sessionId) {
 
         log.debug(fileName);
+        log.debug(sessionId);
         String ext = fileName.substring(fileName.lastIndexOf(".")+1).toLowerCase();
 
-        Path path = Paths.get(tempPath, fileName);
+        Path path = Paths.get(tempPath + File.separator + sessionId + File.separator + "document", fileName);
         Resource resource = new FileSystemResource(path);
 
         MediaType mediaType;

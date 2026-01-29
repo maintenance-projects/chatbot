@@ -10,6 +10,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -43,8 +44,10 @@ public class GenerateController {
         if(StringUtils.hasText(file.getOriginalFilename())) {
             String safeFilename = Paths.get(file.getOriginalFilename()).getFileName().toString();
 
+            File f = new File(tempPath + File.separator + sessionId + File.separator + "dialog");
+            if(!f.exists()) f.mkdirs();
             // 2. 저장 경로
-            Path dirPath = Paths.get(tempPath);
+            Path dirPath = Paths.get(f.getPath());
             Path filePath = dirPath.resolve(safeFilename);
 
             try {
@@ -65,6 +68,14 @@ public class GenerateController {
         }
 
         model.addAttribute("fileName", file.getOriginalFilename());
+        model.addAttribute("sessionId", sessionId);
+        return "summary";
+    }
+
+    @RequestMapping("/csv/upload/test")
+    public String summaryPageTest(@RequestParam("file") String fileName, @RequestParam("sessionId") String sessionId, Model model) {
+
+        model.addAttribute("fileName", fileName);
         model.addAttribute("sessionId", sessionId);
         return "summary";
     }
