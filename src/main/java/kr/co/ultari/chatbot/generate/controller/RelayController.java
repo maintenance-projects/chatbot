@@ -2,6 +2,7 @@ package kr.co.ultari.chatbot.generate.controller;
 
 import kr.co.ultari.chatbot.generate.datamodel.dto.RequestDTO;
 import kr.co.ultari.chatbot.generate.datamodel.dto.ResponseDTO;
+import kr.co.ultari.chatbot.generate.service.AICsvService;
 import kr.co.ultari.chatbot.generate.service.AIRelayService;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONArray;
@@ -10,6 +11,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.ui.Model;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -21,6 +23,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.util.List;
+import java.util.concurrent.Executors;
 
 @Profile("relay")
 @Slf4j
@@ -30,6 +33,9 @@ public class RelayController {
 
     @Autowired
     AIRelayService relayService;
+
+    @Autowired
+    AICsvService csvService;
 
     @Value("${ultari.ai.temp.path:tmp}")
     String tempPath;
@@ -65,8 +71,7 @@ public class RelayController {
     public SseEmitter uploadStream(@RequestParam(value = "file") MultipartFile file, @RequestParam("message") String message, @RequestParam("deepResearch") boolean deepRsrch
             , @RequestParam("sessionId") String sessionId, @RequestParam(value="templateKey", required = false) String templateKey
             , @RequestParam(value="isContinue", required = false) boolean isContinue) {
-        log.info(file.getOriginalFilename());
-        log.info(sessionId);
+        log.info("fileName = {}, sessionId = {}",file.getOriginalFilename(), sessionId);
         //return relayService.ChatRelayServiceAudioStream(sessionId, file);
 
         RequestDTO req = new RequestDTO(sessionId, message, templateKey, null, deepRsrch, isContinue, null);
@@ -114,5 +119,19 @@ public class RelayController {
     public List<String> requestFileList(@RequestParam("sessionId") String sessionId) {
         log.debug(sessionId);
         return relayService.requestFileList(sessionId);
+    }
+
+    @RequestMapping(value = "/csv/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE + ";charset=UTF-8")
+    public SseEmitter streamCsvSummary(@RequestParam("fileName") String fileName, @RequestParam("sessionId") String sessionId) throws Exception {
+        log.debug(fileName);
+        log.debug(sessionId);
+
+        return csvService.callAiServer(getCsvPath(fileName), sessionId);
+    }
+
+    protected Path getCsvPath(String fileKey) {
+        Path dirPath = Paths.get(tempPath);
+        Path filePath = dirPath.resolve(fileKey);
+        return filePath;
     }
 }
