@@ -150,6 +150,7 @@
 
 .cb-summary-stream li {
     margin: 6px 0;
+    font-size: 12px !important;
 }
 
 .cb-summary-muted {
@@ -280,7 +281,7 @@
 
 .cb-bullets li {
     margin: 6px 0;
-    font-size: 11px !important;
+    font-size: 12px !important;
 }
 
 .cb-daybar {
@@ -336,9 +337,9 @@
 }
 
 .cb-day-content-title {
-    font-size: 13px;
+    font-size: 15px;
     font-weight: 900;
-    margin-bottom: 6px;
+    margin-bottom: 10px;
     color: rgba(0, 0, 0, 0.88);
 }
 
@@ -348,6 +349,11 @@
 
 .cb-daily-body {
     padding-top: 2px;
+}
+
+.cb-md-h4 {
+    margin-top: 20px;
+    font-weight: bold;
 }
 
 @media (max-width: 640px) {

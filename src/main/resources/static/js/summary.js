@@ -61,13 +61,11 @@
         };
     };
 
-    const formatKoreanDate = (yyyymmddhhmmss) => {
-        const s = String(yyyymmddhhmmss || "");
-        if (!/^\d{14}$/.test(s)) return s || "";
-        const Y = s.slice(0, 4);
-        const M = s.slice(4, 6);
-        const D = s.slice(6, 8);
-        return `${Y}-${M}-${D}`;
+    const formatKoreanDate = (dateLike) => {
+        const s = String(dateLike || "").trim();
+        if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
+        if (/^\d{14}$/.test(s)) return `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`;
+        return s;
     };
 
     const parseYMD = (ymd) => {
@@ -85,33 +83,83 @@
         return ["일", "월", "화", "수", "목", "금", "토"][w] || "";
     };
 
-    const sanitizeSummaryText = (md) => {
-        let t = String(md || "");
-        t = t.replace(/^#{1,6}\s+.*?\n+/m, "");
-        t = t.replace(/\*\*(.*?)\*\*/g, "$1");
-        t = t.replace(/\r/g, "");
-        t = t.replace(/\n{3,}/g, "\n\n").trim();
-        return t;
-    };
+    const stripTopHeadingLine = (t) => String(t || "").replace(/^#{1,6}\s+.*?\n+/m, "");
 
-    const extractBullets = (md) => {
-        const t = sanitizeSummaryText(md);
-        const lines = t.split("\n").map((v) => v.trim()).filter(Boolean);
-        const out = [];
-        for (const line of lines) {
-            if (/^[-*]\s+/.test(line)) out.push(line.replace(/^[-*]\s+/, "").trim());
-            else if (/^\d+\.\s+/.test(line)) out.push(line.replace(/^\d+\.\s+/, "").trim());
+    const mdToHtml = (md, { stripTopHeading = true } = {}) => {
+        let raw = String(md ?? "");
+        raw = raw.replace(/\r/g, "");
+        if (stripTopHeading) raw = stripTopHeadingLine(raw);
+
+        const lines = raw.split("\n");
+        let html = "";
+        let listMode = null;
+
+        const closeList = () => {
+            if (listMode === "ul") html += "</ul>";
+            if (listMode === "ol") html += "</ol>";
+            listMode = null;
+        };
+
+        const inline = (text) => {
+            let s = escapeHTML(text);
+            s = s.replace(/\*\*(.+?)\*\*/g, "<strong>$1</strong>");
+            return s;
+        };
+
+        for (let i = 0; i < lines.length; i++) {
+            const line = lines[i] ?? "";
+            const trimmed = line.trim();
+
+            if (!trimmed) {
+                closeList();
+                html += `<div class="cb-md-gap"></div>`;
+                continue;
+            }
+
+            const hm = trimmed.match(/^(#{1,6})\s+(.*)$/);
+            if (hm) {
+                closeList();
+                const level = Math.min(6, Math.max(1, hm[1].length));
+                html += `<div class="cb-md-h${level}">${inline(hm[2] || "")}</div>`;
+                continue;
+            }
+
+            const um = trimmed.match(/^[-*]\s+(.*)$/);
+            if (um) {
+                if (listMode !== "ul") {
+                    closeList();
+                    listMode = "ul";
+                    html += "<ul>";
+                }
+                html += `<li>${inline(um[1] || "")}</li>`;
+                continue;
+            }
+
+            const om = trimmed.match(/^(\d+)\.\s+(.*)$/);
+            if (om) {
+                if (listMode !== "ol") {
+                    closeList();
+                    listMode = "ol";
+                    html += "<ol>";
+                }
+                html += `<li value="${escapeHTML(om[1])}">${inline(om[2] || "")}</li>`;
+                continue;
+            }
+
+            closeList();
+            html += `<div class="cb-md-p">${inline(trimmed)}</div>`;
         }
-        if (out.length) return out;
 
-        const fallback = t
-            .split("\n")
-            .map((v) => v.trim())
-            .filter(Boolean)
-            .map((v) => v.replace(/^[-*]\s+/, "").replace(/^\d+\.\s+/, "").trim())
-            .filter(Boolean);
+        closeList();
 
-        return fallback;
+        html = html
+            .replace(
+                /(<div class="cb-md-gap"><\/div>){3,}/g,
+                `<div class="cb-md-gap"></div><div class="cb-md-gap"></div>`
+            )
+            .trim();
+
+        return html || `<div class="cb-summary-muted">요약 내용이 없습니다.</div>`;
     };
 
     const renderStreamHTML = (html) => {
@@ -125,8 +173,7 @@
             const day = formatKoreanDate(item?.date ?? "");
             if (!day) continue;
             if (!groups.has(day)) groups.set(day, []);
-            const bullets = extractBullets(item?.summary || "");
-            for (const b of bullets) if (b) groups.get(day).push(b);
+            groups.get(day).push(String(item?.summary ?? ""));
         }
         const keys = Array.from(groups.keys()).sort((a, b) => String(a).localeCompare(String(b)));
         return { groups, keys };
@@ -154,10 +201,16 @@
 
     const renderDailyBodyHTML = (groups, activeDay) => {
         if (!activeDay || !groups.has(activeDay)) return `<div class="cb-summary-muted">날짜를 선택해 주세요.</div>`;
-        const bullets = groups.get(activeDay) || [];
-        const body = bullets.length
-            ? `<ul class="cb-bullets">${bullets.map((b) => `<li>${escapeHTML(b)}</li>`).join("")}</ul>`
-            : `<div class="cb-summary-muted">요약 내용이 없습니다.</div>`;
+        const summaries = groups.get(activeDay) || [];
+        const body =
+            summaries.length > 0
+                ? summaries
+                    .map((s, idx) => {
+                        const block = mdToHtml(s, { stripTopHeading: true });
+                        return `<div class="cb-md-block">${block}</div>${idx < summaries.length - 1 ? `<div class="cb-md-split"></div>` : ""}`;
+                    })
+                    .join("")
+                : `<div class="cb-summary-muted">요약 내용이 없습니다.</div>`;
         return `
       <div class="cb-day-content">
         <div class="cb-day-content-title">${escapeHTML(activeDay)}</div>
@@ -168,12 +221,9 @@
 
     const renderTabsHTML = (payload) => {
         const daily = Array.isArray(payload?.daily_summaries) ? payload.daily_summaries : [];
-        const overall = payload?.overall_summary ?? "";
+        const overall = String(payload?.overall_summary ?? "");
 
-        const overallBullets = extractBullets(overall);
-        const overallHTML = overallBullets.length
-            ? `<ul class="cb-bullets">${overallBullets.map((b) => `<li>${escapeHTML(b)}</li>`).join("")}</ul>`
-            : `<div class="cb-summary-muted">요약 내용이 없습니다.</div>`;
+        const overallHTML = `<div class="cb-md">${mdToHtml(overall, { stripTopHeading: true })}</div>`;
 
         const { groups, keys } = buildDailyGroups(daily);
 
@@ -240,6 +290,7 @@
                 if (!btn) return;
                 const ymd = btn.getAttribute("data-day") || "";
                 if (!ymd) return;
+
                 state.ui.activeDay = ymd;
 
                 daybar.querySelectorAll(".cb-daypill").forEach((b) => {
@@ -432,9 +483,6 @@
 
         if (btnCopy) {
             btnCopy.addEventListener("click", async () => {
-                const txt = $('#sumStream').val();
-                console.log('Txt: ', txt);
-
                 const text =
                     state.mode === "parsed"
                         ? JSON.stringify(state.parsed || {}, null, 2)
