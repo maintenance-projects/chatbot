@@ -14,14 +14,12 @@
     let running = false;
     let controller = null;
 
-    const defaultFileName = "톡DB.csv";
-    const defaultSessionId = "test";
-
     const state = {
         mode: "stream",
         stream: { plain: "", html: "" },
         parsed: null,
         lastRaw: "",
+        ctx: { fileName: "", sessionId: "" },
         ui: {
             dailyDayKeys: [],
             dailyGroups: new Map(),
@@ -61,6 +59,16 @@
         };
     };
 
+    const getContext = () => {
+        const wFile = typeof window !== "undefined" ? String(window.fileName || "").trim() : "";
+        const wSid = typeof window !== "undefined" ? String(window.sessionId || "").trim() : "";
+        const q = parseQuery();
+        return {
+            fileName: wFile || q.fileName || "",
+            sessionId: wSid || q.sessionId || "",
+        };
+    };
+
     const formatKoreanDate = (dateLike) => {
         const s = String(dateLike || "").trim();
         if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
@@ -86,8 +94,7 @@
     const stripTopHeadingLine = (t) => String(t || "").replace(/^#{1,6}\s+.*?\n+/m, "");
 
     const mdToHtml = (md, { stripTopHeading = true } = {}) => {
-        let raw = String(md ?? "");
-        raw = raw.replace(/\r/g, "");
+        let raw = String(md ?? "").replace(/\r/g, "");
         if (stripTopHeading) raw = stripTopHeadingLine(raw);
 
         const lines = raw.split("\n");
@@ -207,7 +214,8 @@
                 ? summaries
                     .map((s, idx) => {
                         const block = mdToHtml(s, { stripTopHeading: true });
-                        return `<div class="cb-md-block">${block}</div>${idx < summaries.length - 1 ? `<div class="cb-md-split"></div>` : ""}`;
+                        return `<div class="cb-md-block">${block}</div>${idx < summaries.length - 1 ? `<div class="cb-md-split"></div>` : ""
+                            }`;
                     })
                     .join("")
                 : `<div class="cb-summary-muted">요약 내용이 없습니다.</div>`;
@@ -224,7 +232,6 @@
         const overall = String(payload?.overall_summary ?? "");
 
         const overallHTML = `<div class="cb-md">${mdToHtml(overall, { stripTopHeading: true })}</div>`;
-
         const { groups, keys } = buildDailyGroups(daily);
 
         state.ui.dailyGroups = groups;
@@ -348,16 +355,7 @@
         setLoading(false, finalMsg || "대화 요약 완료!");
     };
 
-    const startStream = async ({ fileName, sessionId }) => {
-        stop();
-
-        if (!sessionId) {
-            renderStreamHTML(`<div class="cb-summary-muted">아이디가 없음</div>`);
-            setLoading(false, "실패");
-            return;
-        }
-
-        running = true;
+    const resetStateForRun = () => {
         state.mode = "stream";
         state.stream.plain = "";
         state.stream.html = "";
@@ -367,14 +365,28 @@
         state.ui.dailyGroups = new Map();
         state.ui.activeTab = "overall";
         state.ui.activeDay = "";
+    };
+
+    const startStream = async ({ fileName, sessionId }) => {
+        stop();
+        resetStateForRun();
+        state.ctx = { fileName: String(fileName || ""), sessionId: String(sessionId || "") };
+
+        if (!state.ctx.sessionId) {
+            renderStreamHTML(`<div class="cb-summary-muted">아이디가 없음</div>`);
+            setLoading(false, "실패");
+            return;
+        }
+
+        running = true;
 
         setLoading(true, "요약 생성 중…");
         renderStreamHTML(`<div class="cb-summary-muted">요약을 생성하고 있습니다…</div>`);
 
         const url = "/api/chat/csv/stream";
         const params = new URLSearchParams();
-        params.set("sessionId", sessionId);
-        if (fileName) params.set("fileName", fileName);
+        params.set("sessionId", state.ctx.sessionId);
+        if (state.ctx.fileName) params.set("fileName", state.ctx.fileName);
 
         controller = new AbortController();
 
@@ -407,6 +419,34 @@
         const decoder = new TextDecoder("utf-8");
         let sseBuffer = "";
 
+        const flushSSE = () => {
+            let idx;
+            while ((idx = sseBuffer.indexOf("\n\n")) >= 0) {
+                const eventBlock = sseBuffer.slice(0, idx);
+                sseBuffer = sseBuffer.slice(idx + 2);
+
+                const lines = eventBlock.split("\n");
+                for (const line of lines) {
+                    const trimmed = line.trimEnd();
+                    if (!trimmed.startsWith("data:")) continue;
+
+                    const data = trimmed.slice(5).trimStart();
+
+                    if (data === "[DONE]") {
+                        tryFinalizeRender();
+                        stop("대화 요약 완료!");
+                        try {
+                            reader.cancel();
+                        } catch { }
+                        return true;
+                    }
+
+                    appendTextChunk(data);
+                }
+            }
+            return false;
+        };
+
         try {
             while (true) {
                 const { value, done } = await reader.read();
@@ -421,34 +461,11 @@
                 }
 
                 sseBuffer += chunk;
-
-                let idx;
-                while ((idx = sseBuffer.indexOf("\n\n")) >= 0) {
-                    const eventBlock = sseBuffer.slice(0, idx);
-                    sseBuffer = sseBuffer.slice(idx + 2);
-
-                    const lines = eventBlock.split("\n");
-                    for (const line of lines) {
-                        const trimmed = line.trimEnd();
-                        if (!trimmed.startsWith("data:")) continue;
-
-                        const data = trimmed.slice(5).trimStart();
-
-                        if (data === "[DONE]") {
-                            tryFinalizeRender();
-                            stop("대화 요약 완료!");
-                            try {
-                                reader.cancel();
-                            } catch { }
-                            return;
-                        }
-
-                        appendTextChunk(data);
-                    }
-                }
+                if (flushSSE()) return;
             }
 
             if (running) {
+                if (isSSE && sseBuffer) flushSSE();
                 tryFinalizeRender();
                 stop("대화 요약 완료!");
             }
@@ -465,19 +482,21 @@
     };
 
     const init = () => {
-        const q = parseQuery();
-        const fileName = q.fileName || defaultFileName;
-        const sessionId = q.sessionId || defaultSessionId;
+        const ctx = getContext();
+        state.ctx = ctx;
 
-        const sub = [fileName ? `파일: ${fileName}` : "", sessionId ? `ID: ${sessionId}` : ""]
-            .filter(Boolean)
-            .join(" · ");
+        const sub = [
+            ctx.fileName ? `파일: ${ctx.fileName}` : "파일: 파일 없음",
+            ctx.sessionId ? `ID: ${ctx.sessionId}` : "ID: ID 없음",
+        ].join(" · ");
 
-        if (elSub) elSub.textContent = sub || "";
+        if (elSub) elSub.textContent = sub;
 
         if (btnRetry) {
             btnRetry.addEventListener("click", () => {
-                startStream({ fileName, sessionId });
+                const next = getContext();
+                state.ctx = next;
+                startStream(next);
             });
         }
 
@@ -502,7 +521,7 @@
         }
 
         setLoading(true, "요약 생성 중…");
-        startStream({ fileName, sessionId });
+        startStream(ctx);
     };
 
     if (document.readyState === "loading") {
