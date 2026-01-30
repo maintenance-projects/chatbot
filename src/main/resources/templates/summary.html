@@ -12,7 +12,13 @@
     <script th:inline="javascript">
         const sessionId = /*[[${sessionId}]]*/ "";
         window.sessionId = sessionId;
+        alert("Session ID: " + sessionId);
         console.log("Session ID:", sessionId);
+
+        const fileName = /*[[${fileName}]]*/ "";
+        window.fileName = fileName;
+        alert("File Name: " + fileName);
+        console.log("File Name:", fileName);
     </script>
 </head>
 
