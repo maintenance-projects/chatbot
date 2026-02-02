@@ -3,6 +3,7 @@ package kr.co.ultari.chatbot.generate.service;
 import io.netty.channel.ChannelOption;
 import kr.co.ultari.chatbot.generate.datamodel.dto.RequestDTO;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.MultipartBodyBuilder;
@@ -19,6 +20,9 @@ import java.util.Map;
 @Slf4j
 @Service
 public class AIRelayClientService {
+
+    @Value("${ultari.ai-gateway.chat-private-url:}")
+    private String AI_CHAT_PRIVATE_URL;
 
     private final WebClient webClient;
 
@@ -72,7 +76,11 @@ public class AIRelayClientService {
                 requestUrl = requestUrl.substring(0,requestUrl.lastIndexOf("/")) + "/" + sessionId + "/continue";
             else requestUrl = requestUrl + "/" +sessionId;
         }
-        else requestUrl = requestUrl + "/" +sessionId;
+        else {
+            if(requestDTO.getMessage().equals("summarize")) {
+                requestUrl = AI_CHAT_PRIVATE_URL + "/" +sessionId;
+            } else requestUrl = requestUrl + "/" +sessionId;
+        }
 
         log.debug("request url = {}",requestUrl);
         return webClient.post()
