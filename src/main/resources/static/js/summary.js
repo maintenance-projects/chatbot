@@ -91,7 +91,7 @@
         return ["일", "월", "화", "수", "목", "금", "토"][w] || "";
     };
 
-    const stripTopHeadingLine = (t) => String(t || "").replace(/^#{1,6}\s+.*?\n+/m, "");
+    const stripTopHeadingLine = (t) => String(t || "").replace(/^\s*#{1,2}\s+.*?\n+/, "");
 
     const mdToHtml = (md, { stripTopHeading = true } = {}) => {
         let raw = String(md ?? "").replace(/\r/g, "");
@@ -126,8 +126,15 @@
             const hm = trimmed.match(/^(#{1,6})\s+(.*)$/);
             if (hm) {
                 closeList();
-                const level = Math.min(6, Math.max(1, hm[1].length));
-                html += `<div class="cb-md-h${level}">${inline(hm[2] || "")}</div>`;
+                const hashes = hm[1] || "";
+                const text = hm[2] || "";
+
+                if (hashes.length >= 3) {
+                    html += `<div class="cb-md-p">${inline(hashes + " " + text)}</div>`;
+                } else {
+                    const level = Math.min(6, Math.max(1, hashes.length));
+                    html += `<div class="cb-md-h${level}">${inline(text)}</div>`;
+                }
                 continue;
             }
 
@@ -502,20 +509,33 @@
 
         if (btnCopy) {
             btnCopy.addEventListener("click", async () => {
-                const text =
-                    state.mode === "parsed"
-                        ? JSON.stringify(state.parsed || {}, null, 2)
-                        : String(state.stream.plain || "").trim();
+                const text = getCopyTextUI();
 
-                if (!text || !String(text).trim()) {
+                if (!text) {
                     showToast("복사할 내용이 없습니다.");
                     return;
                 }
+
                 try {
                     await navigator.clipboard.writeText(text);
                     showToast("복사했습니다.");
                 } catch {
-                    showToast("복사에 실패했습니다.");
+                    try {
+                        const ta = document.createElement("textarea");
+                        ta.value = text;
+                        ta.setAttribute("readonly", "");
+                        ta.style.position = "fixed";
+                        ta.style.left = "-9999px";
+                        ta.style.top = "0";
+                        document.body.appendChild(ta);
+                        ta.focus();
+                        ta.select();
+                        document.execCommand("copy");
+                        document.body.removeChild(ta);
+                        showToast("복사했습니다.");
+                    } catch {
+                        showToast("복사에 실패했습니다.");
+                    }
                 }
             });
         }
@@ -529,4 +549,26 @@
     } else {
         init();
     }
+
+    const getCopyTextUI = () => {
+        const pick = (sel) => elStream.querySelector(sel);
+
+        if (state.mode === "parsed") {
+            if (state.ui.activeTab === "overall") {
+                const el = pick('[data-panel="overall"] .cb-panel-inner');
+                return String(el?.innerText || "").trim();
+            }
+
+            if (state.ui.activeTab === "daily") {
+                const title = String(pick(".cb-day-content-title")?.innerText || "").trim();
+                const body = String(pick(".cb-day-content-body")?.innerText || "").trim();
+                return [title, body].filter(Boolean).join("\n\n").trim();
+            }
+
+            const fallback = pick(".cb-panel.is-active .cb-panel-inner");
+            return String(fallback?.innerText || "").trim();
+        }
+
+        return String(state.stream.plain || elStream.innerText || "").trim();
+    };
 })();
