@@ -2,9 +2,8 @@
     const $ = (id) => document.getElementById(id);
 
     const elStream = $("sumStream");
-    const elStatus = $("sumStatus");
+    // const elStatus = $("sumStatus");
     const elSub = $("sumSub");
-    const elProgress = $("sumProgress");
     const btnCopy = $("btnCopy");
     const btnRetry = $("btnRetry");
     const toast = $("sumToast");
@@ -26,6 +25,10 @@
             activeTab: "overall",
             activeDay: "",
         },
+        progress: {
+            dateRange: { start: "", end: "" },
+            lastMessage: "",
+        },
     };
 
     const escapeHTML = (s) =>
@@ -45,9 +48,16 @@
     };
 
     const setLoading = (on, msg) => {
-        if (elProgress) elProgress.style.visibility = on ? "visible" : "hidden";
-        if (elStatus) elStatus.textContent = msg || (on ? "요약 생성 중…" : "대화 요약 완료!");
+        const text = msg || (on ? "요약 생성 중" : "대화 요약 완료!");
+        if (state.mode === "parsed") return;
+
+        if (on) {
+            renderProgressHTML(text);
+        } else {
+            renderStreamHTML(`<div class="cb-summary-muted">${escapeHTML(text)}</div>`);
+        }
     };
+
 
     const parseQuery = () => {
         const sp = new URLSearchParams(location.search);
@@ -179,6 +189,41 @@
     const renderStreamHTML = (html) => {
         elStream.innerHTML = html || `<div class="cb-summary-muted">요약 내용이 없습니다.</div>`;
         elStream.scrollTop = elStream.scrollHeight;
+    };
+
+    const renderProgressHTML = (message) => {
+        const msg = String(message || "").trim() || "처리 중";
+        renderStreamHTML(`
+    <div class="cb-progress-full">
+      <div class="cb-progress-full-msg">${escapeHTML(msg)}</div>
+      <div class="cb-progress-full-dots" aria-hidden="true">
+        <span class="cb-progress-dot"></span>
+        <span class="cb-progress-dot"></span>
+        <span class="cb-progress-dot"></span>
+      </div>
+    </div>
+  `);
+    };
+
+
+
+    const updateSubByDateRange = (start, end) => {
+        const s = formatKoreanDate(start);
+        const e = formatKoreanDate(end);
+        state.progress.dateRange.start = s;
+        state.progress.dateRange.end = e;
+
+        if (!elSub) return;
+
+        if (s && e) {
+            elSub.textContent = `요약 기간: ${s} ~ ${e}`;
+            return;
+        }
+        if (s && !e) {
+            elSub.textContent = `요약 기간: ${s}`;
+            return;
+        }
+        elSub.textContent = "요약 기간: -";
     };
 
     const buildDailyGroups = (daily) => {
@@ -323,7 +368,6 @@
 
     const appendTextChunk = (chunk) => {
         if (!chunk) return;
-
         state.lastRaw += chunk;
 
         const safe = escapeHTML(chunk);
@@ -332,35 +376,19 @@
         renderStreamHTML(`<p>${state.stream.html}</p>`);
     };
 
-    const tryFinalizeRender = () => {
-        const raw = String(state.lastRaw || "").trim();
-        if (!raw) return;
-
-        const start = raw.indexOf("{");
-        const end = raw.lastIndexOf("}");
-        if (start < 0 || end <= start) return;
-
-        const maybe = raw.slice(start, end + 1);
-        try {
-            const json = JSON.parse(maybe);
-            if (json && (json.daily_summaries || json.overall_summary)) {
-                state.mode = "parsed";
-                state.parsed = json;
-                renderTabsHTML(json);
-            }
-        } catch { }
-    };
-
-    const stop = (finalMsg) => {
+    const stop = (finalMsg, { abort = true } = {}) => {
         running = false;
-        if (controller) {
+
+        if (abort && controller) {
             try {
                 controller.abort();
             } catch { }
-            controller = null;
         }
+        controller = null;
+
         setLoading(false, finalMsg || "대화 요약 완료!");
     };
+
 
     const resetStateForRun = () => {
         state.mode = "stream";
@@ -372,6 +400,114 @@
         state.ui.dailyGroups = new Map();
         state.ui.activeTab = "overall";
         state.ui.activeDay = "";
+        state.progress.lastMessage = "";
+    };
+
+    const normalizeContentPayload = (obj) => {
+        if (!obj) return null;
+
+        if (obj.overall_summary || obj.daily_summaries) return obj;
+
+        const c = obj.content;
+        if (typeof c === "object" && c) {
+            if (c.overall_summary || c.daily_summaries) return c;
+        }
+
+        if (typeof c === "string") {
+            const t = c.trim();
+            if (t.startsWith("{") && t.endsWith("}")) {
+                try {
+                    const j = JSON.parse(t);
+                    if (j && (j.overall_summary || j.daily_summaries)) return j;
+                } catch { }
+            }
+            return { overall_summary: c, daily_summaries: [] };
+        }
+
+        return null;
+    };
+
+    const handleProgress = (obj) => {
+        const step = String(obj?.step || "").trim();
+        const msg = String(obj?.message || "").trim();
+
+        const hasRange = obj && (obj.start_date || obj.end_date);
+        if (hasRange) {
+            updateSubByDateRange(obj?.start_date, obj?.end_date);
+        }
+
+        const showMsg =
+            msg ||
+            (hasRange ? "기간 계산 중" : step ? `${step} 처리 중` : "처리 중");
+
+        state.progress.lastMessage = showMsg;
+        setLoading(true, showMsg);
+        // if (state.mode !== "parsed") renderProgressHTML();
+    };
+
+
+    const handleContent = (obj) => {
+        const payload = normalizeContentPayload(obj);
+        if (!payload) return;
+
+        state.mode = "parsed";
+        state.parsed = payload;
+        setLoading(false, "대화 요약 완료!");
+        renderTabsHTML(payload);
+    };
+
+    const handleDone = (obj) => {
+        const msg = String(obj?.message || "").trim();
+        setLoading(false, msg || "대화 요약 완료!");
+        stop(msg || "대화 요약 완료!", { abort: false });
+        return "done";
+
+    };
+
+    const handleDataLine = (data) => {
+        const text = String(data ?? "");
+        const trimmed = text.trim();
+
+        if (!trimmed) return;
+
+        if (trimmed === "[DONE]") {
+            stop("대화 요약 완료!");
+            return "done";
+        }
+
+        if (trimmed.startsWith("{") && trimmed.endsWith("}")) {
+            try {
+                const obj = JSON.parse(trimmed);
+
+                if (obj?.type === "progress") {
+                    handleProgress(obj);
+                    return;
+                }
+
+                if (obj?.type === "content") {
+                    handleContent(obj);
+                    return;
+                }
+
+                if (obj?.type === "result") {
+                    handleContent(obj);
+                    return;
+                }
+
+                if (obj?.type === "done") {
+                    return handleDone(obj);
+                }
+
+                if (obj?.overall_summary || obj?.daily_summaries || obj?.content) {
+                    handleContent(obj);
+                    return;
+                }
+            } catch { }
+        }
+
+        if (state.mode === "parsed") return;
+
+        appendTextChunk(text);
     };
 
     const startStream = async ({ fileName, sessionId }) => {
@@ -387,8 +523,8 @@
 
         running = true;
 
-        setLoading(true, "요약 생성 중…");
-        renderStreamHTML(`<div class="cb-summary-muted">요약을 생성하고 있습니다…</div>`);
+        setLoading(true, "요약 생성 중");
+        renderProgressHTML("요약을 생성하고 있습니다");
 
         const url = "/api/chat/csv/stream";
         const params = new URLSearchParams();
@@ -402,7 +538,7 @@
             res = await fetch(url + "?" + params.toString(), {
                 method: "GET",
                 signal: controller.signal,
-                headers: { Accept: "text/plain, text/event-stream, application/json" },
+                headers: { Accept: "text/event-stream, application/json, text/plain" },
             });
         } catch {
             if (!running) return;
@@ -433,23 +569,18 @@
                 sseBuffer = sseBuffer.slice(idx + 2);
 
                 const lines = eventBlock.split("\n");
+                const dataLines = [];
                 for (const line of lines) {
-                    const trimmed = line.trimEnd();
-                    if (!trimmed.startsWith("data:")) continue;
-
-                    const data = trimmed.slice(5).trimStart();
-
-                    if (data === "[DONE]") {
-                        tryFinalizeRender();
-                        stop("대화 요약 완료!");
-                        try {
-                            reader.cancel();
-                        } catch { }
-                        return true;
-                    }
-
-                    appendTextChunk(data);
+                    const t = line.trimEnd();
+                    if (!t.startsWith("data:")) continue;
+                    dataLines.push(t.slice(5).trimStart());
                 }
+
+                if (!dataLines.length) continue;
+
+                const data = dataLines.join("\n");
+                const r = handleDataLine(data);
+                if (r === "done") return true;
             }
             return false;
         };
@@ -463,41 +594,69 @@
                 if (!running) break;
 
                 if (!isSSE) {
-                    appendTextChunk(chunk);
+                    const r = handleDataLine(chunk);
+                    if (r === "done") break;
                     continue;
                 }
 
                 sseBuffer += chunk;
-                if (flushSSE()) return;
+                if (flushSSE()) {
+                    try {
+                        reader.cancel();
+                    } catch { }
+                    return;
+                }
             }
 
             if (running) {
                 if (isSSE && sseBuffer) flushSSE();
-                tryFinalizeRender();
                 stop("대화 요약 완료!");
             }
-        } catch {
+        } catch (e) {
             if (!running) return;
+
+            if (e && (e.name === "AbortError" || String(e).includes("AbortError"))) {
+                return;
+            }
+
             renderStreamHTML(`<div class="cb-summary-muted">스트림 수신 중 오류가 발생했습니다.</div>`);
             setLoading(false, "실패");
             running = false;
         } finally {
+
             try {
                 reader.releaseLock();
             } catch { }
         }
     };
 
+    const getCopyTextUI = () => {
+        const pick = (sel) => elStream.querySelector(sel);
+
+        if (state.mode === "parsed") {
+            if (state.ui.activeTab === "overall") {
+                const el = pick('[data-panel="overall"] .cb-panel-inner');
+                return String(el?.innerText || "").trim();
+            }
+
+            if (state.ui.activeTab === "daily") {
+                const title = String(pick(".cb-day-content-title")?.innerText || "").trim();
+                const body = String(pick(".cb-day-content-body")?.innerText || "").trim();
+                return [title, body].filter(Boolean).join("\n\n").trim();
+            }
+
+            const fallback = pick(".cb-panel.is-active .cb-panel-inner");
+            return String(fallback?.innerText || "").trim();
+        }
+
+        return String(state.stream.plain || elStream.innerText || "").trim();
+    };
+
     const init = () => {
         const ctx = getContext();
         state.ctx = ctx;
 
-        const sub = [
-            ctx.fileName ? `파일: ${ctx.fileName}` : "파일: 파일 없음",
-            ctx.sessionId ? `ID: ${ctx.sessionId}` : "ID: ID 없음",
-        ].join(" · ");
-
-        if (elSub) elSub.textContent = sub;
+        if (elSub) elSub.textContent = "요약 기간: -";
 
         if (btnRetry) {
             btnRetry.addEventListener("click", () => {
@@ -540,7 +699,7 @@
             });
         }
 
-        setLoading(true, "요약 생성 중…");
+        setLoading(true, "요약 생성 중");
         startStream(ctx);
     };
 
@@ -549,26 +708,4 @@
     } else {
         init();
     }
-
-    const getCopyTextUI = () => {
-        const pick = (sel) => elStream.querySelector(sel);
-
-        if (state.mode === "parsed") {
-            if (state.ui.activeTab === "overall") {
-                const el = pick('[data-panel="overall"] .cb-panel-inner');
-                return String(el?.innerText || "").trim();
-            }
-
-            if (state.ui.activeTab === "daily") {
-                const title = String(pick(".cb-day-content-title")?.innerText || "").trim();
-                const body = String(pick(".cb-day-content-body")?.innerText || "").trim();
-                return [title, body].filter(Boolean).join("\n\n").trim();
-            }
-
-            const fallback = pick(".cb-panel.is-active .cb-panel-inner");
-            return String(fallback?.innerText || "").trim();
-        }
-
-        return String(state.stream.plain || elStream.innerText || "").trim();
-    };
 })();

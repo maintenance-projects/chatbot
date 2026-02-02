@@ -9,6 +9,7 @@
 
     <link rel="stylesheet" th:href="@{/css/dialog.css}" href="/css/dialog.css" />
     <link rel="stylesheet" th:href="@{/css/summary.css}" href="/css/summary.css" />
+
     <script th:inline="javascript">
         const sessionId = /*[[${sessionId}]]*/ "";
         window.sessionId = sessionId;
@@ -29,24 +30,14 @@
                         </div>
                         <div class="cb-summary-actions">
                             <button type="button" class="cb-summary-btn" id="btnCopy" aria-label="복사">복사</button>
-                            <!-- <button type="button" class="cb-summary-btn cb-summary-btn-ghost" id="btnRetry"
-                                aria-label="저장">저장
-                            </button> -->
-
+                            <button type="button" class="cb-summary-btn cb-summary-btn-ghost" id="btnRetry"
+                                aria-label="재시도">재시도</button>
                         </div>
                     </div>
 
                     <div class="cb-summary-body">
-                        <div class="cb-summary-status" id="sumStatus"></div>
+                        <!-- <div class="cb-summary-status" id="sumStatus"></div> -->
                         <div class="cb-summary-stream" id="sumStream" aria-live="polite"></div>
-
-                        <!-- <div class="cb-summary-footer">
-                            <div class="cb-summary-progress" id="sumProgress" aria-hidden="true">
-                                <span class="cb-summary-dot"></span>
-                                <span class="cb-summary-dot"></span>
-                                <span class="cb-summary-dot"></span>
-                            </div>
-                        </div> -->
                     </div>
                 </div>
             </aside>

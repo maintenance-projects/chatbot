@@ -18,6 +18,42 @@
         window.sessionId = sessionId;
         window.templateList = tempList;
     </script>
+
+    <script>
+        function getMenu() {
+            const menu = document.querySelector(".pop-menu");
+            if (menu.style.display === "none") {
+                menu.style.display = "block";
+                $('.btn-menu').text('▼');
+            } else {
+                menu.style.display = "none";
+                $('.btn-menu').text('▲');
+            }
+        }
+    </script>
+
+    <style>
+        .btn-menu {
+            background: #fff;
+            border: 1px solid #dcdddd;
+            padding: 10px;
+        }
+
+        .pop-menu {
+            background: #ffffff;
+            border: 1px solid #dcdddd;
+            padding: 15px;
+        }
+
+        .pop-menu button {
+            background: none;
+            border: none;
+        }
+
+        .div-menu {
+            background: #f8fafc;
+        }
+    </style>
 </head>
 
 <body>
@@ -83,6 +119,27 @@
                     </div>
                 </section>
 
+
+                <div class="div-menu">
+                    <button class="btn-menu" onclick="getMenu();">▲</button>
+
+                    <div class="pop-menu" style="display: none;">
+                        <button type="button" class="cb-qbtn" data-action="upload" aria-label="문서 업로드">
+                            <img src="/img/ic-file.png" alt="" />
+                        </button>
+                        <button type="button" class="cb-qbtn" data-action="print" aria-label="대화 인쇄">
+                            <img src="/img/ic-print.png" alt="" />
+                        </button>
+                        <button type="button" class="cb-qbtn" data-action="select" aria-label="양식 선택">
+                            <img src="/img/ic-select.png" alt="" />
+                        </button>
+                        <!-- 리서치 버튼 쓰면 살리고, 아니면 지워도 됨 -->
+                        <button type="button" class="cb-qbtn" data-action="research" aria-label="리서치">
+                            <img src="/img/ic-research.png" alt="" />
+                        </button>
+                    </div>
+                </div>
+
                 <footer class="cb-footer" id="cbFooter">
                     <div class="cb-inputwrap" id="cbInputWrap">
                         <textarea class="cb-input" id="cbInput" placeholder="메시지를 입력해주세요."
@@ -90,8 +147,8 @@
 
                         <div class="cb-inputbar">
                             <div class="cb-actions">
-                                <button class="cb-plus" id="cbPlus" type="button" aria-label="추가 메뉴"
-                                    aria-expanded="false">＋</button>
+                                <!-- <button class="cb-plus" id="cbPlus" type="button" aria-label="추가 메뉴"
+                                    aria-expanded="false">＋</button> -->
 
                                 <div class="cb-pop" id="cbPop" role="menu" aria-hidden="true">
                                     <button class="cb-pop__item" id="cbActionPrint" type="button" role="menuitem">
