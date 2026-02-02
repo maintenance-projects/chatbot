@@ -230,7 +230,7 @@ textarea {
     color: var(--cb-subtext);
     background: rgba(255, 255, 255, 0.8);
     border: 1px solid var(--cb-line);
-    padding: 6px 10px;
+    padding: 1px 10px 5px 10px;
     border-radius: 999px;
 }
 
@@ -283,7 +283,12 @@ textarea {
 }
 
 .cb-msg--user .cb-bubble {
-    background: var(--cb-user);
+    /* background: var(--cb-user);
+    color: #fff;
+    border-color: rgba(255, 255, 255, 0.08);
+    border-top-right-radius: 6px; */
+
+    background: #474747;
     color: #fff;
     border-color: rgba(255, 255, 255, 0.08);
     border-top-right-radius: 6px;
@@ -381,12 +386,12 @@ textarea {
 }
 
 .cb-fileqbtn {
-    border: 1px solid rgba(15, 23, 42, 0.12);
-    background: rgba(248, 250, 252, 0.98);
-    color: #0f172a;
-    font-size: 10px;
+    border: none;
+    background: rgb(219 219 219 / 98%);
+    color: #434343;
+    font-size: 9px;
     font-weight: 700;
-    padding: 6px 10px;
+    padding: 4px 8px;
     border-radius: 999px;
     cursor: pointer;
     box-shadow: 0 10px 20px rgba(2, 6, 23, 0.1);

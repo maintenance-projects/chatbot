@@ -573,9 +573,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const html = `
       <div class="cb-msg cb-msg--bot">
-        <div class="cb-avatar">
-          <img class="cb-avatar__img" src="/img/ic-chatbot.png" alt="챗봇" />
-        </div>
         <div class="cb-bubble">
           <div class="cb-bubble__text">
             <pre data-rawtext="${escapeHtml(clean)}">${renderRichText(clean)}</pre>
@@ -608,9 +605,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const html = `
       <div class="cb-msg cb-msg--bot cb-msg--card" data-copytext="${escapeHtml(filename)}">
-        <div class="cb-avatar">
-          <img class="cb-avatar__img" src="/img/ic-chatbot.png" alt="챗봇" />
-        </div>
         <div class="cb-bubble cb-bubble--card">
           <div class="cb-bubble__text">
             <div class="cb-filecard--new" role="group" aria-label="첨부파일">
@@ -704,9 +698,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const html = `
       <div class="cb-msg cb-msg--bot cb-msg--streaming" data-stream-id="${id}">
-        <div class="cb-avatar">
-          <img class="cb-avatar__img" src="/img/ic-chatbot.png" alt="챗봇" />
-        </div>
         <div class="cb-bubble">
           <div class="cb-bubble__text">
             <div class="cb-progress" style="display:none">
@@ -737,6 +728,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function showProgress(handle, stepText) {
         if (!handle) return;
+        if (handle.started) return;
         handle.hasProgress = true;
         if (handle.progressEl) handle.progressEl.style.display = "flex";
         if (handle.progressTextEl) handle.progressTextEl.textContent = String(stepText || "");
@@ -759,7 +751,6 @@ document.addEventListener("DOMContentLoaded", () => {
         const next = prev + String(chunk || "");
         handle.preEl.setAttribute("data-rawtext", next);
         handle.preEl.innerHTML = renderRichText(next);
-        // scrollToBottom();
         if (isSearchOpen() && searchInput && searchInput.value.trim()) rebuildHighlights(searchInput.value);
     }
 
@@ -793,6 +784,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
         handle.done = true;
 
+        if (handle.progressEl) handle.progressEl.style.display = "none";
+        if (handle.preEl) handle.preEl.style.display = "block";
+
         if (!handle.metaEl.textContent) handle.metaEl.textContent = formatTime(new Date());
         if (handle && handle.msgEl) handle.msgEl.classList.remove("cb-msg--streaming");
 
@@ -806,8 +800,6 @@ document.addEventListener("DOMContentLoaded", () => {
                 handle.refsEl.innerHTML = "";
             }
         }
-
-        // scrollToBottom();
     }
 
     function parseSseFrame(frame) {
@@ -832,6 +824,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const onProgress = handlers && typeof handlers.onProgress === "function" ? handlers.onProgress : null;
         const onClarification = handlers && typeof handlers.onClarification === "function" ? handlers.onClarification : null;
         const onPercent = handlers && typeof handlers.onPercent === "function" ? handlers.onPercent : null;
+        const onDone = handlers && typeof handlers.onDone === "function" ? handlers.onDone : null;
         const acceptRefs = !!(handlers && handlers.acceptRefs);
 
         const res = await fetch(url, options);
@@ -880,9 +873,18 @@ document.addEventListener("DOMContentLoaded", () => {
                 const frame = buf.slice(0, sep);
                 buf = buf.slice(sep + 2);
 
-                const { data } = parseSseFrame(frame);
+                const { eventName, data } = parseSseFrame(frame);
 
-                if (data === "[DONE]") return;
+                if (data === "[DONE]") {
+                    if (typeof onDone === "function") onDone("");
+                    return;
+                }
+
+                if (eventName === "done" && !data) {
+                    if (typeof onDone === "function") onDone("");
+                    return;
+                }
+
                 if (!data) continue;
 
                 if (data.startsWith("{") || data.startsWith("[")) {
@@ -917,6 +919,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
                     if (acceptRefs && j && j.type === "references" && Array.isArray(j.docs)) {
                         if (typeof onRefs === "function") onRefs(j.docs);
+                        continue;
+                    }
+
+                    if (j && j.type === "done") {
+                        const msg = String((j && j.message) || "").trim();
+                        if (hasPercent && typeof onPercent === "function") {
+                            onPercent(j.percent, msg || "완료");
+                        } else if (typeof onProgress === "function" && (msg || msg === "")) {
+                            onProgress(msg || "완료");
+                        }
+                        if (typeof onDone === "function") onDone(msg);
                         continue;
                     }
 
@@ -981,6 +994,8 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             }
         }
+
+        if (typeof onDone === "function") onDone("");
     }
 
     function closePop() {
@@ -1371,7 +1386,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const payload = {
             sessionId,
-            message: "요약해줘",
+            message: "summarize",
             deepResearch: false,
             templateKey: null,
             isContinue: false,
@@ -1571,6 +1586,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         let botHandle = null;
         let pendingRefs = [];
+        let doneMessage = "";
 
         const ensureBotHandle = () => {
             if (botHandle) return botHandle;
@@ -1610,28 +1626,49 @@ document.addEventListener("DOMContentLoaded", () => {
                     continueNext = true;
                     if (threadId) continueThreadId = threadId;
                 },
+                onDone: (message) => {
+                    doneMessage = String(message || "").trim();
+                    updateUploadProgress(uploadHandle, 100, doneMessage || "완료");
+                    finalizeUploadProgress(uploadHandle);
+                },
             }
         )
             .then(() => {
+                updateUploadProgress(uploadHandle, 100, doneMessage || uploadHandle._lastDoneMessage || "완료");
                 finalizeUploadProgress(uploadHandle);
 
-                const h = ensureBotHandle();
+                if (!botHandle) {
+                    if (msg) addBotMessage("파일이 정상적으로 업로드 되었습니다.");
+                    return;
+                }
+
+                const h = botHandle;
                 startStreaming(h);
                 finalizeStream(h);
 
-                const raw = h.preEl ? h.preEl.getAttribute("data-rawtext") || "" : "";
-                if (!raw.trim()) appendStreamText(h, "파일이 정상적으로 업로드 되었습니다.");
+                const raw = h.preEl ? (h.preEl.getAttribute("data-rawtext") || "") : "";
+                const hasRaw = !!raw.trim();
+
+                if (!hasRaw) {
+                    if (msg) {
+                        appendStreamText(h, "파일이 정상적으로 업로드 되었습니다.");
+                    } else {
+                        if (h.msgEl) h.msgEl.remove();
+                    }
+                }
             })
             .catch((err) => {
+                updateUploadProgress(uploadHandle, uploadHandle._lastPercent || 0, "업로드 중 오류가 발생했습니다.");
                 finalizeUploadProgress(uploadHandle);
+
                 if (botHandle && botHandle.msgEl) botHandle.msgEl.remove();
-                addBotMessage(err && err.message ? String(err.message) : "파일 업로드 중 오류가 발생했습니다.");
+                addBotMessage(err && err.message ? String(err.message) : "업로드 처리 중 오류가 발생했습니다.");
             })
             .finally(() => {
                 setSending(false);
+                if (typeof onDone === "function") onDone();
                 input.focus();
                 autoResizeInput();
-                if (typeof onDone === "function") onDone();
             });
     }
 
