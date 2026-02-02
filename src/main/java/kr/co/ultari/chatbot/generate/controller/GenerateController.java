@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.util.StringUtils;
@@ -12,6 +13,8 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.io.File;
 import java.io.IOException;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -24,6 +27,9 @@ public class GenerateController {
 
     @Value("${ultari.ai.temp.path:tmp}")
     String tempPath;
+
+    @Value("${ultari.interface-summary.url:}")
+    String summaryUrl;
 
     @RequestMapping("/{key}")
     public String login(Model model, @PathVariable("key") String sessionId) {
@@ -40,7 +46,8 @@ public class GenerateController {
     }
 
     @RequestMapping("/csv/upload")
-    public String summaryPage(@RequestParam("file") MultipartFile file, @RequestParam("sessionId") String sessionId, Model model) {
+    public ResponseEntity<String> summaryPage(@RequestParam("file") MultipartFile file, @RequestParam("sessionId") String sessionId) {
+        String code = "0000";
         if(StringUtils.hasText(file.getOriginalFilename())) {
             String safeFilename = Paths.get(file.getOriginalFilename()).getFileName().toString();
 
@@ -61,13 +68,29 @@ public class GenerateController {
                 log.info("파일 저장 완료: {}", filePath);
 
             } catch (IOException e) {
+                code="1111";
                 log.error("파일 저장 실패", e);
                 throw new RuntimeException("파일 저장 중 오류가 발생했습니다.", e);
             }
 
         }
 
-        model.addAttribute("fileName", file.getOriginalFilename());
+        //model.addAttribute("fileName", file.getOriginalFilename());
+        //model.addAttribute("sessionId", sessionId);
+
+        String openUrl = summaryUrl+"?fileName="+URLEncoder.encode(file.getOriginalFilename())+"&sessionId="+URLEncoder.encode(sessionId);
+
+        JSONObject json = new JSONObject();
+        json.put("responseCode",code);
+        if(code.equals("0000")) {
+            json.put("openUrl", openUrl);
+        }
+        return ResponseEntity.ok(json.toString());
+    }
+
+    @PostMapping("/summary")
+    public String summaryPage(@RequestParam("fileName") String fileName, @RequestParam("sessionId") String sessionId, Model model) {
+        model.addAttribute("fileName", fileName);
         model.addAttribute("sessionId", sessionId);
         return "summary";
     }
