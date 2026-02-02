@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.kafka.KafkaProperties;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
@@ -58,12 +59,32 @@ public class AdminController {
         return "admin/error";
     }
 
-    @PostMapping("/management")
-    public String index(@RequestParam("adminId") String adminId) {
+    @PostMapping("/storage")
+    public String storageIndex(@RequestParam("adminId") String adminId, Model model) {
         AdminSession session = sessionStore.get(adminId);
         if(session==null) return "error";
 
-        return "admin/index";
+        model.addAttribute("adminId",session.getAdminId());
+        model.addAttribute("adminName", session.getAdminName());
+        model.addAttribute("storage", session.isAuthStorage());
+        model.addAttribute("statistics", session.isAuthStatistics());
+        model.addAttribute("master",session.isAuthMaster());
+
+        return "admin/storage";
+    }
+
+    @PostMapping("/statistics")
+    public String statisticsIndex(@RequestParam("adminId") String adminId, Model model) {
+        AdminSession session = sessionStore.get(adminId);
+        if(session==null) return "error";
+
+        model.addAttribute("adminId",session.getAdminId());
+        model.addAttribute("adminName", session.getAdminName());
+        model.addAttribute("storage", session.isAuthStorage());
+        model.addAttribute("statistics", session.isAuthStatistics());
+        model.addAttribute("master",session.isAuthMaster());
+
+        return "admin/statistics";
     }
 
     private String getClientIp(HttpServletRequest request) {
