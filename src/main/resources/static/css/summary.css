@@ -436,6 +436,18 @@
     gap: 6px;
 }
 
+.cb-daybar.is-dragging {
+    cursor: grabbing;
+}
+
+.cb-daybar {
+    cursor: grab;
+    user-select: none;
+}
+
+.cb-daybar.is-dragging .cb-daypill {
+    pointer-events: none;
+}
 
 
 @keyframes cbDot {

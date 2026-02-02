@@ -2,7 +2,6 @@
     const $ = (id) => document.getElementById(id);
 
     const elStream = $("sumStream");
-    // const elStatus = $("sumStatus");
     const elSub = $("sumSub");
     const btnCopy = $("btnCopy");
     const btnRetry = $("btnRetry");
@@ -47,17 +46,31 @@
         showToast._t = window.setTimeout(() => toast.classList.remove("is-on"), 1200);
     };
 
+    const renderStreamHTML = (html) => {
+        elStream.innerHTML = html || `<div class="cb-summary-muted">요약 내용이 없습니다.</div>`;
+        elStream.scrollTop = elStream.scrollHeight;
+    };
+
+    const renderProgressHTML = (message) => {
+        const msg = String(message || "").trim() || "처리 중";
+        renderStreamHTML(`
+      <div class="cb-progress-full">
+        <div class="cb-progress-full-msg">${escapeHTML(msg)}</div>
+        <div class="cb-progress-full-dots" aria-hidden="true">
+          <span class="cb-progress-dot"></span>
+          <span class="cb-progress-dot"></span>
+          <span class="cb-progress-dot"></span>
+        </div>
+      </div>
+    `);
+    };
+
     const setLoading = (on, msg) => {
         const text = msg || (on ? "요약 생성 중" : "대화 요약 완료!");
         if (state.mode === "parsed") return;
-
-        if (on) {
-            renderProgressHTML(text);
-        } else {
-            renderStreamHTML(`<div class="cb-summary-muted">${escapeHTML(text)}</div>`);
-        }
+        if (on) renderProgressHTML(text);
+        else renderStreamHTML(`<div class="cb-summary-muted">${escapeHTML(text)}</div>`);
     };
-
 
     const parseQuery = () => {
         const sp = new URLSearchParams(location.search);
@@ -84,6 +97,24 @@
         if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return s;
         if (/^\d{14}$/.test(s)) return `${s.slice(0, 4)}-${s.slice(4, 6)}-${s.slice(6, 8)}`;
         return s;
+    };
+
+    const updateSubByDateRange = (start, end) => {
+        const s = formatKoreanDate(start);
+        const e = formatKoreanDate(end);
+        state.progress.dateRange.start = s;
+        state.progress.dateRange.end = e;
+
+        if (!elSub) return;
+        if (s && e) {
+            elSub.textContent = `요약 기간: ${s} ~ ${e}`;
+            return;
+        }
+        if (s && !e) {
+            elSub.textContent = `요약 기간: ${s}`;
+            return;
+        }
+        elSub.textContent = "요약 기간: -";
     };
 
     const parseYMD = (ymd) => {
@@ -186,44 +217,61 @@
         return html || `<div class="cb-summary-muted">요약 내용이 없습니다.</div>`;
     };
 
-    const renderStreamHTML = (html) => {
-        elStream.innerHTML = html || `<div class="cb-summary-muted">요약 내용이 없습니다.</div>`;
-        elStream.scrollTop = elStream.scrollHeight;
-    };
+    const enableDragScrollX = (scroller) => {
+        if (!scroller) return;
 
-    const renderProgressHTML = (message) => {
-        const msg = String(message || "").trim() || "처리 중";
-        renderStreamHTML(`
-    <div class="cb-progress-full">
-      <div class="cb-progress-full-msg">${escapeHTML(msg)}</div>
-      <div class="cb-progress-full-dots" aria-hidden="true">
-        <span class="cb-progress-dot"></span>
-        <span class="cb-progress-dot"></span>
-        <span class="cb-progress-dot"></span>
-      </div>
-    </div>
-  `);
-    };
+        let isDown = false;
+        let startX = 0;
+        let startScrollLeft = 0;
+        let moved = false;
 
+        const getX = (e) => {
+            if (e.touches && e.touches[0]) return e.touches[0].clientX;
+            return e.clientX;
+        };
 
+        const onDown = (e) => {
+            if (e.button != null && e.button !== 0) return;
+            isDown = true;
+            moved = false;
+            scroller.dataset.dragging = "0";
+            startX = getX(e);
+            startScrollLeft = scroller.scrollLeft;
+            scroller.classList.add("is-dragging");
+        };
 
-    const updateSubByDateRange = (start, end) => {
-        const s = formatKoreanDate(start);
-        const e = formatKoreanDate(end);
-        state.progress.dateRange.start = s;
-        state.progress.dateRange.end = e;
+        const onMove = (e) => {
+            if (!isDown) return;
+            const x = getX(e);
+            const dx = x - startX;
+            if (Math.abs(dx) > 3) moved = true;
 
-        if (!elSub) return;
+            scroller.scrollLeft = startScrollLeft - dx;
 
-        if (s && e) {
-            elSub.textContent = `요약 기간: ${s} ~ ${e}`;
-            return;
-        }
-        if (s && !e) {
-            elSub.textContent = `요약 기간: ${s}`;
-            return;
-        }
-        elSub.textContent = "요약 기간: -";
+            if (e.cancelable) e.preventDefault();
+        };
+
+        const onUp = () => {
+            if (!isDown) return;
+            isDown = false;
+            scroller.classList.remove("is-dragging");
+
+            if (moved) {
+                scroller.dataset.dragging = "1";
+                window.setTimeout(() => {
+                    scroller.dataset.dragging = "0";
+                }, 120);
+            }
+        };
+
+        scroller.addEventListener("mousedown", onDown);
+        window.addEventListener("mousemove", onMove);
+        window.addEventListener("mouseup", onUp);
+
+        scroller.addEventListener("touchstart", onDown, { passive: true });
+        scroller.addEventListener("touchmove", onMove, { passive: false });
+        scroller.addEventListener("touchend", onUp);
+        scroller.addEventListener("touchcancel", onUp);
     };
 
     const buildDailyGroups = (daily) => {
@@ -333,8 +381,8 @@
                 p.classList.toggle("is-active", on);
             });
             if (name === "daily") {
-                const daybar = elStream.querySelector(".cb-daybar");
-                if (daybar) daybar.scrollLeft = 0;
+                const daybar2 = elStream.querySelector(".cb-daybar");
+                if (daybar2) daybar2.scrollLeft = 0;
             }
         };
 
@@ -344,9 +392,14 @@
 
         const daybar = elStream.querySelector(".cb-daybar");
         if (daybar) {
+            enableDragScrollX(daybar);
+
             daybar.addEventListener("click", (e) => {
+                if (daybar.dataset.dragging === "1") return;
+
                 const btn = e.target.closest(".cb-daypill");
                 if (!btn) return;
+
                 const ymd = btn.getAttribute("data-day") || "";
                 if (!ymd) return;
 
@@ -376,7 +429,7 @@
         renderStreamHTML(`<p>${state.stream.html}</p>`);
     };
 
-    const stop = (finalMsg, { abort = true } = {}) => {
+    const stop = (finalMsg, { abort = true, silent = false } = {}) => {
         running = false;
 
         if (abort && controller) {
@@ -386,9 +439,8 @@
         }
         controller = null;
 
-        setLoading(false, finalMsg || "대화 요약 완료!");
+        if (!silent) setLoading(false, finalMsg || "대화 요약 완료!");
     };
-
 
     const resetStateForRun = () => {
         state.mode = "stream";
@@ -432,19 +484,13 @@
         const msg = String(obj?.message || "").trim();
 
         const hasRange = obj && (obj.start_date || obj.end_date);
-        if (hasRange) {
-            updateSubByDateRange(obj?.start_date, obj?.end_date);
-        }
+        if (hasRange) updateSubByDateRange(obj?.start_date, obj?.end_date);
 
-        const showMsg =
-            msg ||
-            (hasRange ? "기간 계산 중" : step ? `${step} 처리 중` : "처리 중");
+        const showMsg = msg || (hasRange ? "기간 계산 중" : step ? `${step} 처리 중` : "처리 중");
 
         state.progress.lastMessage = showMsg;
         setLoading(true, showMsg);
-        // if (state.mode !== "parsed") renderProgressHTML();
     };
-
 
     const handleContent = (obj) => {
         const payload = normalizeContentPayload(obj);
@@ -452,16 +498,13 @@
 
         state.mode = "parsed";
         state.parsed = payload;
-        setLoading(false, "대화 요약 완료!");
         renderTabsHTML(payload);
     };
 
     const handleDone = (obj) => {
         const msg = String(obj?.message || "").trim();
-        setLoading(false, msg || "대화 요약 완료!");
         stop(msg || "대화 요약 완료!", { abort: false });
         return "done";
-
     };
 
     const handleDataLine = (data) => {
@@ -471,7 +514,7 @@
         if (!trimmed) return;
 
         if (trimmed === "[DONE]") {
-            stop("대화 요약 완료!");
+            stop("대화 요약 완료!", { abort: false });
             return "done";
         }
 
@@ -511,7 +554,7 @@
     };
 
     const startStream = async ({ fileName, sessionId }) => {
-        stop();
+        stop(null, { abort: true, silent: true });
         resetStateForRun();
         state.ctx = { fileName: String(fileName || ""), sessionId: String(sessionId || "") };
 
@@ -524,7 +567,6 @@
         running = true;
 
         setLoading(true, "요약 생성 중");
-        renderProgressHTML("요약을 생성하고 있습니다");
 
         const url = "/api/chat/csv/stream";
         const params = new URLSearchParams();
@@ -575,7 +617,6 @@
                     if (!t.startsWith("data:")) continue;
                     dataLines.push(t.slice(5).trimStart());
                 }
-
                 if (!dataLines.length) continue;
 
                 const data = dataLines.join("\n");
@@ -610,20 +651,15 @@
 
             if (running) {
                 if (isSSE && sseBuffer) flushSSE();
-                stop("대화 요약 완료!");
             }
         } catch (e) {
             if (!running) return;
-
-            if (e && (e.name === "AbortError" || String(e).includes("AbortError"))) {
-                return;
-            }
+            if (e && (e.name === "AbortError" || String(e).includes("AbortError"))) return;
 
             renderStreamHTML(`<div class="cb-summary-muted">스트림 수신 중 오류가 발생했습니다.</div>`);
             setLoading(false, "실패");
             running = false;
         } finally {
-
             try {
                 reader.releaseLock();
             } catch { }
@@ -699,7 +735,6 @@
             });
         }
 
-        setLoading(true, "요약 생성 중");
         startStream(ctx);
     };
 
