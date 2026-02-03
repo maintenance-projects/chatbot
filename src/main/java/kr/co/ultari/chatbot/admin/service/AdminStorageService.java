@@ -39,4 +39,21 @@ public class AdminStorageService {
 
         return rtn;
     }
+
+    public JSONArray getCommonFileSearch(String adminId, String type, String context, int size, int page) {
+        JSONArray arr = new JSONArray();
+
+        for(int i = page * size; i < (page * size) + size; i++) {
+            JSONObject json = new JSONObject();
+            json.put("index",i);
+            json.put("key", UUID.randomUUID());
+            json.put("fileName", context+"파일"+i);
+            json.put("length","1234");
+            json.put("registDate", LocalDate.now());
+            arr.put(json);
+        }
+
+
+        return arr;
+    }
 }
