@@ -1,9 +1,11 @@
 package kr.co.ultari.chatbot.generate.service;
 
+import kr.co.ultari.chatbot.database.service.AIUsageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import lombok.var;
 import org.json.JSONObject;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.mock.web.MockMultipartFile;
@@ -25,11 +27,20 @@ public class AICsvService {
     @Value("${ultari.ai-gateway.dialog-summary-url:http://10.0.0.111:8000/convert/dialogue-summary}")
     String AI_DIALOG_URL;
 
+    @Autowired
+    AIUsageService aiUsageService;
+
     private final AIRelayClientService aiClientService;
 
     public SseEmitter callAiServer(Path csvPath, String sessionId) throws Exception {
         SseEmitter emitter = new SseEmitter(0L);
         AtomicBoolean completed = new AtomicBoolean(false);
+
+        aiUsageService.increase(
+                sessionId,
+                sessionId,
+                "DIALOG"
+        );
 
         MultipartFile file = pathToMultipartFile(csvPath);
         MultipartBodyBuilder builder = new MultipartBodyBuilder();
