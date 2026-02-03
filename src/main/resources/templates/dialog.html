@@ -18,42 +18,6 @@
         window.sessionId = sessionId;
         window.templateList = tempList;
     </script>
-
-    <script>
-        function getMenu() {
-            const menu = document.querySelector(".pop-menu");
-            if (menu.style.display === "none") {
-                menu.style.display = "block";
-                $('.btn-menu').text('▼');
-            } else {
-                menu.style.display = "none";
-                $('.btn-menu').text('▲');
-            }
-        }
-    </script>
-
-    <style>
-        .btn-menu {
-            background: #fff;
-            border: 1px solid #dcdddd;
-            padding: 10px;
-        }
-
-        .pop-menu {
-            background: #ffffff;
-            border: 1px solid #dcdddd;
-            padding: 15px;
-        }
-
-        .pop-menu button {
-            background: none;
-            border: none;
-        }
-
-        .div-menu {
-            background: #f8fafc;
-        }
-    </style>
 </head>
 
 <body>
@@ -72,11 +36,25 @@
                     </div>
 
                     <div class="cb-header__right">
-                        <button class="cb-iconbtn" id="cbDocsBtn" type="button" aria-label="문서함" aria-expanded="false">
-                            <img src="/img/ic-docs.png" alt="" />
+                        <button class="cb-iconbtn cb-pop__item_top" id="cbActionPrint" type="button" role="menuitem" data-tooltip="인쇄">
+                            <svg style="color: #ffffff; width: 20px; height: 20px;" width="24px" height="24px"
+                                viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor"
+                                stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                class="feather feather-printer">
+                                <polyline points="6 9 6 2 18 2 18 9"></polyline>
+                                <path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2">
+                                </path>
+                                <rect x="6" y="14" width="12" height="8"></rect>
+                            </svg>
                         </button>
-                        <button class="cb-iconbtn" id="cbSearchBtn" type="button" aria-label="검색" aria-expanded="false">
-                            <img src="/img/ic-search.png" alt="" />
+                        <button class="cb-iconbtn cb-pop__item_top" id="cbSearchBtn" type="button" aria-label="검색" aria-expanded="false"
+                            data-tooltip="검색">
+                            <svg style="color: #ffffff; width: 20px; height: 20px;" viewBox="0 0 24 24"
+                                xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round" class="feather feather-search">
+                                <circle cx="11" cy="11" r="8"></circle>
+                                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                            </svg>
                         </button>
                     </div>
                 </header>
@@ -119,27 +97,6 @@
                     </div>
                 </section>
 
-
-                <div class="div-menu">
-                    <button class="btn-menu" onclick="getMenu();">▲</button>
-
-                    <div class="pop-menu" style="display: none;">
-                        <button type="button" class="cb-qbtn" data-action="upload" aria-label="문서 업로드">
-                            <img src="/img/ic-file.png" alt="" />
-                        </button>
-                        <button type="button" class="cb-qbtn" data-action="print" aria-label="대화 인쇄">
-                            <img src="/img/ic-print.png" alt="" />
-                        </button>
-                        <button type="button" class="cb-qbtn" data-action="select" aria-label="양식 선택">
-                            <img src="/img/ic-select.png" alt="" />
-                        </button>
-                        <!-- 리서치 버튼 쓰면 살리고, 아니면 지워도 됨 -->
-                        <button type="button" class="cb-qbtn" data-action="research" aria-label="리서치">
-                            <img src="/img/ic-research.png" alt="" />
-                        </button>
-                    </div>
-                </div>
-
                 <footer class="cb-footer" id="cbFooter">
                     <div class="cb-inputwrap" id="cbInputWrap">
                         <textarea class="cb-input" id="cbInput" placeholder="메시지를 입력해주세요."
@@ -149,25 +106,6 @@
                             <div class="cb-actions">
                                 <!-- <button class="cb-plus" id="cbPlus" type="button" aria-label="추가 메뉴"
                                     aria-expanded="false">＋</button> -->
-
-                                <div class="cb-pop" id="cbPop" role="menu" aria-hidden="true">
-                                    <button class="cb-pop__item" id="cbActionPrint" type="button" role="menuitem">
-                                        <img class="cb-avatar__img" src="/img/ic-print.png" alt="인쇄" />
-                                        <span class="cb-pop__text">대화 인쇄</span>
-                                    </button>
-                                    <button class="cb-pop__item" id="cbActionUpload" type="button" role="menuitem">
-                                        <img class="cb-avatar__img" src="/img/ic-file.png" alt="첨부파일" />
-                                        <span class="cb-pop__text">문서 업로드</span>
-                                    </button>
-                                    <!-- <button class="cb-pop__item" id="cbActionUpResearch" type="button" role="menuitem">
-                                        <img class="cb-avatar__img" src="/img/ic-research.png" alt="광역 리서치" />
-                                        <span class="cb-pop__text">광역 리서치</span>
-                                    </button> -->
-                                    <button class="cb-pop__item" id="cbActionSelect" type="button" role="menuitem">
-                                        <img class="cb-avatar__img" src="/img/ic-select.png" alt="양식 선택" />
-                                        <span class="cb-pop__text">양식 선택</span>
-                                    </button>
-                                </div>
                             </div>
 
                             <button class="cb-send" id="cbSend" type="button" aria-label="전송">
@@ -176,6 +114,70 @@
                         </div>
 
                         <input id="cbFileInput" type="file" hidden />
+                    </div>
+
+                    <div class="tool-menu" id="tool-menu" role="menu" aria-hidden="true">
+
+                        <!-- 문서 업로드 -->
+                        <button class="cb-pop__item" id="cbActionUpload" type="button" role="menuitem"
+                            data-tooltip="문서 업로드">
+                            <svg width="16px" height="16px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" class="feather feather-upload-cloud">
+                                <polyline points="16 16 12 12 8 16"></polyline>
+                                <line x1="12" y1="12" x2="12" y2="21"></line>
+                                <path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"></path>
+                                <polyline points="16 16 12 12 8 16"></polyline>
+                            </svg>
+                        </button>
+
+                        <!-- 문서함 -->
+                        <button class="cb-pop__item" id="cbDocsBtn" type="button" role="menuitem" data-tooltip="문서함">
+                            <svg width="16px" height="16px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" class="feather feather-hash">
+                                <line x1="4" y1="9" x2="20" y2="9"></line>
+                                <line x1="4" y1="15" x2="20" y2="15"></line>
+                                <line x1="10" y1="3" x2="8" y2="21"></line>
+                                <line x1="16" y1="3" x2="14" y2="21"></line>
+                            </svg>
+                        </button>
+
+                        <!-- 양식 선택 -->
+                        <button class="cb-pop__item" id="cbActionSelect" type="button" role="menuitem"
+                            data-tooltip="양식 선택">
+                            <svg width="16px" height="16px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" class="feather feather-file-minus">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                                <polyline points="14 2 14 8 20 8"></polyline>
+                                <line x1="9" y1="15" x2="15" y2="15"></line>
+                            </svg>
+                        </button>
+
+                        <!-- 지난 대화 보기 -->
+                        <button class="cb-pop__item" id="cbActionLast" type="button" role="menuitem"
+                            data-tooltip="지난 대화 보기">
+                            <svg width="16px" height="16px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" class="feather feather-message-square">
+                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
+                            </svg>
+                        </button>
+
+                        <!-- 공유 -->
+                        <button class="cb-pop__item" id="cbActionSharing" type="button" role="menuitem"
+                            data-tooltip="공유">
+                            <svg width="16px" height="16px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"
+                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                                stroke-linejoin="round" class="feather feather-share-2">
+                                <circle cx="18" cy="5" r="3"></circle>
+                                <circle cx="6" cy="12" r="3"></circle>
+                                <circle cx="18" cy="19" r="3"></circle>
+                                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
+                                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
+                            </svg>
+                        </button>
                     </div>
 
                     <section class="cb-tray" id="cbTplTray" aria-hidden="true">
@@ -203,3 +205,10 @@
 </body>
 
 </html>
+
+
+<!-- 
+    <button class="cb-iconbtn" id="cbDocsBtn" type="button" aria-label="문서함" aria-expanded="false">
+        <img src="/img/ic-docs.png" alt="" />
+    </button> 
+-->

@@ -134,7 +134,7 @@ textarea {
 .cb-header__right {
     display: flex;
     align-items: center;
-    gap: 8px;
+    /* gap: 8px; */
 }
 
 .cb-iconbtn {
@@ -630,7 +630,7 @@ textarea {
     width: 100%;
     display: flex;
     gap: 10px;
-    padding: 10px 10px;
+    /* padding: 10px 10px; */
     border: 0;
     background: transparent;
     cursor: pointer;
@@ -639,14 +639,74 @@ textarea {
     border-radius: 8px;
 }
 
-.cb-pop__item:hover {
-    background: rgba(15, 23, 42, 0.06);
+.cb-pop__item>svg {
+    color: #5d5d5d;
 }
+
+/* .cb-pop__item:hover {
+    background: rgba(15, 23, 42, 0.06);
+} */
 
 .cb-tray,
 .document-list-popup {
     width: 97% !important;
 }
+
+/* 툴팁 */
+.cb-pop__item,
+.cb-pop__item_top {
+    position: relative
+}
+
+.cb-pop__item::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    left: 50%;
+    bottom: calc(100% + 8px);
+    transform: translateX(-60%);
+    padding: 6px 8px;
+    border-radius: 6px;
+    background: #30364F;
+    color: #fff;
+    font-size: 10px;
+    line-height: 1;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity .15s ease, transform .15s ease, visibility .15s ease;
+    z-index: 9999;
+}
+
+.cb-pop__item:hover::after,
+.cb-pop__item:focus-visible::after,
+.cb-pop__item_top:hover::after,
+.cb-pop__item_top:focus-visible::after {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(-2px);
+}
+
+.cb-pop__item_top::after {
+    content: attr(data-tooltip);
+    position: absolute;
+    left: 50%;
+    top: calc(100% + 5px) !important;
+    transform: translateX(-60%);
+    padding: 6px 8px;
+    border-radius: 6px;
+    background: #30364F;
+    color: #fff;
+    font-size: 10px;
+    line-height: 1;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity .15s ease, transform .15s ease, visibility .15s ease;
+    z-index: 9999;
+}
+
 
 .cb-tray {
     position: absolute;
@@ -1228,6 +1288,41 @@ textarea {
 .cb-upload-card--complete .cb-upload-status {
     color: rgba(255, 255, 255, 0.85);
 }
+
+/* tool menu: 세로 -> 가로 */
+#tool-menu.tool-menu {
+    display: flex;
+    flex-direction: row;
+    gap: 10px;
+    align-items: center;
+
+    /* 필요하면 위치 조정 */
+    left: 24px;
+    /* 화면 왼쪽 아래 쪽 */
+    bottom: 18px;
+    padding: 0 8px;
+}
+
+/* 버튼 크기/정렬(원하면) */
+#tool-menu .cb-pop__item {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 0;
+    background: transparent;
+    padding: 0;
+    cursor: pointer;
+    width: 25px;
+    height: 15px;
+}
+
+/* 아이콘 크기(원하면) */
+#tool-menu .cb-pop__item img {
+    width: 22px;
+    height: 22px;
+    display: block;
+}
+
 
 @keyframes cbShimmer {
     0% {
