@@ -2,31 +2,30 @@ package kr.co.ultari.chatbot.admin.controller;
 
 import kr.co.ultari.chatbot.admin.datamodel.dto.AdminLoginRequest;
 import kr.co.ultari.chatbot.admin.service.AdminAuthService;
+import kr.co.ultari.chatbot.admin.service.AdminStorageService;
 import kr.co.ultari.chatbot.admin.session.AdminSession;
 import kr.co.ultari.chatbot.admin.session.AdminSessionStore;
-import kr.co.ultari.chatbot.database.entity.MsgAdmin;
 import lombok.extern.slf4j.Slf4j;
+import org.json.JSONArray;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.autoconfigure.kafka.KafkaProperties;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
-import javax.servlet.http.HttpSession;
 
 @Slf4j
 @Controller
 @RequestMapping("/admin")
-public class AdminController {
+public class AdminLoginController {
 
     @Autowired
     AdminSessionStore sessionStore;
 
     private final AdminAuthService authService;
 
-    public AdminController(AdminAuthService authService) {
+    public AdminLoginController(AdminAuthService authService) {
         this.authService = authService;
     }
 
@@ -59,8 +58,9 @@ public class AdminController {
         return "admin/error";
     }
 
-    @PostMapping("/storage")
+    @PostMapping("storage")
     public String storageIndex(@RequestParam("adminId") String adminId, Model model) {
+        log.debug("[storage index] adminId={}",adminId);
         AdminSession session = sessionStore.get(adminId);
         if(session==null) return "error";
 
@@ -75,6 +75,7 @@ public class AdminController {
 
     @PostMapping("/statistics")
     public String statisticsIndex(@RequestParam("adminId") String adminId, Model model) {
+        log.debug("[statistics index] adminId={}",adminId);
         AdminSession session = sessionStore.get(adminId);
         if(session==null) return "error";
 
