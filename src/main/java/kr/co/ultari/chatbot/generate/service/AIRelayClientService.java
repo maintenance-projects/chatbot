@@ -21,8 +21,8 @@ import java.util.Map;
 @Service
 public class AIRelayClientService {
 
-    @Value("${ultari.ai-gateway.chat-private-url:}")
-    private String AI_CHAT_PRIVATE_URL;
+    @Value("${ultari.ai-gateway.doc-summary-url:}")
+    private String AI_DOC_SUMMARY_URL;
 
     private final WebClient webClient;
 
@@ -78,7 +78,7 @@ public class AIRelayClientService {
         }
         else {
             if(requestDTO.getMessage().equals("summarize")) {
-                requestUrl = AI_CHAT_PRIVATE_URL + "/" +sessionId;
+                requestUrl = AI_DOC_SUMMARY_URL + "/" +sessionId;
             } else requestUrl = requestUrl + "/" +sessionId;
         }
 

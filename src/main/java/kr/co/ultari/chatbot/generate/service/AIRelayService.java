@@ -348,7 +348,7 @@ public class AIRelayService {
         // 진짜 스트리밍: AI Gateway 스트림(Flux)을 subscribe 해서 emitter로 바로 흘림
         try {
             disposableHolder[0] = aiClientService
-                    .callAIStream(StringUtils.hasText(requestDTO.getTargetFileName())?AI_DOC_SUMMARY_URL:AI_CHAT_URL, requestDTO, builder)
+                    .callAIStream(StringUtils.hasText(requestDTO.getTargetFileName())?AI_CHAT_PRIVATE_URL:AI_CHAT_URL, requestDTO, builder)
                     .subscribe(
                             rawChunk -> {
                                 if (completed.get()) return;
