@@ -39,8 +39,7 @@ public class AdminController {
     @PostMapping("/login")
     public ResponseEntity<String> login(
             @RequestBody AdminLoginRequest request,
-            HttpServletRequest httpRequest
-    ) {
+            HttpServletRequest httpRequest) {
 
         String clientIp = getClientIp(httpRequest);
         String rtn = authService.login(request.getAdminId(), request.getPassword(), clientIp);
@@ -59,33 +58,35 @@ public class AdminController {
         return "admin/error";
     }
 
-    @PostMapping("/storage")
-    public String storageIndex(@RequestParam("adminId") String adminId, Model model) {
-        AdminSession session = sessionStore.get(adminId);
-        if(session==null) return "error";
+    // @PostMapping("/storage")
+    // public String storageIndex(@RequestParam("adminId") String adminId, Model
+    // model) {
+    // AdminSession session = sessionStore.get(adminId);
+    // if(session==null) return "error";
 
-        model.addAttribute("adminId",session.getAdminId());
-        model.addAttribute("adminName", session.getAdminName());
-        model.addAttribute("storage", session.isAuthStorage());
-        model.addAttribute("statistics", session.isAuthStatistics());
-        model.addAttribute("master",session.isAuthMaster());
+    // model.addAttribute("adminId",session.getAdminId());
+    // model.addAttribute("adminName", session.getAdminName());
+    // model.addAttribute("storage", session.isAuthStorage());
+    // model.addAttribute("statistics", session.isAuthStatistics());
+    // model.addAttribute("master",session.isAuthMaster());
 
-        return "admin/storage";
-    }
+    // return "admin/storage";
+    // }
 
-    @PostMapping("/statistics")
-    public String statisticsIndex(@RequestParam("adminId") String adminId, Model model) {
-        AdminSession session = sessionStore.get(adminId);
-        if(session==null) return "error";
+    // @PostMapping("/statistics")
+    // public String statisticsIndex(@RequestParam("adminId") String adminId, Model
+    // model) {
+    // AdminSession session = sessionStore.get(adminId);
+    // if(session==null) return "error";
 
-        model.addAttribute("adminId",session.getAdminId());
-        model.addAttribute("adminName", session.getAdminName());
-        model.addAttribute("storage", session.isAuthStorage());
-        model.addAttribute("statistics", session.isAuthStatistics());
-        model.addAttribute("master",session.isAuthMaster());
+    // model.addAttribute("adminId",session.getAdminId());
+    // model.addAttribute("adminName", session.getAdminName());
+    // model.addAttribute("storage", session.isAuthStorage());
+    // model.addAttribute("statistics", session.isAuthStatistics());
+    // model.addAttribute("master",session.isAuthMaster());
 
-        return "admin/statistics";
-    }
+    // return "admin/statistics";
+    // }
 
     private String getClientIp(HttpServletRequest request) {
         String forwarded = request.getHeader("X-Forwarded-For");
@@ -95,5 +96,15 @@ public class AdminController {
         return request.getRemoteAddr();
     }
 
+    // 화면 테스트용
+    @RequestMapping("/storage")
+    public String storage() {
+        return "admin/storage";
+    }
+
+    @RequestMapping("/statistics")
+    public String statistics() {
+        return "admin/statistics";
+    }
 
 }
