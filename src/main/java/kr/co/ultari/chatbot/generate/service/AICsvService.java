@@ -22,8 +22,8 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Slf4j
 public class AICsvService {
 
-    @Value("${ultari.ai.temp.path:tmp}")
-    String tempPath;
+    @Value("${ultari.ai-gateway.dialog-summary-url:http://10.0.0.111:8000/convert/dialogue-summary}")
+    String AI_DIALOG_URL;
 
     private final AIRelayClientService aiClientService;
 
@@ -57,7 +57,7 @@ public class AICsvService {
         // 진짜 스트리밍: AI Gateway 스트림(Flux)을 subscribe 해서 emitter로 바로 흘림
         try {
             disposableHolder[0] = aiClientService
-                    .callAIStream("http://10.0.0.111:8000/convert/dialogue-summary", builder)
+                    .callAIStream(AI_DIALOG_URL, builder)
                     .subscribe(
                             rawChunk -> {
                                 if (completed.get()) return;
