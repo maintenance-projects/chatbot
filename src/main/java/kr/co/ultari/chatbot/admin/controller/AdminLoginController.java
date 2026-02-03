@@ -7,6 +7,7 @@ import kr.co.ultari.chatbot.admin.session.AdminSession;
 import kr.co.ultari.chatbot.admin.session.AdminSessionStore;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONArray;
+import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -22,6 +23,9 @@ public class AdminLoginController {
 
     @Autowired
     AdminSessionStore sessionStore;
+
+    @Autowired
+    AdminStorageService storageService;
 
     private final AdminAuthService authService;
 
@@ -64,11 +68,14 @@ public class AdminLoginController {
         AdminSession session = sessionStore.get(adminId);
         if(session==null) return "error";
 
+        JSONArray arr = storageService.getCountList(adminId);
+
         model.addAttribute("adminId",session.getAdminId());
         model.addAttribute("adminName", session.getAdminName());
         model.addAttribute("storage", session.isAuthStorage());
         model.addAttribute("statistics", session.isAuthStatistics());
         model.addAttribute("master",session.isAuthMaster());
+        model.addAttribute("countList",arr.toString());
 
         return "admin/storage";
     }

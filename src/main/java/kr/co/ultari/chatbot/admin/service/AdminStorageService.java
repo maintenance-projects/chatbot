@@ -17,7 +17,7 @@ public class AdminStorageService {
 
         for(int i = page * size; i < (page * size) + size; i++) {
             JSONObject json = new JSONObject();
-            json.put("index",i);
+            json.put("index", i);
             json.put("key", UUID.randomUUID());
             json.put("fileName", "파일"+i);
             json.put("length","1234");
@@ -53,6 +53,28 @@ public class AdminStorageService {
             arr.put(json);
         }
 
+
+        return arr;
+    }
+
+    public JSONArray getCountList(String adminId) {
+        JSONArray arr = new JSONArray();
+
+        JSONObject totalCount = new JSONObject();
+        totalCount.put("countName","totalCount");
+        totalCount.put("count",100);
+
+        JSONObject useCount = new JSONObject();
+        useCount.put("countName","useCount");
+        useCount.put("count",90);
+
+        JSONObject todayCount = new JSONObject();
+        todayCount.put("countName","todayCount");
+        todayCount.put("count",5);
+
+        JSONObject unUseCount = new JSONObject();
+        unUseCount.put("countName","unUseCount");
+        unUseCount.put("count",10);
 
         return arr;
     }
