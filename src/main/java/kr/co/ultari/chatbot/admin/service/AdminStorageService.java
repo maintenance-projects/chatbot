@@ -20,6 +20,14 @@ public class AdminStorageService {
             json.put("index", i);
             json.put("key", UUID.randomUUID());
             json.put("fileName", "파일"+i);
+            String name = "김현준";
+            boolean isUse = true;
+            if(i%2==0) {
+                name = "김나영";
+                isUse = false;
+            }
+            json.put("adminName", name);
+            json.put("isUse", isUse);
             json.put("length","1234");
             json.put("registDate", LocalDate.now());
             arr.put(json);
@@ -48,6 +56,14 @@ public class AdminStorageService {
             json.put("index",i);
             json.put("key", UUID.randomUUID());
             json.put("fileName", context+"파일"+i);
+            String name = "김현준";
+            boolean isUse = true;
+            if(i%2==0) {
+                name = "김나영";
+                isUse = false;
+            }
+            json.put("adminName", name);
+            json.put("isUse", isUse);
             json.put("length","1234");
             json.put("registDate", LocalDate.now());
             arr.put(json);
@@ -77,5 +93,11 @@ public class AdminStorageService {
         unUseCount.put("count",10);
 
         return arr;
+    }
+
+    public String setCommonFileUsage(String adminId, String key, boolean isUse) {
+        String rtn = "ok";
+
+        return rtn;
     }
 }

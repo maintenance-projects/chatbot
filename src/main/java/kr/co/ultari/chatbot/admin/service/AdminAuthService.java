@@ -21,7 +21,7 @@ public class AdminAuthService {
         this.adminRepository = adminRepository;
     }
 
-    public String login(String adminId, String password, String clientIp) {
+    public String login(String adminId, String password, String clientIp, String uuid) {
 
         String rtn = "ok";
         
@@ -42,12 +42,12 @@ public class AdminAuthService {
         }
 
         AdminSession session = new AdminSession(admin.getAdminId(), admin.getAdminName(), admin.getAuthStorage(), admin.getAuthStatistics(), admin.getAuthMaster());
-        sessionStore.save(adminId, session);
+        sessionStore.save(uuid, session);
 
         return rtn;
     }
 
-    public void logout(String adminId) {
-        sessionStore.remove(adminId);
+    public void logout(String uuid) {
+        sessionStore.remove(uuid);
     }
 }

@@ -6,15 +6,21 @@ import kr.co.ultari.chatbot.admin.service.AdminStorageService;
 import kr.co.ultari.chatbot.admin.session.AdminSession;
 import kr.co.ultari.chatbot.admin.session.AdminSessionStore;
 import lombok.extern.slf4j.Slf4j;
+import oracle.jrockit.jfr.StringConstantPool;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
+import org.springframework.util.ObjectUtils;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
+import java.util.UUID;
 
 @Slf4j
 @Controller
@@ -45,15 +51,21 @@ public class AdminLoginController {
             HttpServletRequest httpRequest
     ) {
 
+        String uuid = UUID.randomUUID().toString();
         String clientIp = getClientIp(httpRequest);
-        String rtn = authService.login(request.getAdminId(), request.getPassword(), clientIp);
+        String rtn = authService.login(request.getAdminId(), request.getPassword(), clientIp, uuid);
+        if ("ok".equals(rtn)) {
+            httpRequest.getSession(true)
+                    .setAttribute("sessionId", uuid);
+        }
 
         return ResponseEntity.ok(rtn);
     }
 
     @PostMapping("/logout")
     public ResponseEntity<String> logout(HttpServletRequest request, @RequestParam("adminId") String adminId) {
-        authService.logout(adminId);
+        String sessionId = (String) request.getSession().getAttribute("sessionId");
+        authService.logout(sessionId);
         return ResponseEntity.ok("ok");
     }
 
@@ -62,11 +74,16 @@ public class AdminLoginController {
         return "admin/error";
     }
 
-    @PostMapping("storage")
-    public String storageIndex(@RequestParam("adminId") String adminId, Model model) {
-        log.debug("[storage index] adminId={}",adminId);
-        AdminSession session = sessionStore.get(adminId);
-        if(session==null) return "error";
+    @RequestMapping("/storage")
+    public String storageIndex(HttpServletRequest request, Model model, @RequestParam(value="adminId", required = false) String a) {
+        String sessionId = (String) request.getSession().getAttribute("sessionId");
+        if(!StringUtils.hasText(sessionId)) return "redirect:/admin/error";
+
+        AdminSession session = sessionStore.get(sessionId);
+        if(session==null) return "redirect:/admin/error";
+
+        String adminId = session.getAdminId();
+        log.debug("[storage index] adminId={}, sessionId={}", adminId, sessionId);
 
         JSONArray arr = storageService.getCountList(adminId);
 
@@ -80,11 +97,16 @@ public class AdminLoginController {
         return "admin/storage";
     }
 
-    @PostMapping("/statistics")
-    public String statisticsIndex(@RequestParam("adminId") String adminId, Model model) {
-        log.debug("[statistics index] adminId={}",adminId);
-        AdminSession session = sessionStore.get(adminId);
-        if(session==null) return "error";
+    @RequestMapping("/statistics")
+    public String statisticsIndex(HttpServletRequest request, Model model, @RequestParam(value="adminId", required = false) String a) {
+        String sessionId = (String) request.getSession().getAttribute("sessionId");
+        if(!StringUtils.hasText(sessionId)) return "redirect:/admin/error";
+
+        AdminSession session = sessionStore.get(sessionId);
+        if(session==null) return "admin/error";
+
+        String adminId = session.getAdminId();
+        log.debug("[statistics index] adminId={}, sessionId={}", adminId, sessionId);
 
         model.addAttribute("adminId",session.getAdminId());
         model.addAttribute("adminName", session.getAdminName());
