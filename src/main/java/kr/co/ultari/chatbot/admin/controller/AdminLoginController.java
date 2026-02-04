@@ -117,6 +117,26 @@ public class AdminLoginController {
         return "admin/statistics";
     }
 
+    @RequestMapping("/master")
+    public String masterIndex(HttpServletRequest request, Model model, @RequestParam(value="adminId", required = false) String a) {
+        String sessionId = (String) request.getSession().getAttribute("sessionId");
+        if(!StringUtils.hasText(sessionId)) return "redirect:/admin/error";
+
+        AdminSession session = sessionStore.get(sessionId);
+        if(session==null) return "admin/error";
+
+        String adminId = session.getAdminId();
+        log.debug("[master index] adminId={}, sessionId={}", adminId, sessionId);
+
+        model.addAttribute("adminId",session.getAdminId());
+        model.addAttribute("adminName", session.getAdminName());
+        model.addAttribute("storage", session.isAuthStorage());
+        model.addAttribute("statistics", session.isAuthStatistics());
+        model.addAttribute("master",session.isAuthMaster());
+
+        return "admin/master";
+    }
+
     private String getClientIp(HttpServletRequest request) {
         String forwarded = request.getHeader("X-Forwarded-For");
         if (forwarded != null && !forwarded.isEmpty()) {
