@@ -126,9 +126,6 @@ public class AdminStorageService {
         if("0000".equals(code)) {
             rtn = "ok";
             log.debug("adminId={}, key={}, code={}, message={}",adminId, key, code, message);
-        } else if("4004".equals(code)) {
-            rtn = "fail";
-            log.warn("adminId={}, key={}, code={}, message={}",adminId, key, code, message);
         } else {
             rtn = "fail";
             log.warn("adminId={}, key={}, code={}, message={}",adminId, key, code, message);
@@ -290,9 +287,6 @@ public class AdminStorageService {
         if("0000".equals(code)) {
             rtn = "ok";
             log.debug("adminId={}, key={}, isUse={}, code={}, message={}",adminId, key, isUse, code, message);
-        } else if("4004".equals(code)) {
-            rtn = "fail";
-            log.warn("adminId={}, key={}, isUse={}, code={}, message={}",adminId, key, isUse, code, message);
         } else {
             rtn = "fail";
             log.warn("adminId={}, key={}, isUse={}, code={}, message={}",adminId, key, isUse, code, message);
