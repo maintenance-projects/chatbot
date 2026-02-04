@@ -67,4 +67,12 @@ public class AdminStorageController {
         return ResponseEntity.ok(rtn);
     }
 
+    @PostMapping("/count")
+    @ResponseBody
+    public String requestStorageCount(@RequestParam("adminId") String adminId) {
+        log.debug("adminId={}",adminId);
+        JSONArray arr = storageService.getCountList(adminId);
+        return arr.toString();
+    }
+
 }

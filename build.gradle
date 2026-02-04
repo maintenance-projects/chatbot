@@ -29,6 +29,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-test'
     implementation 'org.springframework.boot:spring-boot-starter-webflux'
+    implementation 'org.apache.httpcomponents:httpclient'
     implementation 'kr.dogfoot:hwplib:1.0.1'
     implementation 'kr.dogfoot:hwpxlib:1.0.8'
     implementation 'org.apache.pdfbox:pdfbox:2.0.27'
