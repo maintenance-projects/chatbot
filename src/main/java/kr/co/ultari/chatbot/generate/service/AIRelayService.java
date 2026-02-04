@@ -1,6 +1,5 @@
 package kr.co.ultari.chatbot.generate.service;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import kr.co.ultari.chatbot.database.service.AIUsageService;
 import kr.co.ultari.chatbot.generate.datamodel.dto.RequestDTO;
 import kr.co.ultari.chatbot.utils.StringUtilsCustom;
@@ -13,9 +12,11 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
+import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import reactor.core.Disposable;
@@ -54,8 +55,14 @@ public class AIRelayService {
     @Value("${ultari.ai-gateway.doc-summary-url:}")
     private String AI_DOC_SUMMARY_URL;
 
+    @Value("${ultari.ai-gateway.chat-history-url:http://10.0.0.111:8000/history}")
+    private String AI_CHAT_HISTORY_URL;
+
     @Autowired
     AIUsageService aiUsageService;
+
+    @Autowired
+    RestTemplate restTemplate;
 
     private final AIRelayClientService aiClientService;
 
@@ -720,5 +727,18 @@ public class AIRelayService {
             log.error("파일 목록 요청 중 오류 발생: sessionId={}", sessionId, e);
             return Collections.emptyList(); // 혹은 예외를 다시 던짐
         }
+    }
+
+    public JSONObject getChatHistory(String sessionId) {
+        ResponseEntity<String> response =
+                restTemplate.getForEntity(
+                        AI_CHAT_HISTORY_URL + "/" + sessionId,
+                        String.class
+                );
+
+        String raw = response.getBody();
+        log.debug("raw body={}", raw);
+
+        return new JSONObject(raw);
     }
 }

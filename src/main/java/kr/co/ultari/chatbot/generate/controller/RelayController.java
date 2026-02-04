@@ -6,6 +6,7 @@ import kr.co.ultari.chatbot.generate.service.AICsvService;
 import kr.co.ultari.chatbot.generate.service.AIRelayService;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONArray;
+import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Profile;
@@ -131,6 +132,11 @@ public class RelayController {
         log.debug(sessionId);
 
         return csvService.callAiServer(getCsvPath(fileName, sessionId), sessionId);
+    }
+
+    @RequestMapping("/history")
+    public String requestChatHistory(@RequestParam("sessionId") String sessionId) {
+        return relayService.getChatHistory(sessionId).toString();
     }
 
     protected Path getCsvPath(String fileKey, String sessionId) {
