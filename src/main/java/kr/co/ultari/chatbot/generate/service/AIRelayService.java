@@ -11,6 +11,7 @@ import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.MultipartBodyBuilder;
@@ -63,6 +64,9 @@ public class AIRelayService {
 
     @Autowired
     RestTemplate restTemplate;
+
+    @Autowired
+    CachedService cachedService;
 
     private final AIRelayClientService aiClientService;
 
@@ -233,6 +237,8 @@ public class AIRelayService {
             } catch (IOException ignored) {}
             emitter.completeWithError(e);
         }
+
+        cachedService.FilesCacheClear(requestDTO.getSessionId());
 
         return emitter;
     }
@@ -699,6 +705,7 @@ public class AIRelayService {
         return builder;
     }
 
+    @Cacheable(value = "FILES", key = "#sessionId", unless = "#result == null")
     public List<String> requestFileList(String sessionId) {
         try {
             String response = WebUtilsCustom.requestGet(AI_FILES_URL, sessionId);
