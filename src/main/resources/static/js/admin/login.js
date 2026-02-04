@@ -85,15 +85,15 @@
         hideError();
 
         try {
-            const result = await performLogin(adminId, password);
+            const result = await performLoginAjax(adminId, password);
 
             if (result.code === "ok") {
                 saveCredentials(adminId);
-                sessionStorage.setItem("userId", adminId);
+                sessionStorage.setItem("adminId", adminId);
                 showSuccessAnimation();
-                setTimeout(() => {
-                    postNavigate("/admin/storage", { adminId });
-                }, 250);
+
+                const html = await loadStorageHtmlAjax(adminId);
+                replaceDocument(html);
             } else {
                 showError(getErrorMessage(result.code, result.status));
             }
@@ -119,46 +119,59 @@
         return true;
     }
 
-    function postNavigate(url, params) {
-        const form = document.createElement("form");
-        form.method = "POST";
-        form.action = url;
+    function performLoginAjax(adminId, password) {
+        return new Promise((resolve, reject) => {
+            if (!window.jQuery) {
+                reject(new Error("jQuery is not loaded"));
+                return;
+            }
 
-        Object.entries(params || {}).forEach(([k, v]) => {
-            const input = document.createElement("input");
-            input.type = "hidden";
-            input.name = k;
-            input.value = v == null ? "" : String(v);
-            form.appendChild(input);
+            $.ajax({
+                url: "/admin/login",
+                type: "POST",
+                contentType: "application/json; charset=UTF-8",
+                dataType: "text",
+                data: JSON.stringify({ adminId: adminId, password: password }),
+                success: function (data, _status, xhr) {
+                    const code = String(data || "").trim();
+                    resolve({ code: code || String(xhr.status), status: xhr.status });
+                },
+                error: function (xhr) {
+                    const code = String(xhr.responseText || "").trim();
+                    resolve({ code: code || String(xhr.status), status: xhr.status });
+                }
+            });
+
         });
-
-        document.body.appendChild(form);
-        form.submit();
     }
 
-    async function performLogin(adminId, password) {
-        const url = "/admin/login";
+    function loadStorageHtmlAjax(adminId) {
+        return new Promise((resolve, reject) => {
+            if (!window.jQuery) {
+                reject(new Error("jQuery is not loaded"));
+                return;
+            }
 
-        const jsonAttempt = await fetch(url, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ adminId, password }),
-        }).catch(() => null);
-
-        if (jsonAttempt) {
-            const code = (await jsonAttempt.text()).trim();
-            if (code) return { code, status: jsonAttempt.status };
-        }
-
-        const formBody = new URLSearchParams({ adminId, password }).toString();
-        const formAttempt = await fetch(url, {
-            method: "POST",
-            headers: { "Content-Type": "application/x-www-form-urlencoded;charset=UTF-8" },
-            body: formBody,
+            $.ajax({
+                url: "/admin/storage",
+                method: "POST",
+                data: { adminId: adminId },
+                dataType: "html",
+                success: function (html) {
+                    resolve(html);
+                },
+                error: function (xhr) {
+                    const status = xhr?.status;
+                    reject(new Error("storage load failed: " + status));
+                }
+            });
         });
+    }
 
-        const code2 = (await formAttempt.text()).trim();
-        return { code: code2 || String(formAttempt.status), status: formAttempt.status };
+    function replaceDocument(html) {
+        const doc = document.open("text/html", "replace");
+        doc.write(html);
+        doc.close();
     }
 
     function getErrorMessage(code, httpStatus) {
@@ -167,11 +180,10 @@
         const byCode = {
             NoUser: "아이디가 없습니다.",
             NoPassword: "비밀번호가 틀렸습니다.",
-            NoIp: "접속가능한 IP 가 아닙니다.",
+            NoIp: "접속가능한 IP 가 아닙니다."
         };
 
         if (c === "ok") return "";
-
         if (byCode[c]) return byCode[c];
 
         const status = Number.isFinite(Number(c)) ? Number(c) : Number(httpStatus);
@@ -185,7 +197,7 @@
             429: "너무 많은 요청입니다. 잠시 후 다시 시도해주세요.",
             500: "서버 오류가 발생했습니다.",
             502: "서버에 연결할 수 없습니다.",
-            503: "서비스를 일시적으로 사용할 수 없습니다.",
+            503: "서비스를 일시적으로 사용할 수 없습니다."
         };
 
         return byStatus[status] || "알 수 없는 오류가 발생했습니다.";
