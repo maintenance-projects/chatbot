@@ -24,6 +24,9 @@ public class DefaultController {
     @Value("${ultari.ai.temp.path:tmp}")
     String tempPath;
 
+    @Value("${ultari.ai-gateway.download-url:http://10.0.0.111:8000/documents/download}")
+    String AI_DOWNLOAD_URL;
+
     @RequestMapping("favicon.ico")
     @ResponseBody
     void favicon() {
@@ -34,7 +37,7 @@ public class DefaultController {
     public ResponseEntity<Resource> download(@PathVariable String key) {
 
         log.info(key);
-        String targetUrl = "http://10.0.0.111:8000/documents/download/" + key;
+        String targetUrl = AI_DOWNLOAD_URL + "/" + key;
 
         RestTemplate restTemplate = new RestTemplate();
 
