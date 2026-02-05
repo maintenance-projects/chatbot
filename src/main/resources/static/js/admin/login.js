@@ -94,6 +94,7 @@
                 showSuccessAnimation();
 
                 const html = await loadStorageHtmlAjax(adminId);
+                history.replaceState(null, "", "/admin/storage");
                 replaceDocument(html);
             } else {
                 showError(getErrorMessage(result.code, result.status));
@@ -159,6 +160,7 @@
                 dataType: "html",
                 success: function (html) {
                     resolve(html);
+
                 },
                 error: function (xhr) {
                     const status = xhr?.status;
