@@ -27,9 +27,10 @@ public class AdminStorageController {
 
     @PostMapping("/list")
     @ResponseBody
-    public String requestStorageList(@RequestParam("adminId") String adminId, @RequestParam("size") int size, @RequestParam("page") int page) {
-        log.debug("adminId={}, size={}, page={}",adminId, size, page);
-        JSONArray arr = storageService.getCommonFileList(adminId, size, page);
+    public String requestStorageList(@RequestParam("adminId") String adminId, @RequestParam("size") int size, @RequestParam("page") int page, @RequestParam("orderType") String orderType, @RequestParam("order") String order) {
+
+        log.debug("adminId={}, size={}, page={}, orderType={}, order={}",adminId, size, page, orderType, order);
+        JSONArray arr = storageService.getCommonFileList(adminId, size, page, orderType, order);
         return arr.toString();
     }
 
@@ -53,9 +54,10 @@ public class AdminStorageController {
     @ResponseBody
     public String requestStorageSearch(@RequestParam("adminId") String adminId
             , @RequestParam("type") String type, @RequestParam("context") String context
-            , @RequestParam("size") int size, @RequestParam("page") int page) {
-        log.debug("adminId={}, type={}, context={}, size={}, page={}", adminId, type, context, size, page);
-        JSONObject json = storageService.getCommonFileSearch(adminId, type, context, size, page);
+            , @RequestParam("size") int size, @RequestParam("page") int page
+            , @RequestParam("orderType") String orderType, @RequestParam("order") String order) {
+        log.debug("adminId={}, type={}, context={}, size={}, page={}, orderType={}, order={}", adminId, type, context, size, page, orderType, order);
+        JSONObject json = storageService.getCommonFileSearch(adminId, type, context, size, page, orderType, order);
         return json.toString();
     }
 

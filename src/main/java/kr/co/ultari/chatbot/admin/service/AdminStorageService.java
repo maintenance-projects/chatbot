@@ -48,7 +48,7 @@ public class AdminStorageService {
     @Autowired
     MsgAdminRepository adminRepository;
 
-    public JSONArray getCommonFileList(String adminId, int size, int page) {
+    public JSONArray getCommonFileList(String adminId, int size, int page, String orderType, String order) {
         JSONArray arr = new JSONArray();
 
         HttpHeaders headers = new HttpHeaders();
@@ -60,6 +60,8 @@ public class AdminStorageService {
                 .fromHttpUrl(AI_COMMON_DOC_LIST_URL)
                 .queryParam("page", page)
                 .queryParam("size", size)
+                .queryParam("orderType", orderType)
+                .queryParam("order", order)
                 .build()
                 .toUri();
 
@@ -186,12 +188,12 @@ public class AdminStorageService {
     }
 
 
-    public JSONObject getCommonFileSearch(String adminId, String type, String context, int size, int page) {
+    public JSONObject getCommonFileSearch(String adminId, String type, String context, int size, int page, String orderType, String order) {
         JSONObject rtn = new JSONObject();
 
         ResponseEntity<String> response =
                 restTemplate.getForEntity(
-                        AI_COMMON_DOC_SRCH_URL+"?searchType="+type+"&searchTerm="+context+"&page="+page+"&size="+size,
+                        AI_COMMON_DOC_SRCH_URL+"?searchType="+type+"&searchTerm="+context+"&page="+page+"&size="+size+"&orderType="+orderType+"&order="+order,
                         String.class
                 );
 
