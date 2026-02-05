@@ -89,6 +89,7 @@
 
             if (result.code === "ok") {
                 saveCredentials(adminId);
+
                 sessionStorage.setItem("adminId", adminId);
                 showSuccessAnimation();
 
@@ -141,7 +142,6 @@
                     resolve({ code: code || String(xhr.status), status: xhr.status });
                 }
             });
-
         });
     }
 

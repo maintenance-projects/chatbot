@@ -1,6 +1,10 @@
 (function () {
+    function getSessionUserId() {
+        return sessionStorage.getItem("adminId") || "";
+    }
+
     function checkSession() {
-        const adminId = sessionStorage.getItem("userId");
+        const adminId = getSessionUserId();
 
         if (!adminId) {
             window.location.href = "/admin";
@@ -15,5 +19,6 @@
 
         return true;
     }
+
     window.checkSession = checkSession;
 })();

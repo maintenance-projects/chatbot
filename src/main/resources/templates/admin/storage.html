@@ -7,6 +7,10 @@
     <title>관리자 페이지</title>
     <link rel="stylesheet" th:href="@{/css/admin/base.css}" href="/css/admin/base.css" />
     <link rel="stylesheet" th:href="@{/css/admin/storage.css}" href="/css/admin/storage.css" />
+
+    <script th:inline="javascript">
+        const countList = JSON.parse(/*[[${countList}]]*/ "[]");
+    </script>
 </head>
 
 <body>
@@ -100,6 +104,18 @@
                         </div>
                     </div>
                     <div class="stat-card">
+                        <div class="stat-icon purple">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                            </svg>
+                        </div>
+                        <div class="stat-info">
+                            <div class="stat-label">오늘 업로드</div>
+                            <div class="stat-value" id="statToday">0</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
                         <div class="stat-icon green">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                 stroke-linecap="round" stroke-linejoin="round">
@@ -110,18 +126,6 @@
                         <div class="stat-info">
                             <div class="stat-label">활성 문서</div>
                             <div class="stat-value" id="statActive">0</div>
-                        </div>
-                    </div>
-                    <div class="stat-card">
-                        <div class="stat-icon purple">
-                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                stroke-linecap="round" stroke-linejoin="round">
-                                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-                            </svg>
-                        </div>
-                        <div class="stat-info">
-                            <div class="stat-label">오늘 업로드</div>
-                            <div class="stat-value" id="statToday">0</div>
                         </div>
                     </div>
                     <div class="stat-card">
@@ -150,8 +154,8 @@
                         <div class="toolbar-left">
                             <div class="search-group">
                                 <select class="search-select" id="searchField">
-                                    <option value="title">문서명</option>
-                                    <option value="date">등록일</option>
+                                    <option value="fileName">문서명</option>
+                                    <option value="adminName">등록자</option>
                                 </select>
                                 <input type="text" class="search-input" id="searchInput" placeholder="검색어를 입력하세요…">
                                 <button class="btn-search" id="btnSearch" title="검색">
@@ -164,10 +168,10 @@
                             </div>
                             <div class="sort-group">
                                 <select class="sort-select" id="sortField">
-                                    <option value="title">문서명</option>
-                                    <option value="date">등록일</option>
+                                    <option value="fileName">문서명</option>
+                                    <option value="registDate" selected>등록일</option>
                                 </select>
-                                <button class="btn-sort" id="btnSort" title="정렬 변경">
+                                <button class="btn-sort" id="btnSort" title="정렬 변경" type="button">
                                     <svg class="sort-icon-svg" id="sortIconSvg" viewBox="0 0 24 24" fill="none"
                                         stroke="currentColor" stroke-width="2" stroke-linecap="round"
                                         stroke-linejoin="round">
@@ -179,7 +183,7 @@
                             </div>
                         </div>
                         <div class="toolbar-right">
-                            <button class="btn btn-primary" id="btnAddDoc">
+                            <button class="btn btn-primary" id="btnAddDoc" type="button">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                     stroke-linecap="round" stroke-linejoin="round">
                                     <line x1="12" y1="5" x2="12" y2="19" />
@@ -204,8 +208,7 @@
                                     <th style="width:80px;" class="center">관리</th>
                                 </tr>
                             </thead>
-                            <tbody id="docTableBody">
-                            </tbody>
+                            <tbody id="docTableBody"></tbody>
                         </table>
                     </div>
 
@@ -232,7 +235,7 @@
         <div class="modal">
             <div class="modal-header">
                 <h3 class="modal-title" id="docModalTitle">문서 추가</h3>
-                <button class="modal-close" id="docModalClose">
+                <button class="modal-close" id="docModalClose" type="button">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                         stroke-linejoin="round">
                         <line x1="18" y1="6" x2="6" y2="18" />
@@ -243,7 +246,7 @@
             <div class="modal-body">
                 <form id="docForm">
                     <div class="form-group">
-                        <label class="form-label">등록자</label>
+                        <label class="form-label">등록자 <span class="required">*</span></label>
                         <input type="text" class="form-input" id="docUploader" readonly disabled>
                     </div>
                     <div class="form-group" id="fileUploadGroup">
@@ -267,8 +270,8 @@
                 </form>
             </div>
             <div class="modal-footer">
-                <button class="btn btn-outline" id="docModalCancel">취소</button>
-                <button class="btn btn-primary" id="docModalSave">업로드</button>
+                <button class="btn btn-outline" id="docModalCancel" type="button">취소</button>
+                <button class="btn btn-primary" id="docModalSave" type="button">업로드</button>
             </div>
         </div>
     </div>
@@ -289,8 +292,8 @@
                 <div class="confirm-msg" id="confirmMsg">삭제된 문서는 복구할 수 없습니다.</div>
             </div>
             <div class="modal-footer" style="justify-content:center;">
-                <button class="btn btn-outline" id="confirmCancel">취소</button>
-                <button class="btn btn-danger" id="confirmOk"
+                <button class="btn btn-outline" id="confirmCancel" type="button">취소</button>
+                <button class="btn btn-danger" id="confirmOk" type="button"
                     style="background:var(--danger);color:#fff;border-color:var(--danger);">삭제</button>
             </div>
         </div>
@@ -298,8 +301,8 @@
 
     <div class="toast-container" id="toastContainer"></div>
 
-    <script th:src="@{/js/admin/storage.js}" src="/js/admin/storage.js"></script>
     <script th:src="@{/js/admin/common.js}" src="/js/admin/common.js"></script>
+    <script th:src="@{/js/admin/storage.js}" src="/js/admin/storage.js"></script>
 </body>
 
 </html>
