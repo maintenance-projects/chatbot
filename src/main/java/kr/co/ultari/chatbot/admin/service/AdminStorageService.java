@@ -186,8 +186,8 @@ public class AdminStorageService {
     }
 
 
-    public JSONArray getCommonFileSearch(String adminId, String type, String context, int size, int page) {
-        JSONArray arr = new JSONArray();
+    public JSONObject getCommonFileSearch(String adminId, String type, String context, int size, int page) {
+        JSONObject rtn = new JSONObject();
 
         ResponseEntity<String> response =
                 restTemplate.getForEntity(
@@ -200,20 +200,21 @@ public class AdminStorageService {
 
         JSONObject json = new JSONObject(raw);
 
-        if(ObjectUtils.isEmpty(json)) return arr;
+        if(ObjectUtils.isEmpty(json)) return rtn;
 
         String code = json.getString("code");
         String message = json.getString("message");
 
         if("0000".equals(code)) {
             log.debug("adminId={}, size={}, page={}, code={}, message={}", adminId, size, page, code, message);
-            log.debug(json.get("items").toString());
-            arr = json.getJSONArray("items");
+            log.debug(json.toString());
+
+            rtn = json;
         } else {
             log.warn("adminId={}, size={}, page={}, code={}, message={}", adminId, size, page, code, message);
         }
 
-        return arr;
+        return rtn;
     }
 
     public JSONArray getCountList(String adminId) {

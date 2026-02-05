@@ -4,6 +4,7 @@ import kr.co.ultari.chatbot.admin.service.AdminStorageService;
 import kr.co.ultari.chatbot.admin.session.AdminSessionStore;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONArray;
+import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -54,8 +55,8 @@ public class AdminStorageController {
             , @RequestParam("type") String type, @RequestParam("context") String context
             , @RequestParam("size") int size, @RequestParam("page") int page) {
         log.debug("adminId={}, type={}, context={}, size={}, page={}", adminId, type, context, size, page);
-        JSONArray arr = storageService.getCommonFileSearch(adminId, type, context, size, page);
-        return arr.toString();
+        JSONObject json = storageService.getCommonFileSearch(adminId, type, context, size, page);
+        return json.toString();
     }
 
     @PostMapping("/usage")

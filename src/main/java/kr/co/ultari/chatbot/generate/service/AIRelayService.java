@@ -224,6 +224,7 @@ public class AIRelayService {
                                 emitter.completeWithError(err);
                             },
                             () -> {
+                                cachedService.FilesCacheClear(requestDTO.getSessionId());
                                 if (completed.get()) return;
                                 try {
                                     emitter.send(SseEmitter.event().name("done").data(""));
@@ -237,8 +238,6 @@ public class AIRelayService {
             } catch (IOException ignored) {}
             emitter.completeWithError(e);
         }
-
-        cachedService.FilesCacheClear(requestDTO.getSessionId());
 
         return emitter;
     }
