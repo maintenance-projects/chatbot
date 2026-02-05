@@ -175,25 +175,20 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         const targetAbs = new URL(String(url), window.location.href).href;
+        const busted = withCacheBuster(targetAbs);
 
         shell.classList.add("has-viewer");
         viewer.classList.add("is-open");
         viewer.setAttribute("aria-hidden", "false");
 
-        const currentAbs = viewerFrame.src ? new URL(viewerFrame.src, window.location.href).href : "";
-        const curBase = currentAbs ? currentAbs.split("#")[0] : "";
-        const tarBase = targetAbs.split("#")[0];
+        try {
+            viewerFrame.srcdoc = "";
+        } catch (e) { }
 
-        if (currentAbs && curBase === tarBase) {
-            const busted = withCacheBuster(targetAbs);
-            viewerFrame.src = "about:blank";
-            requestAnimationFrame(() => {
-                viewerFrame.src = busted;
-            });
-            return;
-        }
-
-        viewerFrame.src = targetAbs;
+        viewerFrame.src = "about:blank";
+        requestAnimationFrame(() => {
+            viewerFrame.src = busted;
+        });
     }
 
     function openViewerHtml(title, htmlBody) {
@@ -401,34 +396,6 @@ document.addEventListener("DOMContentLoaded", () => {
         if (isSearchOpen() && searchInput && searchInput.value.trim()) rebuildHighlights(searchInput.value);
     }
 
-    function addUserFileMessage(file) {
-        const name = file && file.name ? String(file.name) : "파일";
-        const ext = getExt(name);
-        const badge = ext ? ext.toUpperCase() : "FILE";
-
-        const html = `
-      <div class="cb-msg cb-msg--user cb-msg--card" data-copytext="${escapeHtml(name)}" data-filename="${escapeHtml(name)}">
-        <div class="cb-bubble cb-bubble--card">
-          <div class="cb-bubble__text">
-            <div class="cb-filecard" role="group" aria-label="첨부파일">
-              <img src="/img/ic-file-w.png" class="cb-filecard__icon" alt="" />
-              <div class="cb-filecard__meta_w">
-                <div class="cb-filecard__name">${escapeHtml(name)}</div>
-                <div class="cb-filecard__badge">${escapeHtml(badge)}</div>
-              </div>
-            </div>
-          </div>
-          ${fileQuickActionsHtml(false)}
-          ${actionsHtml({ copy: false })}
-        </div>
-      </div>
-    `;
-        const stack = ensureUserCardStack();
-        stack.insertAdjacentHTML("beforeend", html);
-        scrollToBottom();
-        if (isSearchOpen() && searchInput && searchInput.value.trim()) rebuildHighlights(searchInput.value);
-    }
-
     function addUserFileMessageWithProgress(file) {
         const name = file && file.name ? String(file.name) : "파일";
         const ext = getExt(name);
@@ -631,14 +598,24 @@ document.addEventListener("DOMContentLoaded", () => {
         if (widget) widget.classList.toggle("is-sending", isSending);
     }
 
+    function normalizePageValue(p) {
+        if (p == null) return null;
+        const s = String(p).trim();
+        if (!s) return null;
+        const n = Number(s);
+        if (!Number.isFinite(n) || n <= 0) return null;
+        return Math.floor(n);
+    }
+
     function buildRefUrl(source, page) {
         const s = String(source || "").trim();
         if (!s) return "";
         const ext = getExt(s);
         if (ext !== "pdf") return "";
-        const p = Number.isFinite(Number(page)) ? Number(page) : 1;
+        const pn = normalizePageValue(page);
+        if (pn == null) return "";
         const encodedName = safeEncodePathSegment(s);
-        return `/document/view/${sessionId}/${encodedName}#page=${p}`;
+        return `/document/view/${sessionId}/${encodedName}#page=${pn}`;
     }
 
     function filterPdfDocs(docs) {
@@ -646,10 +623,10 @@ document.addEventListener("DOMContentLoaded", () => {
         return list
             .map((d) => {
                 const source = d && d.source != null ? String(d.source) : "";
-                const page = Number.isFinite(Number(d && d.page)) ? Number(d.page) : 1;
-                const url = buildRefUrl(source, page);
-                if (!url) return null;
-                return { source, page, url };
+                if (!String(source || "").trim()) return null;
+                const pn = normalizePageValue(d && d.page);
+                const url = pn != null ? buildRefUrl(source, pn) : "";
+                return { source, page: pn, url };
             })
             .filter(Boolean);
     }
@@ -661,12 +638,19 @@ document.addEventListener("DOMContentLoaded", () => {
         const maxPreview = 3;
 
         const itemHtml = (d) => {
-            const meta = `${d.page} 페이지`;
-            return `
+            if (d.url) {
+                const meta = `${d.page} 페이지`;
+                return `
           <button class="cb-ref" type="button" data-url="${escapeHtml(d.url)}">
             <div class="cb-ref__name">${escapeHtml(d.source || "문서")}</div>
             <div class="cb-ref__meta">${escapeHtml(meta)}</div>
           </button>
+        `;
+            }
+            return `
+          <div class="cb-ref cb-ref--text" role="note">
+            <div class="cb-ref__name text-font">${escapeHtml(d.source || "문서")}</div>
+          </div>
         `;
         };
 
@@ -1030,6 +1014,7 @@ document.addEventListener("DOMContentLoaded", () => {
         closeDocPopup();
         tray.classList.add("is-open");
         tray.setAttribute("aria-hidden", "false");
+        tray.style.width = "94% !important";
         setTimeout(() => {
             if (trayBody) trayBody.scrollTop = 0;
         }, 0);
@@ -1212,7 +1197,14 @@ document.addEventListener("DOMContentLoaded", () => {
         autoResizeInput();
     }
 
-    async function fetchUploadedFiles() {
+    async function fetchUploadedFiles(force) {
+        const f = !!force;
+
+        if (f) {
+            uploadedFilesCache = null;
+            uploadedFilesPromise = null;
+        }
+
         if (uploadedFilesCache) return uploadedFilesCache;
         if (uploadedFilesPromise) return uploadedFilesPromise;
 
@@ -1261,7 +1253,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function openDocPopup() {
         if (!documentListPopup) return;
-        documentListPopup.style.display = "block";
+        documentListPopup.style.display = "flex";
         documentListPopup.setAttribute("aria-hidden", "false");
         documentListPopup.classList.add("is-open");
     }
@@ -1276,20 +1268,24 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function populateDocumentList(popup, list, keyword, loading, errorText) {
         const k = String(keyword || "").trim();
+
         const head = `
-      <div class="document-list-head">
-        <div class="document-list-title">업로드 파일 선택</div>
-        <div class="document-list-sub"># 입력 후 선택</div>
+      <div class="cb-tray__head">
+        <div class="cb-tray__titlewrap">
+          <div class="cb-tray__title">업로드 파일 선택</div>
+          <div class="cb-tray__subnote">※업로드된 파일은 7일간 보관되며,<br/>보관 기간 만료 시 시스템에 의해 자동 삭제됩니다.</div>
+        </div>
+        <button type="button" class="cb-tray__close" data-action="close" aria-label="닫기">×</button>
       </div>
     `;
 
         if (errorText) {
-            popup.innerHTML = `${head}<div class="document-list-body"><div class="document-pop__empty">${escapeHtml(errorText)}</div></div>`;
+            popup.innerHTML = `${head}<div class="cb-tray__body"><div class="cb-tpl" style="cursor:default"><div class="cb-tpl__name">${escapeHtml(errorText)}</div></div></div>`;
             return;
         }
 
         if (loading) {
-            popup.innerHTML = `${head}<div class="document-list-body"><div class="document-pop__empty">불러오는 중...</div></div>`;
+            popup.innerHTML = `${head}<div class="cb-tray__body"><div class="cb-tpl" style="cursor:default"><div class="cb-tpl__name">불러오는 중...</div></div></div>`;
             return;
         }
 
@@ -1304,7 +1300,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const shown = filtered;
 
         if (!shown.length) {
-            popup.innerHTML = `${head}<div class="document-list-body"><div class="document-pop__empty">검색 결과가 없습니다.</div></div>`;
+            popup.innerHTML = `${head}<div class="cb-tray__body"><div class="cb-tpl" style="cursor:default"><div class="cb-tpl__name">검색 결과가 없습니다.</div></div></div>`;
             return;
         }
 
@@ -1312,18 +1308,20 @@ document.addEventListener("DOMContentLoaded", () => {
             .map((name) => {
                 const safe = escapeHtml(name);
                 return `
-          <div class="document-item" role="option" data-doc-name="${safe}" aria-selected="false">
-            <span class="document-item__title">${safe}</span>
-            <span class="document-item__actions">
-              <button type="button" class="document-item__btn" data-action="summary">요약</button>
-              <button type="button" class="document-item__btn" data-action="question">질문</button>
-            </span>
+          <div class="cb-tpl" role="option" data-doc-name="${safe}" aria-selected="false">
+            <div class="cb-tpl__top">
+              <div class="cb-tpl__name">${safe}</div>
+              <div class="cb-tpl__actions">
+                <button type="button" class="cb-tpl__btn" data-action="summary">요약</button>
+                <button type="button" class="cb-tpl__btn" data-action="question">질문</button>
+              </div>
+            </div>
           </div>
         `;
             })
             .join("");
 
-        popup.innerHTML = `${head}<div class="document-list-body">${items}</div>`;
+        popup.innerHTML = `${head}<div class="cb-tray__body">${items}</div>`;
     }
 
     async function openDocsPopupFromButton() {
@@ -1333,7 +1331,7 @@ document.addEventListener("DOMContentLoaded", () => {
         populateDocumentList(documentListPopup, [], "", true, "");
 
         try {
-            const files = await fetchUploadedFiles();
+            const files = await fetchUploadedFiles(true);
             populateDocumentList(documentListPopup, files, "", false, "");
         } catch (err) {
             populateDocumentList(
@@ -1359,7 +1357,7 @@ document.addEventListener("DOMContentLoaded", () => {
         populateDocumentList(documentListPopup, [], q, true, "");
 
         try {
-            const files = await fetchUploadedFiles();
+            const files = await fetchUploadedFiles(false);
             populateDocumentList(documentListPopup, files, q, false, "");
         } catch (err) {
             populateDocumentList(
@@ -1449,8 +1447,16 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     documentListPopup.addEventListener("click", (e) => {
-        const btn = e.target && e.target.closest ? e.target.closest(".document-item__btn") : null;
-        const item = e.target && e.target.closest ? e.target.closest(".document-item") : null;
+        const closeBtn = e.target && e.target.closest ? e.target.closest('[data-action="close"]') : null;
+        if (closeBtn) {
+            e.preventDefault();
+            closeDocPopup();
+            input.focus();
+            return;
+        }
+
+        const btn = e.target && e.target.closest ? e.target.closest(".cb-tpl__btn") : null;
+        const item = e.target && e.target.closest ? e.target.closest(".cb-tpl[data-doc-name]") : null;
         if (!item) return;
 
         const name = item.getAttribute("data-doc-name") || "";
@@ -1954,7 +1960,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const list = Array.isArray(window.templateList) ? window.templateList : [];
 
         if (list.length === 0) {
-            trayBody.innerHTML = `<div>템플릿이 없습니다.</div>`;
+            trayBody.innerHTML = `<div class="cb-tpl" style="cursor:default"><div class="cb-tpl__name">템플릿이 없습니다.</div></div>`;
         } else {
             trayBody.innerHTML = list
                 .map((t) => {

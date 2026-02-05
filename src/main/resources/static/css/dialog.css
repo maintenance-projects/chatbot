@@ -134,7 +134,6 @@ textarea {
 .cb-header__right {
     display: flex;
     align-items: center;
-    /* gap: 8px; */
 }
 
 .cb-iconbtn {
@@ -283,11 +282,6 @@ textarea {
 }
 
 .cb-msg--user .cb-bubble {
-    /* background: var(--cb-user);
-    color: #fff;
-    border-color: rgba(255, 255, 255, 0.08);
-    border-top-right-radius: 6px; */
-
     background: #474747;
     color: #fff;
     border-color: rgba(255, 255, 255, 0.08);
@@ -482,9 +476,33 @@ textarea {
     white-space: nowrap;
 }
 
+.text-font {
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    /* color: #6e7279 !important; */
+}
+
 .cb-ref__meta {
     font-size: 11px;
     color: #64748b;
+}
+
+.cb-ref--text {
+    cursor: default;
+    cursor: default;
+    border: none !important;
+    background: #f1f5f9 !important;
+    padding: 5px 2px !important;
+}
+
+.cb-ref--text:active {
+    transform: none;
+}
+
+.cb-ref--text .cb-ref__name {
+    white-space: normal;
+    overflow: visible;
+    text-overflow: clip;
 }
 
 .cb-cardstack {
@@ -569,8 +587,6 @@ textarea {
 }
 
 .cb-send {
-    /* width: 30px; */
-    /* height: 30px; */
     border: 0;
     border-radius: 13px;
     color: #fff;
@@ -630,7 +646,6 @@ textarea {
     width: 100%;
     display: flex;
     gap: 10px;
-    /* padding: 10px 10px; */
     border: 0;
     background: transparent;
     cursor: pointer;
@@ -643,19 +658,14 @@ textarea {
     color: #5d5d5d;
 }
 
-/* .cb-pop__item:hover {
-    background: rgba(15, 23, 42, 0.06);
-} */
-
 .cb-tray,
 .document-list-popup {
     width: 97% !important;
 }
 
-/* 툴팁 */
 .cb-pop__item,
 .cb-pop__item_top {
-    position: relative
+    position: relative;
 }
 
 .cb-pop__item::after {
@@ -707,7 +717,6 @@ textarea {
     z-index: 9999;
 }
 
-
 .cb-tray {
     position: absolute;
     left: 12px;
@@ -744,7 +753,7 @@ textarea {
     align-items: center;
     justify-content: space-between;
     gap: 10px;
-    padding: 10px 12px;
+    padding: 18px;
     border-bottom: 1px solid rgba(15, 23, 42, 0.08);
     background: linear-gradient(180deg, rgba(248, 250, 252, 0.95), rgba(255, 255, 255, 0.7));
 }
@@ -824,6 +833,27 @@ textarea {
     font-size: 11px;
     color: #64748b;
     line-height: 1.35;
+}
+
+.cb-tpl__actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.cb-tpl__btn {
+    border: 1px solid rgba(15, 23, 42, 0.12);
+    background: rgba(248, 250, 252, 0.92);
+    color: #0f172a;
+    font-size: 10px;
+    font-weight: 700;
+    padding: 6px 10px;
+    border-radius: 999px;
+    cursor: pointer;
+}
+
+.cb-tpl__btn:active {
+    transform: scale(0.99);
 }
 
 .cb-mark {
@@ -1094,110 +1124,46 @@ textarea {
     left: 12px;
     right: 12px;
     bottom: calc(100% + 10px);
-    max-height: 260px;
-    border-radius: 16px;
+    z-index: 1200;
     border: 1px solid rgba(15, 23, 42, 0.12);
+    border-radius: 16px;
     background: rgba(255, 255, 255, 0.92);
     box-shadow: 0 24px 70px rgba(2, 6, 23, 0.22);
     backdrop-filter: blur(14px);
-    z-index: 1200;
     overflow: hidden;
+    max-height: 0;
+    opacity: 0;
+    transform: translateY(6px) scale(0.98);
     transform-origin: bottom center;
-    animation: docPopIn 0.14s ease-out;
-}
-
-.document-list-head {
-    padding: 15px 20px 15px 20px;
-    border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+    pointer-events: none;
+    transition: max-height 0.18s ease, opacity 0.18s ease, transform 0.18s ease;
     display: flex;
-    align-items: baseline;
-    justify-content: space-between;
-    gap: 10px;
-    background: linear-gradient(180deg, rgba(248, 250, 252, 0.95), rgba(255, 255, 255, 0.7));
+    flex-direction: column;
+    min-height: 0;
 }
 
-.document-list-title {
-    font-size: 12px;
-    font-weight: 900;
-    color: #0f172a;
-    letter-spacing: -0.01em;
+.document-list-popup.is-open {
+    max-height: 280px;
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
 }
 
-.document-list-sub {
-    font-size: 11px;
-    color: #64748b;
-    font-weight: 600;
+.document-list-popup .cb-tray__body {
+    grid-template-columns: 1fr;
 }
 
-.document-list-body {
-    max-height: 210px;
-    overflow: auto;
-    padding: 6px;
-    background: #ffffff;
+.document-list-popup .cb-tray__titlewrap {
+    display: grid;
+    gap: 3px;
 }
 
-.document-item {
-    width: 100%;
-    border: 1px solid rgba(15, 23, 42, 0.08);
-    background: rgba(255, 255, 255, 0.72);
-    border-radius: 14px;
-    padding: 10px 10px;
-    cursor: pointer;
-    text-align: left;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    gap: 10px;
-    margin: 6px 0;
-    transition: transform 0.06s ease, background 0.12s ease, border-color 0.12s ease;
-}
-
-.document-item__title {
-    font-size: 12px;
-    color: #0f172a;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-    min-width: 0;
-    flex: 1 1 auto;
-}
-
-.document-item__actions {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    flex: 0 0 auto;
-}
-
-.document-item__btn {
-    border: 1px solid rgba(15, 23, 42, 0.12);
-    background: rgba(248, 250, 252, 0.92);
-    color: #0f172a;
+.document-list-popup .cb-tray__subnote {
+    color: #f15f5f;
     font-size: 10px;
-    font-weight: 600;
-    padding: 6px 10px;
-    border-radius: 999px;
-    cursor: pointer;
-}
-
-.document-item__btn:active {
-    transform: scale(0.99);
-}
-
-.document-item:hover {
-    background: rgba(59, 130, 246, 0.08);
-    border-color: rgba(59, 130, 246, 0.18);
-}
-
-.document-item:active {
-    transform: scale(0.99);
-}
-
-.document-pop__empty {
-    padding: 12px 12px;
-    font-size: 12px;
-    color: #64748b;
-    font-weight: 600;
+    font-weight: 700;
+    font-family: system-ui;
+    line-height: 1.25;
 }
 
 .cb-upload-card {
@@ -1231,7 +1197,6 @@ textarea {
 
 .cb-upload-card__name {
     font-size: 11px;
-    /* font-weight: 800; */
     line-height: 1.2;
     white-space: nowrap;
     overflow: hidden;
@@ -1289,21 +1254,16 @@ textarea {
     color: rgba(255, 255, 255, 0.85);
 }
 
-/* tool menu: 세로 -> 가로 */
 #tool-menu.tool-menu {
     display: flex;
     flex-direction: row;
     gap: 10px;
     align-items: center;
-
-    /* 필요하면 위치 조정 */
     left: 24px;
-    /* 화면 왼쪽 아래 쪽 */
     bottom: 18px;
     padding: 0 8px;
 }
 
-/* 버튼 크기/정렬(원하면) */
 #tool-menu .cb-pop__item {
     display: inline-flex;
     align-items: center;
@@ -1316,13 +1276,11 @@ textarea {
     height: 15px;
 }
 
-/* 아이콘 크기(원하면) */
 #tool-menu .cb-pop__item img {
     width: 22px;
     height: 22px;
     display: block;
 }
-
 
 @keyframes cbShimmer {
     0% {
@@ -1331,18 +1289,6 @@ textarea {
 
     100% {
         background-position: 220% 0;
-    }
-}
-
-@keyframes docPopIn {
-    0% {
-        opacity: 0;
-        transform: translateY(6px) scale(0.98);
-    }
-
-    100% {
-        opacity: 1;
-        transform: translateY(0) scale(1);
     }
 }
 
@@ -1389,11 +1335,6 @@ textarea {
         max-height: 240px;
     }
 
-    .document-list-body {
-        max-height: 190px;
-        background: #ffffff;
-    }
-
     .cb-tray {
         left: 10px;
         right: 10px;
@@ -1403,6 +1344,10 @@ textarea {
     }
 
     .cb-tray.is-open {
+        max-height: 240px;
+    }
+
+    .document-list-popup.is-open {
         max-height: 240px;
     }
 
