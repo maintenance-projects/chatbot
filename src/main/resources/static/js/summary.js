@@ -30,6 +30,12 @@
         },
     };
 
+    const ARROW_SVG = `<svg width="15px" height="15px" viewBox="0 0 400 400" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M49 200.913C99.7842 198.157 150.377 196.78 200.778 196.78C276.38 196.78 336.003 200.913 351.598 200.913" stroke="#000000" stroke-opacity="0.9" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M297.858 148C311.416 151.811 342.206 190.498 350.385 194.54C358.564 198.581 323.305 244.831 307.119 253" stroke="#000000" stroke-opacity="0.9" stroke-width="16" stroke-linecap="round" stroke-linejoin="round"/>
+                        </svg>
+                    `;
+
     const escapeHTML = (s) =>
         String(s ?? "")
             .replaceAll("&", "&amp;")
@@ -134,19 +140,12 @@
 
     const stripTopHeadingLine = (t) => String(t || "").replace(/^\s*#{1,2}\s+.*?\n+/, "");
 
-    const mdToHtml = (md, { stripTopHeading = true } = {}) => {
+    const mdToHtml = (md, { stripTopHeading = false } = {}) => {
         let raw = String(md ?? "").replace(/\r/g, "");
         if (stripTopHeading) raw = stripTopHeadingLine(raw);
 
         const lines = raw.split("\n");
         let html = "";
-        let listMode = null;
-
-        const closeList = () => {
-            if (listMode === "ul") html += "</ul>";
-            if (listMode === "ol") html += "</ol>";
-            listMode = null;
-        };
 
         const inline = (text) => {
             let s = escapeHTML(text);
@@ -154,68 +153,74 @@
             return s;
         };
 
+        const hasDoubleStarStrong = (text) => {
+            const t = String(text || "");
+            return /\*\*(.+?)\*\*/.test(t);
+        };
+
+        const renderHashLine = (content) => {
+            const txt = String(content || "").trim();
+            if (!txt) return "";
+            return `<div class="cb-md-hash">${inline(txt)}</div>`;
+        };
+
+        const renderDotLine = (content) => {
+            const txt = String(content || "").trim();
+            if (!txt) return "";
+            return `
+            <div class="cb-md-row cb-md-row-dot">
+                <span class="cb-md-mid-dot" aria-hidden="true">·</span>
+                <div class="cb-md-row-txt">${inline(txt)}</div>
+            </div>
+        `;
+        };
+
+        const renderArrowLine = (content) => {
+            const txt = String(content || "").trim();
+            if (!txt) return "";
+            return `
+            <div class="cb-md-row cb-md-row-arrow">
+                <span class="cb-md-arrow" aria-hidden="true">${ARROW_SVG}</span>
+                <div class="cb-md-row-txt">${inline(txt)}</div>
+            </div>
+        `;
+        };
+
         for (let i = 0; i < lines.length; i++) {
             const line = lines[i] ?? "";
             const trimmed = line.trim();
 
             if (!trimmed) {
-                closeList();
                 html += `<div class="cb-md-gap"></div>`;
                 continue;
             }
 
-            const hm = trimmed.match(/^(#{1,6})\s+(.*)$/);
-            if (hm) {
-                closeList();
-                const hashes = hm[1] || "";
-                const text = hm[2] || "";
+            const dm = trimmed.match(/^-+\s+(.*)$/);
+            const content = (dm ? dm[1] : trimmed) || "";
 
-                if (hashes.length >= 3) {
-                    html += `<div class="cb-md-p">${inline(hashes + " " + text)}</div>`;
-                } else {
-                    const level = Math.min(6, Math.max(1, hashes.length));
-                    html += `<div class="cb-md-h${level}">${inline(text)}</div>`;
-                }
+            if (/^#{3}\s*/.test(content)) {
+                html += renderHashLine(content);
                 continue;
             }
 
-            const um = trimmed.match(/^[-*]\s+(.*)$/);
-            if (um) {
-                if (listMode !== "ul") {
-                    closeList();
-                    listMode = "ul";
-                    html += "<ul>";
-                }
-                html += `<li>${inline(um[1] || "")}</li>`;
+            if (hasDoubleStarStrong(content)) {
+                html += renderDotLine(content);
                 continue;
             }
 
-            const om = trimmed.match(/^(\d+)\.\s+(.*)$/);
-            if (om) {
-                if (listMode !== "ol") {
-                    closeList();
-                    listMode = "ol";
-                    html += "<ol>";
-                }
-                html += `<li value="${escapeHTML(om[1])}">${inline(om[2] || "")}</li>`;
-                continue;
-            }
-
-            closeList();
-            html += `<div class="cb-md-p">${inline(trimmed)}</div>`;
+            html += renderArrowLine(content);
         }
 
-        closeList();
-
         html = html
-            .replace(
-                /(<div class="cb-md-gap"><\/div>){3,}/g,
-                `<div class="cb-md-gap"></div><div class="cb-md-gap"></div>`
-            )
+            .replace(/(<div class="cb-md-gap"><\/div>){3,}/g, `<div class="cb-md-gap"></div><div class="cb-md-gap"></div>`)
             .trim();
 
         return html || `<div class="cb-summary-muted">요약 내용이 없습니다.</div>`;
     };
+
+
+
+
 
     const enableDragScrollX = (scroller) => {
         if (!scroller) return;
@@ -237,18 +242,23 @@
             scroller.dataset.dragging = "0";
             startX = getX(e);
             startScrollLeft = scroller.scrollLeft;
-            scroller.classList.add("is-dragging");
         };
 
         const onMove = (e) => {
             if (!isDown) return;
+
             const x = getX(e);
             const dx = x - startX;
-            if (Math.abs(dx) > 3) moved = true;
 
-            scroller.scrollLeft = startScrollLeft - dx;
+            if (!moved && Math.abs(dx) > 3) {
+                moved = true;
+                scroller.classList.add("is-dragging");
+            }
 
-            if (e.cancelable) e.preventDefault();
+            if (moved) {
+                scroller.scrollLeft = startScrollLeft - dx;
+                if (e.cancelable) e.preventDefault();
+            }
         };
 
         const onUp = () => {
@@ -314,8 +324,7 @@
                 ? summaries
                     .map((s, idx) => {
                         const block = mdToHtml(s, { stripTopHeading: true });
-                        return `<div class="cb-md-block">${block}</div>${idx < summaries.length - 1 ? `<div class="cb-md-split"></div>` : ""
-                            }`;
+                        return `<div class="cb-md-block">${block}</div>${idx < summaries.length - 1 ? `<div class="cb-md-split"></div>` : ""}`;
                     })
                     .join("")
                 : `<div class="cb-summary-muted">요약 내용이 없습니다.</div>`;
