@@ -162,38 +162,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function openViewer(url) {
         if (!url) return;
-
-        const isMobile = window.matchMedia && window.matchMedia("(max-width: 900px)").matches;
-        if (isMobile) {
-            window.open(url, "_blank");
-            return;
-        }
-
-        if (!shell || !viewer || !viewerFrame) {
-            window.open(url, "_blank");
-            return;
-        }
-
-        const targetAbs = new URL(String(url), window.location.href).href;
-        const busted = withCacheBuster(targetAbs);
-
-        shell.classList.add("has-viewer");
-        viewer.classList.add("is-open");
-        viewer.setAttribute("aria-hidden", "false");
-
-        try {
-            viewerFrame.srcdoc = "";
-        } catch (e) { }
-
-        viewerFrame.src = "about:blank";
-        requestAnimationFrame(() => {
-            viewerFrame.src = busted;
-        });
+        window.open(url, "_blank");
     }
 
     function openViewerHtml(title, htmlBody) {
-        const isMobile = window.matchMedia && window.matchMedia("(max-width: 900px)").matches;
-
         const doc = `<!doctype html>
                         <html lang="ko">
                         <head>
@@ -218,39 +190,11 @@ document.addEventListener("DOMContentLoaded", () => {
                         </body>
                         </html>
                     `;
-
-        if (isMobile) {
-            const w = window.open("", "_blank");
-            if (!w) return;
-            w.document.open();
-            w.document.write(doc);
-            w.document.close();
-            return;
-        }
-
-        if (!shell || !viewer || !viewerFrame) {
-            const w = window.open("", "_blank");
-            if (!w) return;
-            w.document.open();
-            w.document.write(doc);
-            w.document.close();
-            return;
-        }
-
-        shell.classList.add("has-viewer");
-        viewer.classList.add("is-open");
-        viewer.setAttribute("aria-hidden", "false");
-        setViewerTitle(title || "내용");
-
-        viewerFrame.src = "about:blank";
-        try {
-            viewerFrame.srcdoc = doc;
-        } catch (e) {
-            const blob = new Blob([doc], { type: "text/html;charset=utf-8" });
-            const blobUrl = URL.createObjectURL(blob);
-            viewerFrame.src = blobUrl;
-            window.setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
-        }
+        const w = window.open("", "_blank");
+        if (!w) return;
+        w.document.open();
+        w.document.write(doc);
+        w.document.close();
     }
 
     function closeViewer() {
@@ -1270,14 +1214,14 @@ document.addEventListener("DOMContentLoaded", () => {
         const k = String(keyword || "").trim();
 
         const head = `
-      <div class="cb-tray__head">
-        <div class="cb-tray__titlewrap">
-          <div class="cb-tray__title">업로드 파일 선택</div>
-          <div class="cb-tray__subnote">※업로드된 파일은 7일간 보관되며,<br/>보관 기간 만료 시 시스템에 의해 자동 삭제됩니다.</div>
-        </div>
-        <button type="button" class="cb-tray__close" data-action="close" aria-label="닫기">×</button>
-      </div>
-    `;
+                        <div class="cb-tray__head">
+                            <div class="cb-tray__titlewrap">
+                            <div class="cb-tray__title">업로드 파일 선택</div>
+                            <div class="cb-tray__subnote">※업로드된 파일은 7일간 보관되며,<br/>보관 기간 만료 시 시스템에 의해 자동 삭제됩니다.</div>
+                            </div>
+                            <button type="button" class="cb-tray__close" data-action="close" aria-label="닫기">×</button>
+                        </div>
+                    `;
 
         if (errorText) {
             popup.innerHTML = `${head}<div class="cb-tray__body"><div class="cb-tpl" style="cursor:default"><div class="cb-tpl__name">${escapeHtml(errorText)}</div></div></div>`;
@@ -1565,7 +1509,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         if (!isAllowedFile(file)) {
-            addBotMessage("업로드할 수 없는 파일 형식입니다. (가능: PDF, 한글(HWP/HWPX), 엑셀(XLS/XLSX/CSV), PPT(PPT/PPTX), 워드(DOC/DOCX), TXT)");
+            addBotMessage("업로드할 수 없는 파일 형식입니다. (가능: PDF, 한글(HWP/HWPX), 엑셀(XLS/XLSX/CSV), PPT(PPT/PPTX), 워드(DOC/DOCX), TXT, M4A)");
             if (typeof onDone === "function") onDone();
             return;
         }
@@ -1865,7 +1809,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!f) {
                 const dt = e.dataTransfer;
                 const files = dt && dt.files ? Array.from(dt.files) : [];
-                if (files.length) addBotMessage("업로드할 수 없는 파일 형식입니다. (가능: PDF, 한글(HWP/HWPX), 엑셀(XLS/XLSX/CSV), PPT(PPT/PPTX), 워드(DOC/DOCX), TXT)");
+                if (files.length) addBotMessage("업로드할 수 없는 파일 형식입니다. (가능: PDF, 한글(HWP/HWPX), 엑셀(XLS/XLSX/CSV), PPT(PPT/PPTX), 워드(DOC/DOCX), TXT, M4A)");
                 return;
             }
 
@@ -2070,7 +2014,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const parts = String(html || "").split(/(<[^>]+>)/g);
         return parts
             .map((p) => {
-                if (!p) return "";
+                if(!p) return "";
                 if (p.startsWith("<") && p.endsWith(">")) return p;
                 return p.replace(re, (m) => `<mark class="cb-mark">${m}</mark>`);
             })

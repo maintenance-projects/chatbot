@@ -819,7 +819,7 @@ textarea {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
+    gap: 30px;
 }
 
 .cb-tpl__name {
@@ -850,6 +850,7 @@ textarea {
     padding: 6px 10px;
     border-radius: 999px;
     cursor: pointer;
+    width: 41px;
 }
 
 .cb-tpl__btn:active {
