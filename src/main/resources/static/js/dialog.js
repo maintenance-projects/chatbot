@@ -31,6 +31,10 @@ document.addEventListener("DOMContentLoaded", () => {
     const actionUpResearch = document.getElementById("cbActionUpResearch");
     const fileInput = document.getElementById("cbFileInput");
 
+    const guideBtn = document.getElementById("cbGuideBtn");
+    const guideModal = document.getElementById("cbGuideModal");
+    const guideClose = document.getElementById("cbGuideClose");
+
     const tray = document.getElementById("cbTplTray");
     const trayClose = document.getElementById("cbTplTrayClose");
     const trayBody = document.getElementById("cbTplTrayBody");
@@ -182,7 +186,6 @@ document.addEventListener("DOMContentLoaded", () => {
         activeViewerBlobUrl = null;
     }
 
-    // ✅✅✅ [수정 1] openViewer: srcdoc "세팅" 금지(제거만), fetch/blob 제거, iframe src로 직접 로드
     async function openViewer(url, title) {
         if (!url) return;
 
@@ -195,16 +198,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
             setViewerTitle(title || "미리보기");
 
-            // iframe 초기화
             viewerFrame.src = "about:blank";
 
-            // ⚠️ srcdoc은 값을 넣으면 src보다 우선이라 PDF가 안 뜨거나 "null"이 출력됨
-            // 따라서 removeAttribute만 한다.
             try { viewerFrame.removeAttribute("srcdoc"); } catch (e) { }
 
             revokeViewerBlob();
 
-            // hash(#page=) 포함된 URL도 그대로 로드 (cache buster 포함)
             viewerFrame.src = withCacheBuster(url);
 
             scrollToBottom();
@@ -214,7 +213,6 @@ document.addEventListener("DOMContentLoaded", () => {
         window.open(url, "_blank", "noopener");
     }
 
-    // ✅✅✅ [수정 2] closeViewer: srcdoc "세팅" 금지(제거만)
     function closeViewer() {
         if (!shell || !viewer || !viewerFrame) return;
         shell.classList.remove("has-viewer");
@@ -612,20 +610,20 @@ document.addEventListener("DOMContentLoaded", () => {
         return out;
     }
 
-function renderRefs(docs) {
-  const list = Array.isArray(docs) ? docs : [];
-  if (!list.length) return "";
+    function renderRefs(docs) {
+        const list = Array.isArray(docs) ? docs : [];
+        if (!list.length) return "";
 
-  const maxPreview = 3;
+        const maxPreview = 3;
 
-  const itemHtml = (d) => {
-    const isPdf = String(d.ext || "").toLowerCase().trim() === "pdf";
-    const disCls = isPdf ? "" : " is-disabled";
-    const tip = isPdf ? "미리보기" : "PDF 파일만 미리보기가 제공됩니다.";
+        const itemHtml = (d) => {
+            const isPdf = String(d.ext || "").toLowerCase().trim() === "pdf";
+            const disCls = isPdf ? "" : " is-disabled";
+            const tip = isPdf ? "미리보기" : "PDF 파일만 미리보기가 제공됩니다.";
 
-    const meta = d.page ? `${d.page} 페이지` : (d.ext ? d.ext.toUpperCase() : "FILE");
+            const meta = d.page ? `${d.page} 페이지` : (d.ext ? d.ext.toUpperCase() : "FILE");
 
-    return `
+            return `
       <div class="cb-refrow" data-url="${escapeHtml(d.url || "")}" data-ext="${escapeHtml(d.ext || "")}" data-name="${escapeHtml(d.source || "문서")}">
         <button class="cb-refmain" type="button" aria-label="출처 열기">
           <div class="cb-ref__name">${escapeHtml(d.source || "문서")}</div>
@@ -657,35 +655,34 @@ function renderRefs(docs) {
         </div>
       </div>
     `;
-  };
+        };
 
-  if (list.length <= maxPreview) {
-    const items = list.map(itemHtml).join("");
-    return `
+        if (list.length <= maxPreview) {
+            const items = list.map(itemHtml).join("");
+            return `
       <div class="cb-refs__title"><span>출처</span></div>
       <div class="cb-refs__list">${items}</div>
     `;
-  }
+        }
 
-  const first = list.slice(0, maxPreview);
-  const rest = list.slice(maxPreview);
-  const items1 = first.map(itemHtml).join("");
-  const items2 = rest.map(itemHtml).join("");
+        const first = list.slice(0, maxPreview);
+        const rest = list.slice(maxPreview);
+        const items1 = first.map(itemHtml).join("");
+        const items2 = rest.map(itemHtml).join("");
 
-  return `
+        return `
     <div class="cb-refs__title"><span>출처</span></div>
     <div class="cb-refs__list">${items1}</div>
     <div class="cb-refs__more" style="display:none">${items2}</div>
     <button class="cb-refs__toggle" type="button" data-open="false" data-morecount="${rest.length}">+${rest.length}개 더보기</button>
   `;
-}
+    }
 
 
     function addBotStreamLoadingMessage(enableRefs) {
         endUserCardStack();
         const id = `cbStream_${Date.now()}_${Math.random().toString(16).slice(2)}`;
         const refsHtml = enableRefs ? `<div class="cb-refs" aria-label="출처"></div>` : ``;
-
         const html = `
       <div class="cb-msg cb-msg--bot cb-msg--streaming" data-stream-id="${id}">
         <div class="cb-bubble">
@@ -710,6 +707,7 @@ function renderRefs(docs) {
         const progressTextEl = progressEl ? progressEl.querySelector(".cb-progress__text") : null;
         const clarifyEl = msgEl ? msgEl.querySelector(".cb-clarify") : null;
         const refsEl = enableRefs && msgEl ? msgEl.querySelector(".cb-refs") : null;
+
         if (refsEl) {
             refsEl.classList.remove("is-open");
             refsEl.innerHTML = "";
@@ -782,12 +780,10 @@ function renderRefs(docs) {
 
     function applyStreamRefs(handle, docs) {
         if (!handle) return;
-
         const refs = mapRefs(docs);
         handle.pendingRefs = refs;
 
         if (!handle.refsEl) return;
-
         if (!handle.done) {
             handle.refsEl.classList.remove("is-open");
             handle.refsEl.innerHTML = "";
@@ -807,7 +803,6 @@ function renderRefs(docs) {
 
     function finalizeStream(handle) {
         if (!handle || !handle.metaEl) return;
-
         handle.done = true;
 
         if (handle.progressEl) handle.progressEl.style.display = "none";
@@ -891,7 +886,6 @@ function renderRefs(docs) {
             if (!chunk) continue;
 
             buf += chunk;
-
             while (true) {
                 const sep = buf.indexOf("\n\n");
                 if (sep < 0) break;
@@ -927,7 +921,6 @@ function renderRefs(docs) {
                     }
 
                     const hasPercent = j && typeof j.percent !== "undefined";
-
                     if (j && (j.type === "percent") && hasPercent) {
                         if (typeof onPercent === "function") onPercent(j.percent, j.message || "");
                         continue;
@@ -1035,6 +1028,7 @@ function renderRefs(docs) {
         if (!pop || !plusBtn) return;
         closeTray();
         closeDocPopup();
+        closeGuideModal();
         pop.classList.add("is-open");
         pop.setAttribute("aria-hidden", "false");
         plusBtn.setAttribute("aria-expanded", "true");
@@ -1054,6 +1048,7 @@ function renderRefs(docs) {
         if (!tray) return;
         closePop();
         closeDocPopup();
+        closeGuideModal();
         tray.classList.add("is-open");
         tray.setAttribute("aria-hidden", "false");
         tray.style.setProperty("width", "94%", "important");
@@ -1072,6 +1067,32 @@ function renderRefs(docs) {
     function toggleTray() {
         if (isTrayOpen()) closeTray();
         else openTray();
+    }
+
+    function openGuideModal() {
+        if (!guideModal) return;
+        closePop();
+        closeTray();
+        closeDocPopup();
+        guideModal.classList.add("is-open");
+        guideModal.setAttribute("aria-hidden", "false");
+    }
+
+    function closeGuideModal() {
+        if (!guideModal) return;
+        guideModal.classList.remove("is-open");
+        guideModal.setAttribute("aria-hidden", "true");
+    }
+
+    if (guideBtn && guideModal) {
+        guideBtn.addEventListener("click", () => {
+            if (guideModal.classList.contains("is-open")) closeGuideModal();
+            else openGuideModal();
+        });
+    }
+
+    if (guideClose) {
+        guideClose.addEventListener("click", closeGuideModal);
     }
 
     function consumeContinueFlag() {
@@ -1101,7 +1122,6 @@ function renderRefs(docs) {
 
     function ensureResearchTag() {
         if (researchTag) return researchTag;
-
         researchTag = document.createElement("button");
         researchTag.type = "button";
         researchTag.id = "cbResearchTag";
@@ -1111,13 +1131,11 @@ function renderRefs(docs) {
       <span class="cb-rch__label">리서치</span>
       <span class="cb-rch__x" aria-hidden="true">×</span>
     `;
-
         researchTag.addEventListener("click", (e) => {
             e.preventDefault();
             setResearchMode(false);
             input.focus();
         });
-
         mountChip(researchTag);
         researchTag.style.display = "none";
         updateChipRow();
@@ -1126,7 +1144,6 @@ function renderRefs(docs) {
 
     function ensureTemplateTag() {
         if (templateTag) return templateTag;
-
         templateTag = document.createElement("button");
         templateTag.type = "button";
         templateTag.id = "cbTemplateTag";
@@ -1136,13 +1153,11 @@ function renderRefs(docs) {
       <span class="cb-tpltag__label"></span>
       <span class="cb-tpltag__x" aria-hidden="true">×</span>
     `;
-
         templateTag.addEventListener("click", (e) => {
             e.preventDefault();
             setTemplate(null);
             input.focus();
         });
-
         ensureResearchTag();
         mountChip(templateTag);
         templateTag.style.display = "none";
@@ -1152,7 +1167,6 @@ function renderRefs(docs) {
 
     function ensureDocTag() {
         if (documentTag) return documentTag;
-
         documentTag = document.createElement("button");
         documentTag.type = "button";
         documentTag.id = "cbDocumentTag";
@@ -1162,13 +1176,11 @@ function renderRefs(docs) {
       <span class="cb-doctag__label"></span>
       <span class="cb-doctag__x" aria-hidden="true">×</span>
     `;
-
         documentTag.addEventListener("click", (e) => {
             e.preventDefault();
             setSelectedDocument(null);
             input.focus();
         });
-
         ensureTemplateTag();
         mountChip(documentTag);
         documentTag.style.display = "none";
@@ -1181,7 +1193,6 @@ function renderRefs(docs) {
 
         const tag = ensureDocTag();
         if (!tag) return;
-
         if (!selectedDocument) {
             tag.style.display = "none";
             tag.setAttribute("aria-pressed", "false");
@@ -1200,12 +1211,10 @@ function renderRefs(docs) {
 
     function setTemplate(tpl) {
         if (tpl && isResearchMode) setResearchMode(false);
-
         selectedTemplate = tpl ? { ...tpl } : null;
 
         const tag = ensureTemplateTag();
         if (!tag) return;
-
         if (!selectedTemplate) {
             tag.style.display = "none";
             tag.setAttribute("aria-pressed", "false");
@@ -1242,7 +1251,6 @@ function renderRefs(docs) {
 
     async function fetchUploadedFiles(force) {
         const f = !!force;
-
         if (f) {
             uploadedFilesCache = null;
             uploadedFilesPromise = null;
@@ -1311,7 +1319,6 @@ function renderRefs(docs) {
 
     function populateDocumentList(popup, list, keyword, loading, errorText) {
         const k = String(keyword || "").trim();
-
         const head = `
                         <div class="cb-tray__head">
                             <div class="cb-tray__titlewrap">
@@ -1321,7 +1328,6 @@ function renderRefs(docs) {
                             <button type="button" class="cb-tray__close" data-action="close" aria-label="닫기">×</button>
                         </div>
                     `;
-
         if (errorText) {
             popup.innerHTML = `${head}<div class="cb-tray__body"><div class="cb-tpl" style="cursor:default"><div class="cb-tpl__name">${escapeHtml(errorText)}</div></div></div>`;
             return;
@@ -1341,7 +1347,6 @@ function renderRefs(docs) {
         }
 
         const shown = filtered;
-
         if (!shown.length) {
             popup.innerHTML = `${head}<div class="cb-tray__body"><div class="cb-tpl" style="cursor:default"><div class="cb-tpl__name">검색 결과가 없습니다.</div></div></div>`;
             return;
@@ -1363,13 +1368,13 @@ function renderRefs(docs) {
         `;
             })
             .join("");
-
         popup.innerHTML = `${head}<div class="cb-tray__body">${items}</div>`;
     }
 
     async function openDocsPopupFromButton() {
         closePop();
         closeTray();
+        closeGuideModal();
         openDocPopup();
         populateDocumentList(documentListPopup, [], "", true, "");
 
@@ -1537,7 +1542,7 @@ function renderRefs(docs) {
 
     function sendTextMessage(msg, targetNameOverride) {
         closeTray();
-
+        closeGuideModal();
         const m = String(msg || "").trim();
         if (m) addUserMessage(m);
 
@@ -1550,7 +1555,6 @@ function renderRefs(docs) {
         const cont = consumeContinueFlag();
 
         const targetName = String(targetNameOverride || "").trim();
-
         const payload = {
             sessionId,
             message: m,
@@ -1609,6 +1613,7 @@ function renderRefs(docs) {
         }
 
         closeTray();
+        closeGuideModal();
 
         const msg = String(messageText || "").trim();
 
@@ -1627,7 +1632,6 @@ function renderRefs(docs) {
         if (cont.threadId) formData.append("threadId", cont.threadId);
 
         setSending(true);
-
         let botHandle = null;
         let pendingRefs = [];
         let doneMessage = "";
@@ -1720,7 +1724,6 @@ function renderRefs(docs) {
 
     async function requestTemplateDownload(messageText, templateKey) {
         const msg = String(messageText || "").trim();
-
         setSending(true);
         const handle = addBotStreamLoadingMessage(false);
 
@@ -1742,7 +1745,6 @@ function renderRefs(docs) {
                 body: JSON.stringify(payload),
                 credentials: "same-origin",
             });
-
             if (!res.ok) {
                 let t = "";
                 try {
@@ -1752,7 +1754,6 @@ function renderRefs(docs) {
             }
 
             const data = await res.json();
-
             if (handle && handle.msgEl) handle.msgEl.remove();
 
             if (!data || data.success !== true || !data.download_url) {
@@ -1781,7 +1782,6 @@ function renderRefs(docs) {
 
         const allowView = !!(opts && opts.allowView);
         const page = Number.isFinite(Number(fileInfo && fileInfo.page)) ? Number(fileInfo.page) : null;
-
         const viewUrl = (allowView && ext === "pdf") ? buildDocViewUrl(filename, page) : "";
 
         const html = `
@@ -1828,7 +1828,6 @@ function renderRefs(docs) {
         const msg = String(input.value || "").trim();
         const tpl = selectedTemplate ? { ...selectedTemplate } : null;
         const tplKey = tpl ? tpl.key || "" : "";
-
         const docName = selectedDocument && selectedDocument.name ? String(selectedDocument.name) : "";
 
         if (!msg && !tplKey) return;
@@ -1894,6 +1893,7 @@ function renderRefs(docs) {
             closePop();
             closeTray();
             closeDocPopup();
+            closeGuideModal();
             startImmediateUpload(first);
         });
     }
@@ -1912,24 +1912,20 @@ function renderRefs(docs) {
 
     if (widget) {
         let dragDepth = 0;
-
         widget.addEventListener("dragenter", (e) => {
             e.preventDefault();
             dragDepth += 1;
             setDragOver(true);
         });
-
         widget.addEventListener("dragover", (e) => {
             e.preventDefault();
             setDragOver(true);
         });
-
         widget.addEventListener("dragleave", (e) => {
             e.preventDefault();
             dragDepth = Math.max(0, dragDepth - 1);
             if (dragDepth === 0) setDragOver(false);
         });
-
         widget.addEventListener("drop", (e) => {
             e.preventDefault();
             dragDepth = 0;
@@ -1941,6 +1937,7 @@ function renderRefs(docs) {
             closePop();
             closeTray();
             closeDocPopup();
+            closeGuideModal();
             startImmediateUpload(f);
         });
     }
@@ -1968,6 +1965,11 @@ function renderRefs(docs) {
                 const insideDoc = documentListPopup.contains(e.target) || inputWrap.contains(e.target);
                 if (!insideDoc) closeDocPopup();
             }
+
+            if (guideModal && guideModal.classList.contains("is-open")) {
+                const insideGuide = guideModal.contains(e.target) || guideBtn.contains(e.target);
+                if (!insideGuide) closeGuideModal();
+            }
         });
 
         document.addEventListener("keydown", (e) => {
@@ -1976,6 +1978,7 @@ function renderRefs(docs) {
                 closeTray();
                 closeViewer();
                 closeDocPopup();
+                closeGuideModal();
             }
         });
     } else {
@@ -1984,6 +1987,7 @@ function renderRefs(docs) {
                 closeTray();
                 closeViewer();
                 closeDocPopup();
+                closeGuideModal();
             }
         });
     }
@@ -2002,6 +2006,7 @@ function renderRefs(docs) {
             closePop();
             closeTray();
             closeDocPopup();
+            closeGuideModal();
             fileInput.click();
         });
     }
@@ -2010,6 +2015,7 @@ function renderRefs(docs) {
         actionSelect.addEventListener("click", () => {
             closePop();
             closeDocPopup();
+            closeGuideModal();
             toggleTray();
             if (!isTrayOpen()) input.focus();
         });
@@ -2021,6 +2027,7 @@ function renderRefs(docs) {
             closePop();
             closeTray();
             closeDocPopup();
+            closeGuideModal();
             setResearchMode(!isResearchMode);
             input.focus();
         });
@@ -2076,6 +2083,7 @@ function renderRefs(docs) {
             closePop();
             closeTray();
             closeDocPopup();
+            closeGuideModal();
             const chatHtml = body.innerHTML;
             const w = window.open("", "_blank", "width=900,height=700");
             if (!w) return;
@@ -2156,7 +2164,6 @@ function renderRefs(docs) {
 
     function clearHighlights() {
         body.querySelectorAll(".cb-hit").forEach((el) => el.classList.remove("cb-hit"));
-
         const pres = Array.from(body.querySelectorAll(".cb-bubble__text pre"));
         for (const pre of pres) {
             const raw = pre.getAttribute("data-rawtext");
@@ -2214,7 +2221,6 @@ function renderRefs(docs) {
 
     function focusHit(idx) {
         if (!searchHits.length || idx < 0 || idx >= searchHits.length) return;
-
         body.querySelectorAll(".cb-hit").forEach((el) => el.classList.remove("cb-hit"));
 
         const target = searchHits[idx];
@@ -2225,7 +2231,6 @@ function renderRefs(docs) {
         const delta = msgRect.top - bodyRect.top;
 
         body.scrollTo({ top: Math.max(0, body.scrollTop + delta - 40), behavior: "smooth" });
-
         if (searchMeta) searchMeta.textContent = `${idx + 1} / ${searchHits.length}`;
     }
 
@@ -2263,12 +2268,10 @@ function renderRefs(docs) {
 
     if (searchInput) {
         let t = null;
-
         searchInput.addEventListener("input", () => {
             window.clearTimeout(t);
             t = window.setTimeout(() => rebuildHighlights(searchInput.value), 120);
         });
-
         searchInput.addEventListener("keydown", (e) => {
             if (e.key === "Enter") {
                 e.preventDefault();
@@ -2352,13 +2355,11 @@ function renderRefs(docs) {
         if (refActBtn) {
             e.preventDefault();
             e.stopPropagation();
-
             const action = refActBtn.getAttribute("data-action") || "";
             const row = refActBtn.closest(".cb-refrow");
 
             if (action === "preview") {
                 if (!row) return;
-
                 const url = row.getAttribute("data-url") || "";
                 const ext = row.getAttribute("data-ext") || "";
                 const name = row.getAttribute("data-name") || "미리보기";
@@ -2373,6 +2374,7 @@ function renderRefs(docs) {
             if (action === "download") {
                 const url = refActBtn.getAttribute("data-url") || (row ? row.getAttribute("data-url") : "") || "";
                 const filename = refActBtn.getAttribute("data-filename") || (row ? row.getAttribute("data-name") : "") || "document.pdf";
+
                 if (!url) return;
 
                 try {
@@ -2417,7 +2419,6 @@ function renderRefs(docs) {
             e.stopPropagation();
 
             if (qBtn.hasAttribute("disabled")) return;
-
             const action = qBtn.getAttribute("data-action") || "";
             const msgEl = qBtn.closest(".cb-msg");
             const filename = msgEl ? (msgEl.getAttribute("data-filename") || msgEl.getAttribute("data-copytext") || "") : "";

@@ -35,6 +35,16 @@
                     </div>
 
                     <div class="cb-header__right">
+                        <button class="cb-iconbtn cb-pop__item_top" id="cbGuideBtn" type="button" role="menuitem"
+                            data-tooltip="이용 안내">
+                            <svg style="color: #ffffff; width: 20px; height: 20px;" viewBox="0 0 24 24"
+                                xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round" class="feather feather-help-circle">
+                                <circle cx="12" cy="12" r="10"></circle>
+                                <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"></path>
+                                <line x1="12" y1="17" x2="12.01" y2="17"></line>
+                            </svg>
+                        </button>
                         <button class="cb-iconbtn cb-pop__item_top" id="cbActionPrint" type="button" role="menuitem"
                             data-tooltip="인쇄">
                             <svg style="color: #ffffff; width: 20px; height: 20px;" width="24px" height="24px"
@@ -95,6 +105,100 @@
                     </div>
                 </section>
 
+                <div class="cb-guide-modal" id="cbGuideModal" aria-hidden="true">
+                    <div class="cb-guide-head">
+                        <div class="cb-guide-title">이용 안내</div>
+                        <button class="cb-guide-close" id="cbGuideClose" type="button">×</button>
+                    </div>
+                    <div class="cb-guide-body">
+                        <div class="cb-guide-section">
+                            <h3>📘 문서 기반 AI 이용 안내</h3>
+
+                            <h4>👋 이렇게 사용하세요</h4>
+                            <p>채팅창에 궁금한 내용을 입력하세요.<br>AI가 업로드된 문서를 분석해 답변을 제공합니다.</p>
+                            <div class="cb-guide-note">
+                                <strong>만약 “관련된 자료를 찾을 수 없습니다”라는 답변이 나오면,</strong><br>
+                                해당 내용의 문서가 아직 업로드되지 않은 상태입니다.<br>
+                                👉 관련 문서를 업로드한 뒤 다시 질문해 주세요.
+                            </div>
+
+                            <h4>🔍 검색 방식 안내</h4>
+                            <p>AI는 상황에 따라 아래 두 가지 방식으로 문서를 검색합니다.</p>
+                            <ul>
+                                <li><strong>▪ 전체 문서 검색</strong> : 업로드된 모든 문서를 대상으로 답변을 찾습니다. 별도의 설정이 없으면 기본으로 적용됩니다.
+                                </li>
+                                <li><strong>▪ 특정 문서 검색</strong> : 선택한 문서 안에서만 답변을 찾습니다. 특정 문서를 업로드하거나 선택하면 자동으로 전환됩니다.
+                                </li>
+                            </ul>
+
+                            <h4>💡 이렇게 질문하면 더 좋아요</h4>
+                            <p>질문이 구체적일수록 답변이 더 정확해집니다.</p>
+                            <ul class="cb-guide-check">
+                                <li>✔️ “2024년 매출 실적을 알려줘”</li>
+                                <li>✔️ “A제품과 B제품의 성능 차이는?”</li>
+                                <li>✔️ 한 번에 하나의 주제씩 질문하기</li>
+                            </ul>
+
+                            <h4>❓ AI가 다시 물어볼 수 있어요</h4>
+                            <p>질문이 모호한 경우, AI가 한 번 더 확인할 수 있습니다.</p>
+                            <ul class="cb-guide-badgood">
+                                <li>❌ “그거 알려줘”</li>
+                                <li>⭕ “2023년 하반기 인사 정책 변경 내용을 알려줘”</li>
+                            </ul>
+                            <p class="cb-guide-sub">👉 안내에 따라 조금 더 구체적으로 입력해 주세요.</p>
+
+                            <h4>📌 답변 출처 확인</h4>
+                            <p>답변 하단에서 참고한 문서와 페이지 정보를 확인할 수 있습니다.<br>전체 문서 검색 결과의 경우, 문서 다운로드 링크도 함께 제공됩니다.</p>
+
+                            <h4>ℹ️ 이용 시 참고해 주세요</h4>
+                            <ul>
+                                <li>AI는 업로드된 문서 내용을 기준으로 답변합니다.</li>
+                                <li>문서에 없는 내용은 답변이 어려울 수 있습니다.</li>
+                                <li>중요한 수치나 날짜 정보는 원본 문서와 함께 확인하시는 것을 권장합니다.</li>
+                                <li>대화 기록과 업로드된 파일은 7일간 보관됩니다.</li>
+                                <li>AI가 되물은 후 10분 이내에 응답하지 않으면 대화가 초기화됩니다.</li>
+                                <li>질문 분석에 따라 답변까지 약간의 시간이 걸릴 수 있습니다.</li>
+                                <li>이전에 업로드한 문서는 하단의 <strong>문서함(#)</strong>에서 확인할 수 있습니다.</li>
+                            </ul>
+                        </div>
+
+                        <div class="cb-guide-divider"></div>
+
+                        <div class="cb-guide-section">
+                            <h3>📝 문서 요약 안내</h3>
+
+                            <h4>👀 요약은 이렇게 진행돼요</h4>
+                            <ol>
+                                <li>요약할 문서를 업로드하세요.</li>
+                                <li>문서를 선택하면 AI가 자동으로 요약을 시작합니다.</li>
+                                <li>요약 진행 상황이 실시간으로 표시됩니다.</li>
+                            </ol>
+
+                            <h4>📄 요약 결과 구성</h4>
+                            <p>요약 결과는 아래와 같이 제공됩니다.</p>
+                            <ul>
+                                <li>문서 요약: 핵심 내용을 간결하게 정리</li>
+                                <li>문서의 목적: 문서가 작성된 이유와 배경</li>
+                                <li>주요 내용: 중요한 항목을 목록으로 안내</li>
+                            </ul>
+
+                            <h4>💡 요약 활용 팁</h4>
+                            <ul>
+                                <li>긴 문서는 요약부터 확인하면 전체 내용을 빠르게 파악할 수 있어요.</li>
+                                <li>요약 후 궁금한 부분은 질문 기능으로 자세히 확인해 보세요.</li>
+                            </ul>
+
+                            <h4>ℹ️ 요약 관련 안내</h4>
+                            <ul>
+                                <li>지원 파일 형식: PDF, HWP, HWPX, Word, Excel, PowerPoint 등</li>
+                                <li>분량이 많은 문서는 요약에 시간이 더 걸릴 수 있습니다.</li>
+                                <li>요약은 주요 내용 중심으로 제공되며, 세부 내용은 질문 기능을 활용해 주세요.</li>
+                                <li>이미지 위주의 PDF는 내용 인식이 어려울 수 있습니다.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
                 <footer class="cb-footer" id="cbFooter">
                     <div class="cb-inputwrap" id="cbInputWrap">
                         <textarea class="cb-input" id="cbInput" placeholder="메시지를 입력해주세요."
@@ -146,6 +250,8 @@
                             </svg>
                         </button>
                     </div>
+
+                    <div class="cb-pop" id="cbPop" aria-hidden="true"></div>
 
                     <section class="cb-tray" id="cbTplTray" aria-hidden="true">
                         <div class="cb-tray__head">
