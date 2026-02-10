@@ -1,10 +1,223 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="ko">
+
 <head>
     <meta charset="UTF-8">
-    <title>통계</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>관리자 페이지</title>
+    <link rel="stylesheet" th:href="@{/css/admin/base.css}" href="/css/admin/base.css" />
+    <link rel="stylesheet" th:href="@{/css/admin/statistics.css}" href="/css/admin/statistics.css" />
 </head>
-<body>
 
+<body>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <div class="admin-wrapper">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="#" class="sidebar-logo">
+                    <div class="sidebar-logo-icon">AT-I</div>
+                    <span class="sidebar-logo-text">관리자 페이지</span>
+                </a>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section-title">메뉴</div>
+                <a href="/admin/storage" class="nav-item" data-page="storage">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                        <line x1="16" y1="13" x2="8" y2="13" />
+                        <line x1="16" y1="17" x2="8" y2="17" />
+                        <polyline points="10 9 9 9 8 9" />
+                    </svg>
+                    문서 관리
+                </a>
+                <a href="#" class="nav-item active" data-page="statistics">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <line x1="18" y1="20" x2="18" y2="10"></line>
+                        <line x1="12" y1="20" x2="12" y2="4"></line>
+                        <line x1="6" y1="20" x2="6" y2="14"></line>
+                    </svg>
+                    통계
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="sidebar-user">
+                    <div class="sidebar-user-avatar" id="userAvatar">A</div>
+                    <div class="sidebar-user-info">
+                        <div class="sidebar-user-name" id="userName">admin</div>
+                        <div class="sidebar-user-role">관리자</div>
+                    </div>
+                    <button class="btn-logout" id="btnLogout" title="로그아웃">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                            <polyline points="16 17 21 12 16 7" />
+                            <line x1="21" y1="12" x2="9" y2="12" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <div class="main-content">
+            <header class="topbar">
+                <div class="topbar-left">
+                    <button class="btn-sidebar-toggle" id="btnSidebarToggle">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="3" y1="12" x2="21" y2="12" />
+                            <line x1="3" y1="6" x2="21" y2="6" />
+                            <line x1="3" y1="18" x2="21" y2="18" />
+                        </svg>
+                    </button>
+                    <div class="breadcrumb">
+                        <a href="#">홈</a>
+                        <span class="breadcrumb-sep">›</span>
+                        <span class="breadcrumb-current">통계</span>
+                    </div>
+                </div>
+            </header>
+
+            <main class="page-body">
+                <!-- 기간 필터 + 사용자 검색 -->
+                <section class="filter-bar">
+                    <div class="filter-left">
+                        <div class="filter-presets">
+                            <button class="filter-btn" data-range="0">오늘</button>
+                            <button class="filter-btn active" data-range="7">7일</button>
+                            <button class="filter-btn" data-range="30">30일</button>
+                            <button class="filter-btn" data-range="90">90일</button>
+                        </div>
+                        <div class="filter-dates">
+                            <input type="date" class="date-input" id="startDate">
+                            <span class="date-sep">~</span>
+                            <input type="date" class="date-input" id="endDate">
+                            <button class="btn btn-primary btn-sm" id="btnApplyDate">조회</button>
+                        </div>
+                    </div>
+                    <div class="filter-user">
+                        <input type="text" class="user-search-input" id="userSearchInput" placeholder="사용자 ID 검색...">
+                        <button class="btn-user-search" id="btnUserSearch" title="검색">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <circle cx="11" cy="11" r="8" />
+                                <line x1="21" y1="21" x2="16.65" y2="16.65" />
+                            </svg>
+                        </button>
+                        <button class="btn-user-clear" id="btnUserClear" title="초기화" style="display:none;">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="18" y1="6" x2="6" y2="18" />
+                                <line x1="6" y1="6" x2="18" y2="18" />
+                            </svg>
+                        </button>
+                    </div>
+                </section>
+
+                <!-- 사용자 필터 표시 -->
+                <div class="user-filter-badge" id="userFilterBadge" style="display:none;">
+                    <span id="userFilterText"></span>
+                    <button id="userFilterRemove" title="필터 해제">&times;</button>
+                </div>
+
+                <!-- 요약 카드 -->
+                <section class="stats-row stats-row-2">
+                    <div class="stat-card">
+                        <div class="stat-icon blue">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+                            </svg>
+                        </div>
+                        <div class="stat-info">
+                            <div class="stat-label">총 요청 수</div>
+                            <div class="stat-value" id="statTotal">0</div>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon purple">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                                <circle cx="9" cy="7" r="4" />
+                                <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                                <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                            </svg>
+                        </div>
+                        <div class="stat-info">
+                            <div class="stat-label">고유 사용자</div>
+                            <div class="stat-value" id="statUsers">0</div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 타입별 요약 -->
+                <section class="type-summary" id="typeSummary"></section>
+
+                <!-- 차트 영역 -->
+                <div class="chart-grid">
+                    <section class="chart-card">
+                        <div class="chart-header">
+                            <h3 class="chart-title">일별 사용량 추이</h3>
+                        </div>
+                        <div class="chart-body">
+                            <canvas id="dailyChart"></canvas>
+                        </div>
+                    </section>
+
+                    <section class="chart-card">
+                        <div class="chart-header">
+                            <h3 class="chart-title">시간대별 분포</h3>
+                        </div>
+                        <div class="chart-body">
+                            <canvas id="hourlyChart"></canvas>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- 사용자 랭킹 테이블 -->
+                <section class="table-card">
+                    <div class="table-card-header">
+                        <h3 class="table-card-title">사용자별 랭킹</h3>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th style="width:60px;" class="center">순위</th>
+                                    <th class="center">사용자 ID</th>
+                                    <th style="width:100px;" class="center">CHAT</th>
+                                    <th style="width:100px;" class="center">DOCUMENT</th>
+                                    <th style="width:100px;" class="center">TEMPLATE</th>
+                                    <th style="width:100px;" class="center">DIALOG</th>
+                                    <th style="width:100px;" class="center">AUDIO</th>
+                                    <th style="width:100px;" class="center">합계</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rankingTableBody">
+                                <tr>
+                                    <td colspan="8" class="center" style="padding:40px;color:var(--text-light);">
+                                        데이터를 불러오는 중...
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.7/dist/chart.umd.min.js"></script>
+    <script th:src="@{/js/admin/common.js}" src="/js/admin/common.js"></script>
+    <script th:src="@{/js/admin/statistics.js}" src="/js/admin/statistics.js"></script>
 </body>
+
 </html>
