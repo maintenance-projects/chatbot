@@ -30,13 +30,13 @@
                             <div class="cb-brand__logo">A</div>
                             <div class="cb-brand__text">
                                 <div class="cb-brand__title">AT-I</div>
-                                <!-- <div class="cb-brand__sub">챗봇 상담</div> -->
                             </div>
                         </div>
                     </div>
 
                     <div class="cb-header__right">
-                        <button class="cb-iconbtn cb-pop__item_top" id="cbActionPrint" type="button" role="menuitem" data-tooltip="인쇄">
+                        <button class="cb-iconbtn cb-pop__item_top" id="cbActionPrint" type="button" role="menuitem"
+                            data-tooltip="인쇄">
                             <svg style="color: #ffffff; width: 20px; height: 20px;" width="24px" height="24px"
                                 viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor"
                                 stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
@@ -47,8 +47,8 @@
                                 <rect x="6" y="14" width="12" height="8"></rect>
                             </svg>
                         </button>
-                        <button class="cb-iconbtn cb-pop__item_top" id="cbSearchBtn" type="button" aria-label="검색" aria-expanded="false"
-                            data-tooltip="검색">
+                        <button class="cb-iconbtn cb-pop__item_top" id="cbSearchBtn" type="button" aria-label="검색"
+                            aria-expanded="false" data-tooltip="대화 내용 검색">
                             <svg style="color: #ffffff; width: 20px; height: 20px;" viewBox="0 0 24 24"
                                 xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2"
                                 stroke-linecap="round" stroke-linejoin="round" class="feather feather-search">
@@ -80,16 +80,14 @@
                     <div class="cb-divider"><span>오늘</span></div>
 
                     <div class="cb-msg cb-msg--bot">
-                        <!-- <div class="cb-avatar">
-                            <img class="cb-avatar__img" src="/img/ic-chatbot.png" alt="챗봇" />
-                        </div> -->
                         <div class="cb-bubble">
                             <div class="cb-bubble__text">
                                 <pre data-rawtext="안녕하세요! 무엇을 도와드릴까요?">안녕하세요! 무엇을 도와드릴까요?</pre>
                             </div>
                             <div class="cb-meta"></div>
                             <div class="cb-actionsbar" aria-hidden="true">
-                                <button class="cb-actbtn cb-actbtn--copy" type="button" aria-label="복사">
+                                <button class="cb-actbtn cb-actbtn--copy" type="button" aria-label="복사"
+                                    data-tooltip="복사">
                                     <img src="/img/ic-copy.png" alt="복사" />
                                 </button>
                             </div>
@@ -103,10 +101,7 @@
                             autocomplete="off"></textarea>
 
                         <div class="cb-inputbar">
-                            <div class="cb-actions">
-                                <!-- <button class="cb-plus" id="cbPlus" type="button" aria-label="추가 메뉴"
-                                    aria-expanded="false">＋</button> -->
-                            </div>
+                            <div class="cb-actions"></div>
 
                             <button class="cb-send" id="cbSend" type="button" aria-label="전송">
                                 전송
@@ -117,8 +112,6 @@
                     </div>
 
                     <div class="tool-menu" id="tool-menu" role="menu" aria-hidden="true">
-
-                        <!-- 문서 업로드 -->
                         <button class="cb-pop__item" id="cbActionUpload" type="button" role="menuitem"
                             data-tooltip="문서 업로드">
                             <svg width="16px" height="16px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"
@@ -131,8 +124,7 @@
                             </svg>
                         </button>
 
-                        <!-- 문서함 -->
-                        <button class="cb-pop__item" id="cbDocsBtn" type="button" role="menuitem" data-tooltip="문서함">
+                        <button class="cb-pop__item" id="cbDocsBtn" type="button" role="menuitem" data-tooltip="개인 문서함">
                             <svg width="16px" height="16px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"
                                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                                 stroke-linejoin="round" class="feather feather-hash">
@@ -143,7 +135,6 @@
                             </svg>
                         </button>
 
-                        <!-- 양식 선택 -->
                         <button class="cb-pop__item" id="cbActionSelect" type="button" role="menuitem"
                             data-tooltip="양식 선택">
                             <svg width="16px" height="16px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"
@@ -154,30 +145,6 @@
                                 <line x1="9" y1="15" x2="15" y2="15"></line>
                             </svg>
                         </button>
-
-                        <!-- 지난 대화 보기 -->
-                        <!-- <button class="cb-pop__item" id="cbActionLast" type="button" role="menuitem"
-                            data-tooltip="지난 대화 보기">
-                            <svg width="16px" height="16px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"
-                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round" class="feather feather-message-square">
-                                <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path>
-                            </svg>
-                        </button> -->
-
-                        <!-- 공유 -->
-                        <!-- <button class="cb-pop__item" id="cbActionSharing" type="button" role="menuitem"
-                            data-tooltip="공유">
-                            <svg width="16px" height="16px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"
-                                fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                                stroke-linejoin="round" class="feather feather-share-2">
-                                <circle cx="18" cy="5" r="3"></circle>
-                                <circle cx="6" cy="12" r="3"></circle>
-                                <circle cx="18" cy="19" r="3"></circle>
-                                <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line>
-                                <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line>
-                            </svg>
-                        </button> -->
                     </div>
 
                     <section class="cb-tray" id="cbTplTray" aria-hidden="true">
@@ -205,10 +172,3 @@
 </body>
 
 </html>
-
-
-<!-- 
-    <button class="cb-iconbtn" id="cbDocsBtn" type="button" aria-label="문서함" aria-expanded="false">
-        <img src="/img/ic-docs.png" alt="" />
-    </button> 
--->

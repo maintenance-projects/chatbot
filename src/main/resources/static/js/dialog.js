@@ -59,13 +59,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const MAX_HEIGHT = 250;
 
-    const allowedExt = new Set(["pdf", "hwp", "hwpx", "xls", "xlsx", "ppt", "pptx", "csv", "doc", "docx", "txt", "m4a"]);
-    const blockedExt = new Set(["png", "jpg", "jpeg", "gif", "webp", "bmp", "heic", "svg"]);
-
     let uploadedFilesCache = null;
     let uploadedFilesPromise = null;
 
     let summaryBusy = false;
+
+    let activeViewerBlobUrl = null;
 
     function pad2(n) {
         return String(n).padStart(2, "0");
@@ -121,10 +120,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function isAllowedFile(file) {
         if (!file) return false;
-        const ext = getExt(file.name);
-        if (!ext) return false;
-        if (blockedExt.has(ext)) return false;
-        return allowedExt.has(ext);
+        if (!file.name) return false;
+        return true;
     }
 
     function safeEncodePathSegment(value) {
@@ -160,52 +157,74 @@ document.addEventListener("DOMContentLoaded", () => {
         if (t) t.textContent = String(text || "");
     }
 
-    function openViewer(url) {
+    function isDesktopViewerMode() {
+        try {
+            return window.matchMedia && window.matchMedia("(min-width: 901px)").matches;
+        } catch (e) {
+            return false;
+        }
+    }
+
+    function splitHash(url) {
+        const raw = String(url || "");
+        const i = raw.indexOf("#");
+        if (i < 0) return { base: raw, hash: "" };
+        return { base: raw.slice(0, i), hash: raw.slice(i) };
+    }
+
+    function revokeViewerBlob() {
+        if (!activeViewerBlobUrl) return;
+        try {
+            const i = activeViewerBlobUrl.indexOf("#");
+            const base = i >= 0 ? activeViewerBlobUrl.slice(0, i) : activeViewerBlobUrl;
+            URL.revokeObjectURL(base);
+        } catch (e) { }
+        activeViewerBlobUrl = null;
+    }
+
+    // ✅✅✅ [수정 1] openViewer: srcdoc "세팅" 금지(제거만), fetch/blob 제거, iframe src로 직접 로드
+    async function openViewer(url, title) {
         if (!url) return;
-        window.open(url, "_blank");
+
+        const desktop = isDesktopViewerMode();
+
+        if (desktop && shell && viewer && viewerFrame) {
+            shell.classList.add("has-viewer");
+            viewer.classList.add("is-open");
+            viewer.setAttribute("aria-hidden", "false");
+
+            setViewerTitle(title || "미리보기");
+
+            // iframe 초기화
+            viewerFrame.src = "about:blank";
+
+            // ⚠️ srcdoc은 값을 넣으면 src보다 우선이라 PDF가 안 뜨거나 "null"이 출력됨
+            // 따라서 removeAttribute만 한다.
+            try { viewerFrame.removeAttribute("srcdoc"); } catch (e) { }
+
+            revokeViewerBlob();
+
+            // hash(#page=) 포함된 URL도 그대로 로드 (cache buster 포함)
+            viewerFrame.src = withCacheBuster(url);
+
+            scrollToBottom();
+            return;
+        }
+
+        window.open(url, "_blank", "noopener");
     }
 
-    function openViewerHtml(title, htmlBody) {
-        const doc = `<!doctype html>
-                        <html lang="ko">
-                        <head>
-                        <meta charset="utf-8" />
-                        <meta name="viewport" content="width=device-width, initial-scale=1" />
-                        <title>${escapeHtml(title || "내용")}</title>
-                        <style>
-                        :root{ color-scheme: light; }
-                        body{ margin:0; font-family: PretendardVariable, system-ui, -apple-system, Segoe UI, Roboto, Arial; background:#fff; color:#0f172a; }
-                        .wrap{ padding: 18px 18px 22px; }
-                        .h{ font-size: 14px; font-weight: 900; margin: 0 0 10px; }
-                        .sub{ font-size: 12px; color:#64748b; margin: 0 0 14px; }
-                        pre{ margin:0; white-space: pre-wrap; word-break: break-word; font-size: 12px; line-height: 1.6; }
-                        .box{ border:1px solid rgba(15,23,42,.10); border-radius: 14px; background: #f8fafc; padding: 14px; }
-                        strong{ font-weight: 900; }
-                        </style>
-                        </head>
-                        <body>
-                        <div class="wrap">
-                            ${htmlBody || ""}
-                        </div>
-                        </body>
-                        </html>
-                    `;
-        const w = window.open("", "_blank");
-        if (!w) return;
-        w.document.open();
-        w.document.write(doc);
-        w.document.close();
-    }
-
+    // ✅✅✅ [수정 2] closeViewer: srcdoc "세팅" 금지(제거만)
     function closeViewer() {
         if (!shell || !viewer || !viewerFrame) return;
         shell.classList.remove("has-viewer");
         viewer.classList.remove("is-open");
         viewer.setAttribute("aria-hidden", "true");
+
+        try { viewerFrame.removeAttribute("srcdoc"); } catch (e) { }
+
         viewerFrame.src = "about:blank";
-        try {
-            viewerFrame.srcdoc = "";
-        } catch (e) { }
+        revokeViewerBlob();
     }
 
     if (viewerClose) {
@@ -218,29 +237,32 @@ document.addEventListener("DOMContentLoaded", () => {
     function actionsHtml(opts) {
         const canCopy = !!(opts && opts.copy);
         const downloadUrl = opts && opts.downloadUrl ? String(opts.downloadUrl) : "";
+        const showView = !!(opts && opts.view);
         const viewUrl = opts && opts.viewUrl ? String(opts.viewUrl) : "";
+        const viewExt = opts && opts.viewExt ? String(opts.viewExt) : "";
+        const viewName = opts && opts.viewName ? String(opts.viewName) : "";
 
-        if (!canCopy && !downloadUrl && !viewUrl) return "";
+        if (!canCopy && !downloadUrl && !showView) return "";
 
         let html = `<div class="cb-actionsbar" aria-hidden="true">`;
         if (canCopy) {
             html += `
-        <button class="cb-actbtn cb-actbtn--copy" type="button" aria-label="복사">
+        <button class="cb-actbtn cb-actbtn--copy" type="button" aria-label="복사" data-tooltip="복사">
           <img src="/img/ic-copy.png" alt="복사" />
         </button>
       `;
         }
         if (downloadUrl) {
             html += `
-        <button class="cb-actbtn cb-actbtn--download" type="button" aria-label="다운로드" data-url="${escapeHtml(downloadUrl)}">
-          <img src="/img/ic-download.png" alt="다운로드" />
+        <button class="cb-actbtn cb-actbtn--download" type="button" aria-label="다운로드" data-url="${escapeHtml(downloadUrl)}" data-tooltip="다운로드">
+          <img src="/img/ic-view-down.svg" alt="다운로드" />
         </button>
       `;
         }
-        if (viewUrl) {
+        if (showView) {
             html += `
-        <button class="cb-actbtn cb-actbtn--view" type="button" aria-label="미리보기" data-url="${escapeHtml(viewUrl)}">
-          <img src="/img/ic-link.png" alt="미리보기" />
+        <button class="cb-actbtn cb-actbtn--view" type="button" aria-label="미리보기" data-url="${escapeHtml(viewUrl)}" data-ext="${escapeHtml(viewExt)}" data-name="${escapeHtml(viewName)}" data-tooltip="미리보기">
+          <img src="/img/ic-view.svg" alt="미리보기" />
         </button>
       `;
         }
@@ -498,50 +520,6 @@ document.addEventListener("DOMContentLoaded", () => {
         if (isSearchOpen() && searchInput && searchInput.value.trim()) rebuildHighlights(searchInput.value);
     }
 
-    function addBotAttachmentMessage(fileInfo, opts) {
-        endUserCardStack();
-        const now = formatTime(new Date());
-        const filename = fileInfo && fileInfo.filename ? String(fileInfo.filename) : "파일";
-        const downloadUrl = fileInfo && fileInfo.download_url ? String(fileInfo.download_url) : "";
-        const ext = getExt(filename);
-        const badge = ext ? ext.toUpperCase() : "FILE";
-
-        const allowView = !!(opts && opts.allowView);
-        let viewUrl = "";
-        if (allowView && ext) {
-            const page = Number.isFinite(Number(fileInfo && fileInfo.page)) ? Number(fileInfo.page) : 1;
-            const encodedName = safeEncodePathSegment(filename);
-            viewUrl = `/document/view/${sessionId}/${encodedName}${ext === "pdf" ? `#page=${page}` : ""}`;
-        }
-
-        const html = `
-      <div class="cb-msg cb-msg--bot cb-msg--card" data-copytext="${escapeHtml(filename)}">
-        <div class="cb-bubble cb-bubble--card">
-          <div class="cb-bubble__text">
-            <div class="cb-filecard--new" role="group" aria-label="첨부파일">
-              <img src="/img/ic-file.png" class="cb-filecard__icon" alt="" />
-              <div class="cb-filecard__meta">
-                <div class="cb-filecard__name">${escapeHtml(filename)}</div>
-                <div class="cb-filecard__badge">${escapeHtml(badge)}</div>
-              </div>
-            </div>
-          </div>
-          <div class="cb-meta">${now}</div>
-          ${actionsHtml({ copy: false, downloadUrl, viewUrl })}
-        </div>
-      </div>
-    `;
-        body.insertAdjacentHTML("beforeend", html);
-        scrollToBottom();
-        if (isSearchOpen() && searchInput && searchInput.value.trim()) rebuildHighlights(searchInput.value);
-    }
-
-    function setSending(isSending) {
-        sendBtn.disabled = isSending;
-        input.disabled = isSending;
-        if (widget) widget.classList.toggle("is-sending", isSending);
-    }
-
     function normalizePageValue(p) {
         if (p == null) return null;
         const s = String(p).trim();
@@ -551,73 +529,157 @@ document.addEventListener("DOMContentLoaded", () => {
         return Math.floor(n);
     }
 
-    function buildRefUrl(source, page) {
-        const s = String(source || "").trim();
-        if (!s) return "";
-        const ext = getExt(s);
-        if (ext !== "pdf") return "";
+    function buildDocViewUrl(fileName, page) {
+        const name = String(fileName || "").trim();
+        if (!name) return "";
+        const encodedName = safeEncodePathSegment(name);
         const pn = normalizePageValue(page);
-        if (pn == null) return "";
-        const encodedName = safeEncodePathSegment(s);
-        return `/document/view/${sessionId}/${encodedName}#page=${pn}`;
+        if (pn != null) return `/document/view/${sessionId}/${encodedName}#page=${pn}`;
+        return `/document/view/${sessionId}/${encodedName}`;
     }
 
-    function filterPdfDocs(docs) {
-        const list = Array.isArray(docs) ? docs : [];
-        return list
-            .map((d) => {
-                const source = d && d.source != null ? String(d.source) : "";
-                if (!String(source || "").trim()) return null;
-                const pn = normalizePageValue(d && d.page);
-                const url = pn != null ? buildRefUrl(source, pn) : "";
-                return { source, page: pn, url };
-            })
-            .filter(Boolean);
-    }
+    function mapRefs(docs) {
+        const arr = Array.isArray(docs) ? docs : [];
+        const out = [];
+        const seen = new Set();
 
-    function renderRefs(docs) {
-        const list = filterPdfDocs(docs);
-        if (!list.length) return "";
+        for (const raw of arr) {
+            if (!raw) continue;
 
-        const maxPreview = 3;
+            const r = typeof raw === "string" ? { source: raw } : raw;
 
-        const itemHtml = (d) => {
-            if (d.url) {
-                const meta = `${d.page} 페이지`;
-                return `
-          <button class="cb-ref" type="button" data-url="${escapeHtml(d.url)}">
-            <div class="cb-ref__name">${escapeHtml(d.source || "문서")}</div>
-            <div class="cb-ref__meta">${escapeHtml(meta)}</div>
-          </button>
-        `;
+            const source =
+                String(
+                    r.source ||
+                    r.title ||
+                    r.name ||
+                    r.fileName ||
+                    r.filename ||
+                    r.originalName ||
+                    r.displayName ||
+                    "문서"
+                ).trim() || "문서";
+
+            const page = Number.isFinite(Number(r.page)) ? Number(r.page) : null;
+
+            const extCandidate =
+                String(
+                    r.ext ||
+                    r.extension ||
+                    getExt(r.fileName || r.filename || r.name || source)
+                ).toLowerCase().trim();
+
+            let url =
+                String(
+                    r.url ||
+                    r.viewUrl ||
+                    r.view_url ||
+                    r.previewUrl ||
+                    r.preview_url ||
+                    r.downloadUrl ||
+                    r.download_url ||
+                    ""
+                ).trim();
+
+            const fileNameCandidate = String(r.fileName || r.filename || r.name || "").trim();
+
+            let ext = extCandidate;
+
+            if (!ext) ext = getExt(fileNameCandidate || source);
+
+            if (!url) {
+                const nameForUrl = fileNameCandidate || source;
+                if (getExt(nameForUrl) === "pdf") {
+                    url = buildDocViewUrl(nameForUrl, page);
+                    ext = "pdf";
+                }
             }
-            return `
-          <div class="cb-ref cb-ref--text" role="note">
-            <div class="cb-ref__name text-font">${escapeHtml(d.source || "문서")}</div>
-          </div>
-        `;
-        };
 
-        if (list.length <= maxPreview) {
-            const items = list.map(itemHtml).join("");
-            return `
+            if (!url) continue;
+
+            const key = `${source}|${url}|${ext}|${page || ""}`;
+            if (seen.has(key)) continue;
+            seen.add(key);
+
+            out.push({
+                source,
+                url,
+                ext,
+                page,
+            });
+        }
+
+        return out;
+    }
+
+function renderRefs(docs) {
+  const list = Array.isArray(docs) ? docs : [];
+  if (!list.length) return "";
+
+  const maxPreview = 3;
+
+  const itemHtml = (d) => {
+    const isPdf = String(d.ext || "").toLowerCase().trim() === "pdf";
+    const disCls = isPdf ? "" : " is-disabled";
+    const tip = isPdf ? "미리보기" : "PDF 파일만 미리보기가 제공됩니다.";
+
+    const meta = d.page ? `${d.page} 페이지` : (d.ext ? d.ext.toUpperCase() : "FILE");
+
+    return `
+      <div class="cb-refrow" data-url="${escapeHtml(d.url || "")}" data-ext="${escapeHtml(d.ext || "")}" data-name="${escapeHtml(d.source || "문서")}">
+        <button class="cb-refmain" type="button" aria-label="출처 열기">
+          <div class="cb-ref__name">${escapeHtml(d.source || "문서")}</div>
+          <div class="cb-ref__meta">${escapeHtml(meta)}</div>
+        </button>
+
+        <div class="cb-refacts" aria-hidden="false">
+          <span class="cb-tipwrap" data-tooltip="${escapeHtml(tip)}">
+            <button
+              class="cb-refact cb-actbtn cb-refact--preview${disCls}"
+              type="button"
+              data-action="preview"
+              ${isPdf ? "" : 'aria-disabled="true" disabled'}
+            >
+              <img src="/img/ic-view.svg" alt="미리보기"/>
+            </button>
+          </span>
+
+          <button
+            class="cb-refact cb-actbtn"
+            type="button"
+            data-action="download"
+            data-url="${escapeHtml(d.url || "")}"
+            data-filename="${escapeHtml((d.source || "document") + (d.ext ? "." + d.ext : ""))}"
+            data-tooltip="다운로드"
+          >
+            <img src="/img/ic-view-down.svg" alt="다운로드"/>
+          </button>
+        </div>
+      </div>
+    `;
+  };
+
+  if (list.length <= maxPreview) {
+    const items = list.map(itemHtml).join("");
+    return `
       <div class="cb-refs__title"><span>출처</span></div>
       <div class="cb-refs__list">${items}</div>
     `;
-        }
+  }
 
-        const first = list.slice(0, maxPreview);
-        const rest = list.slice(maxPreview);
-        const items1 = first.map(itemHtml).join("");
-        const items2 = rest.map(itemHtml).join("");
+  const first = list.slice(0, maxPreview);
+  const rest = list.slice(maxPreview);
+  const items1 = first.map(itemHtml).join("");
+  const items2 = rest.map(itemHtml).join("");
 
-        return `
-      <div class="cb-refs__title"><span>출처</span></div>
-      <div class="cb-refs__list">${items1}</div>
-      <div class="cb-refs__more" style="display:none">${items2}</div>
-      <button class="cb-refs__toggle" type="button" data-open="false" data-morecount="${rest.length}">+${rest.length}개 더보기</button>
-    `;
-    }
+  return `
+    <div class="cb-refs__title"><span>출처</span></div>
+    <div class="cb-refs__list">${items1}</div>
+    <div class="cb-refs__more" style="display:none">${items2}</div>
+    <button class="cb-refs__toggle" type="button" data-open="false" data-morecount="${rest.length}">+${rest.length}개 더보기</button>
+  `;
+}
+
 
     function addBotStreamLoadingMessage(enableRefs) {
         endUserCardStack();
@@ -628,6 +690,7 @@ document.addEventListener("DOMContentLoaded", () => {
       <div class="cb-msg cb-msg--bot cb-msg--streaming" data-stream-id="${id}">
         <div class="cb-bubble">
           <div class="cb-bubble__text">
+            <div class="cb-clarify" style="display:none">AT-I에게 좀 더 자세한 정보를 제공해 주세요.</div>
             <div class="cb-progress" style="display:none">
               <span class="cb-progress__text"></span>
             </div>
@@ -645,13 +708,48 @@ document.addEventListener("DOMContentLoaded", () => {
         const metaEl = msgEl ? msgEl.querySelector(".cb-meta") : null;
         const progressEl = msgEl ? msgEl.querySelector(".cb-progress") : null;
         const progressTextEl = progressEl ? progressEl.querySelector(".cb-progress__text") : null;
+        const clarifyEl = msgEl ? msgEl.querySelector(".cb-clarify") : null;
         const refsEl = enableRefs && msgEl ? msgEl.querySelector(".cb-refs") : null;
         if (refsEl) {
             refsEl.classList.remove("is-open");
             refsEl.innerHTML = "";
         }
         scrollToBottom();
-        return { msgEl, preEl, metaEl, progressEl, progressTextEl, refsEl, started: false, done: false, pendingRefs: [], hasProgress: false };
+        return { msgEl, preEl, metaEl, progressEl, progressTextEl, refsEl, clarifyEl, started: false, done: false, pendingRefs: [], hasProgress: false };
+    }
+
+    async function forceDownloadFile(url, filename) {
+        const u = String(url || "").trim();
+        if (!u) return;
+
+        const name = (String(filename || "").trim() || "download").replace(/[\\/:*?"<>|]/g, "_");
+
+        const res = await fetch(withCacheBuster(u), { method: "GET", credentials: "same-origin" });
+        if (!res.ok) {
+            let t = "";
+            try { t = await res.text(); } catch (e) { }
+            throw new Error(t || "다운로드에 실패했습니다.");
+        }
+
+        const blob = await res.blob();
+        const blobUrl = URL.createObjectURL(blob);
+
+        const a = document.createElement("a");
+        a.href = blobUrl;
+        a.download = name;
+        a.style.display = "none";
+        document.body.appendChild(a);
+        a.click();
+        a.remove();
+
+        setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+    }
+
+
+    function showClarify(handle) {
+        if (!handle || !handle.clarifyEl) return;
+        handle.clarifyEl.style.display = "block";
+        scrollToBottom();
     }
 
     function showProgress(handle, stepText) {
@@ -685,8 +783,8 @@ document.addEventListener("DOMContentLoaded", () => {
     function applyStreamRefs(handle, docs) {
         if (!handle) return;
 
-        const pdfDocs = filterPdfDocs(docs);
-        handle.pendingRefs = pdfDocs;
+        const refs = mapRefs(docs);
+        handle.pendingRefs = refs;
 
         if (!handle.refsEl) return;
 
@@ -696,13 +794,13 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        if (!pdfDocs.length) {
+        if (!refs.length) {
             handle.refsEl.classList.remove("is-open");
             handle.refsEl.innerHTML = "";
             return;
         }
 
-        handle.refsEl.innerHTML = renderRefs(pdfDocs);
+        handle.refsEl.innerHTML = renderRefs(refs);
         handle.refsEl.classList.add("is-open");
         scrollToBottom();
     }
@@ -958,7 +1056,8 @@ document.addEventListener("DOMContentLoaded", () => {
         closeDocPopup();
         tray.classList.add("is-open");
         tray.setAttribute("aria-hidden", "false");
-        tray.style.width = "94% !important";
+        tray.style.setProperty("width", "94%", "important");
+
         setTimeout(() => {
             if (trayBody) trayBody.scrollTop = 0;
         }, 0);
@@ -1480,6 +1579,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 onFirstToken: () => startStreaming(handle),
                 onRefs: (docs) => applyStreamRefs(handle, docs),
                 onClarification: (message, threadId) => {
+                    showClarify(handle);
                     continueNext = true;
                     if (threadId) continueThreadId = threadId;
                 },
@@ -1504,12 +1604,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function uploadFile(file, messageText, templateKey, onDone) {
         if (!file) {
-            if (typeof onDone === "function") onDone();
-            return;
-        }
-
-        if (!isAllowedFile(file)) {
-            addBotMessage("업로드할 수 없는 파일 형식입니다. (가능: PDF, 한글(HWP/HWPX), 엑셀(XLS/XLSX/CSV), PPT(PPT/PPTX), 워드(DOC/DOCX), TXT, M4A)");
             if (typeof onDone === "function") onDone();
             return;
         }
@@ -1569,10 +1663,12 @@ document.addEventListener("DOMContentLoaded", () => {
                     startStreaming(botHandle);
                 },
                 onRefs: (docs) => {
-                    pendingRefs = filterPdfDocs(docs);
+                    pendingRefs = mapRefs(docs);
                     if (botHandle) applyStreamRefs(botHandle, pendingRefs);
                 },
                 onClarification: (message, threadId) => {
+                    ensureBotHandle();
+                    showClarify(botHandle);
                     continueNext = true;
                     if (threadId) continueThreadId = threadId;
                 },
@@ -1664,7 +1760,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
 
-            addBotAttachmentMessage({ filename: data.filename || "generated_template", download_url: data.download_url }, { allowView: false });
+            addBotAttachmentMessage({ filename: data.filename || "generated_template", download_url: data.download_url }, { allowView: true });
         } catch (err) {
             if (handle && handle.msgEl) handle.msgEl.remove();
             addBotMessage(err && err.message ? String(err.message) : "요청 처리 중 오류가 발생했습니다.");
@@ -1673,6 +1769,47 @@ document.addEventListener("DOMContentLoaded", () => {
             input.focus();
             autoResizeInput();
         }
+    }
+
+    function addBotAttachmentMessage(fileInfo, opts) {
+        endUserCardStack();
+        const now = formatTime(new Date());
+        const filename = fileInfo && fileInfo.filename ? String(fileInfo.filename) : "파일";
+        const downloadUrl = fileInfo && fileInfo.download_url ? String(fileInfo.download_url) : "";
+        const ext = getExt(filename);
+        const badge = ext ? ext.toUpperCase() : "FILE";
+
+        const allowView = !!(opts && opts.allowView);
+        const page = Number.isFinite(Number(fileInfo && fileInfo.page)) ? Number(fileInfo.page) : null;
+
+        const viewUrl = (allowView && ext === "pdf") ? buildDocViewUrl(filename, page) : "";
+
+        const html = `
+      <div class="cb-msg cb-msg--bot cb-msg--card" data-copytext="${escapeHtml(filename)}">
+        <div class="cb-bubble cb-bubble--card">
+          <div class="cb-bubble__text">
+            <div class="cb-filecard--new" role="group" aria-label="첨부파일">
+              <img src="/img/ic-file.png" class="cb-filecard__icon" alt="" />
+              <div class="cb-filecard__meta">
+                <div class="cb-filecard__name">${escapeHtml(filename)}</div>
+                <div class="cb-filecard__badge">${escapeHtml(badge)}</div>
+              </div>
+            </div>
+          </div>
+          <div class="cb-meta">${now}</div>
+          ${actionsHtml({ copy: false, downloadUrl, view: allowView, viewUrl, viewExt: ext, viewName: filename })}
+        </div>
+      </div>
+    `;
+        body.insertAdjacentHTML("beforeend", html);
+        scrollToBottom();
+        if (isSearchOpen() && searchInput && searchInput.value.trim()) rebuildHighlights(searchInput.value);
+    }
+
+    function setSending(isSending) {
+        sendBtn.disabled = isSending;
+        input.disabled = isSending;
+        if (widget) widget.classList.toggle("is-sending", isSending);
     }
 
     function startImmediateUpload(file) {
@@ -1742,7 +1879,7 @@ document.addEventListener("DOMContentLoaded", () => {
     });
 
     if (fileInput) {
-        fileInput.setAttribute("accept", ".pdf,.hwp,.hwpx,.xls,.xlsx,.ppt,.pptx,.csv,.doc,.docx,.txt,.m4a");
+        fileInput.removeAttribute("accept");
     }
 
     if (fileInput) {
@@ -1752,13 +1889,6 @@ document.addEventListener("DOMContentLoaded", () => {
             if (!files.length) return;
 
             const first = files.find(isAllowedFile);
-            const blocked = files.filter((f) => !isAllowedFile(f));
-
-            if (blocked.length > 0) {
-                const names = blocked.map((f) => f.name).join(", ");
-                addBotMessage(`업로드 불가 파일이 제외되었습니다: ${names}`);
-            }
-
             if (!first) return;
 
             closePop();
@@ -1806,12 +1936,7 @@ document.addEventListener("DOMContentLoaded", () => {
             setDragOver(false);
 
             const f = pickDroppedFile(e.dataTransfer);
-            if (!f) {
-                const dt = e.dataTransfer;
-                const files = dt && dt.files ? Array.from(dt.files) : [];
-                if (files.length) addBotMessage("업로드할 수 없는 파일 형식입니다. (가능: PDF, 한글(HWP/HWPX), 엑셀(XLS/XLSX/CSV), PPT(PPT/PPTX), 워드(DOC/DOCX), TXT, M4A)");
-                return;
-            }
+            if (!f) return;
 
             closePop();
             closeTray();
@@ -1848,6 +1973,14 @@ document.addEventListener("DOMContentLoaded", () => {
         document.addEventListener("keydown", (e) => {
             if (e.key === "Escape") {
                 closePop();
+                closeTray();
+                closeViewer();
+                closeDocPopup();
+            }
+        });
+    } else {
+        document.addEventListener("keydown", (e) => {
+            if (e.key === "Escape") {
                 closeTray();
                 closeViewer();
                 closeDocPopup();
@@ -2014,7 +2147,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const parts = String(html || "").split(/(<[^>]+>)/g);
         return parts
             .map((p) => {
-                if(!p) return "";
+                if (!p) return "";
                 if (p.startsWith("<") && p.endsWith(">")) return p;
                 return p.replace(re, (m) => `<mark class="cb-mark">${m}</mark>`);
             })
@@ -2148,6 +2281,13 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     }
 
+    function ensurePdfPreviewOrWarn(ext) {
+        const e = String(ext || "").toLowerCase().trim();
+        if (e === "pdf") return true;
+        addBotMessage("pdf 외 다른 확장자는 미리보기가 제공되지 않습니다.");
+        return false;
+    }
+
     body.addEventListener("click", async (e) => {
         const copyBtn = e.target && e.target.closest ? e.target.closest(".cb-actbtn--copy") : null;
         if (copyBtn) {
@@ -2180,19 +2320,70 @@ document.addEventListener("DOMContentLoaded", () => {
             e.preventDefault();
             e.stopPropagation();
             const url = viewBtn.getAttribute("data-url") || "";
+            const ext = viewBtn.getAttribute("data-ext") || "";
+            const name = viewBtn.getAttribute("data-name") || "미리보기";
+            if (String(ext || "").toLowerCase().trim() !== "pdf") return;
+
             if (!url) return;
-            openViewer(url);
+            openViewer(url, name);
             return;
         }
 
-        const refBtn = e.target && e.target.closest ? e.target.closest(".cb-ref") : null;
-        if (refBtn) {
+        const refMainBtn = e.target && e.target.closest ? e.target.closest(".cb-refmain") : null;
+        if (refMainBtn) {
             e.preventDefault();
             e.stopPropagation();
-            const url = refBtn.getAttribute("data-url") || "";
+
+            const row = refMainBtn.closest(".cb-refrow");
+            if (!row) return;
+
+            const url = row.getAttribute("data-url") || "";
+            const ext = row.getAttribute("data-ext") || "";
+            const name = row.getAttribute("data-name") || "미리보기";
+
+            if (String(ext || "").toLowerCase().trim() !== "pdf") return;
             if (!url) return;
-            openViewer(url);
+
+            openViewer(url, name);
             return;
+        }
+
+        const refActBtn = e.target && e.target.closest ? e.target.closest(".cb-refact") : null;
+        if (refActBtn) {
+            e.preventDefault();
+            e.stopPropagation();
+
+            const action = refActBtn.getAttribute("data-action") || "";
+            const row = refActBtn.closest(".cb-refrow");
+
+            if (action === "preview") {
+                if (!row) return;
+
+                const url = row.getAttribute("data-url") || "";
+                const ext = row.getAttribute("data-ext") || "";
+                const name = row.getAttribute("data-name") || "미리보기";
+
+                if (!ensurePdfPreviewOrWarn(ext)) return;
+                if (!url) return;
+
+                openViewer(url, name);
+                return;
+            }
+
+            if (action === "download") {
+                const url = refActBtn.getAttribute("data-url") || (row ? row.getAttribute("data-url") : "") || "";
+                const filename = refActBtn.getAttribute("data-filename") || (row ? row.getAttribute("data-name") : "") || "document.pdf";
+                if (!url) return;
+
+                try {
+                    await forceDownloadFile(url, filename);
+                } catch (err) {
+                    addBotMessage(err && err.message ? String(err.message) : "다운로드 중 오류가 발생했습니다.");
+                }
+                return;
+            }
+
+
         }
 
         const refsToggle = e.target && e.target.closest ? e.target.closest(".cb-refs__toggle") : null;
