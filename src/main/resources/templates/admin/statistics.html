@@ -117,6 +117,17 @@
                             <button class="btn btn-primary btn-sm" id="btnApplyDate">조회</button>
                         </div>
                     </div>
+                    <div class="filter-right">
+                        <button class="btn btn-outline btn-sm" id="btnExport" type="button">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                stroke-linecap="round" stroke-linejoin="round" style="width:14px;height:14px;margin-right:4px;">
+                                <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+                                <polyline points="7 10 12 15 17 10" />
+                                <line x1="12" y1="15" x2="12" y2="3" />
+                            </svg>
+                            엑셀 다운로드
+                        </button>
+                    </div>
                     <div class="filter-user">
                         <input type="text" class="user-search-input" id="userSearchInput" placeholder="사용자 ID 검색...">
                         <button class="btn-user-search" id="btnUserSearch" title="검색">
@@ -190,6 +201,7 @@
                     <section class="chart-card">
                         <div class="chart-header">
                             <h3 class="chart-title">시간대별 분포</h3>
+                            <select class="hourly-date-select" id="hourlyDateSelect"></select>
                         </div>
                         <div class="chart-body">
                             <canvas id="hourlyChart"></canvas>

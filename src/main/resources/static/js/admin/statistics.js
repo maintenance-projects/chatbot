@@ -198,49 +198,79 @@
     }
 
     /* ───── 시간대별 차트 ───── */
+    var hourlyRawData = [];
+    var elHourlyDateSelect = $("#hourlyDateSelect");
+
     function loadHourlyChart() {
         postData("/admin/statistics/hourly").then(function (rows) {
-            var hourData = {};
-            TYPES.forEach(function (t) { hourData[t] = new Array(24).fill(0); });
+            hourlyRawData = rows;
 
+            // 날짜 목록 추출
+            var dates = [];
             rows.forEach(function (r) {
-                if (hourData[r.type]) hourData[r.type][r.hour] = r.totalCount;
+                if (dates.indexOf(r.date) === -1) dates.push(r.date);
             });
+            dates.sort();
 
-            var labels = Array.from({ length: 24 }, function (_, i) { return i + "시"; });
-
-            var datasets = [];
-            TYPES.forEach(function (t) {
-                var hasData = hourData[t].some(function (v) { return v > 0; });
-                if (hasData) {
-                    var c = TYPE_COLORS[t];
-                    datasets.push({
-                        label: t,
-                        data: hourData[t],
-                        backgroundColor: c.bar,
-                        borderRadius: 3
-                    });
-                }
+            // select 옵션 구성
+            var html = "";
+            dates.forEach(function (d) {
+                html += '<option value="' + d + '">' + d + '</option>';
             });
+            elHourlyDateSelect.innerHTML = html;
 
-            if (hourlyChart) hourlyChart.destroy();
-            hourlyChart = new Chart($("#hourlyChart"), {
-                type: "bar",
-                data: { labels: labels, datasets: datasets },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    interaction: { mode: "index", intersect: false },
-                    plugins: {
-                        legend: { position: "top", labels: { usePointStyle: true, padding: 16 } }
-                    },
-                    scales: {
-                        y: { beginAtZero: true, ticks: { precision: 0 }, stacked: true },
-                        x: { stacked: true }
-                    }
-                }
-            });
+            // 마지막 날짜 선택 후 렌더링
+            if (dates.length > 0) {
+                elHourlyDateSelect.value = dates[dates.length - 1];
+            }
+            renderHourlyChart();
         }).catch(function () { showToast("시간대별 통계를 불러올 수 없습니다.", "error"); });
+    }
+
+    function renderHourlyChart() {
+        var selectedDate = elHourlyDateSelect.value;
+        var hourData = {};
+        TYPES.forEach(function (t) { hourData[t] = new Array(24).fill(0); });
+
+        hourlyRawData.forEach(function (r) {
+            if (r.date === selectedDate && hourData[r.type]) {
+                hourData[r.type][r.hour] = r.totalCount;
+            }
+        });
+
+        var labels = Array.from({ length: 24 }, function (_, i) { return i + "시"; });
+
+        var datasets = [];
+        TYPES.forEach(function (t) {
+            var hasData = hourData[t].some(function (v) { return v > 0; });
+            if (hasData) {
+                var c = TYPE_COLORS[t];
+                datasets.push({
+                    label: t,
+                    data: hourData[t],
+                    backgroundColor: c.bar,
+                    borderRadius: 3
+                });
+            }
+        });
+
+        if (hourlyChart) hourlyChart.destroy();
+        hourlyChart = new Chart($("#hourlyChart"), {
+            type: "bar",
+            data: { labels: labels, datasets: datasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: "index", intersect: false },
+                plugins: {
+                    legend: { position: "top", labels: { usePointStyle: true, padding: 16 } }
+                },
+                scales: {
+                    y: { beginAtZero: true, ticks: { precision: 0 }, stacked: true },
+                    x: { stacked: true }
+                }
+            }
+        });
     }
 
     /* ───── 사용자 랭킹 ───── */
@@ -328,6 +358,9 @@
             loadAll();
         });
 
+        // 시간대별 날짜 선택
+        elHourlyDateSelect.addEventListener("change", renderHourlyChart);
+
         // 사용자 검색
         elBtnUserSearch.addEventListener("click", applyUserFilter);
         elBtnUserClear.addEventListener("click", clearUserFilter);
@@ -335,6 +368,31 @@
         elUserInput.addEventListener("keydown", function (e) {
             if (e.key === "Enter") applyUserFilter();
         });
+
+        // 엑셀 다운로드
+        var btnExport = $("#btnExport");
+        if (btnExport) {
+            btnExport.addEventListener("click", function () {
+                var form = document.createElement("form");
+                form.method = "POST";
+                form.action = "/admin/statistics/export";
+
+                var fields = { adminId: adminId, startDate: elStartDate.value, endDate: elEndDate.value };
+                if (searchUserId) fields.userId = searchUserId;
+
+                Object.keys(fields).forEach(function (key) {
+                    var input = document.createElement("input");
+                    input.type = "hidden";
+                    input.name = key;
+                    input.value = fields[key];
+                    form.appendChild(input);
+                });
+
+                document.body.appendChild(form);
+                form.submit();
+                form.remove();
+            });
+        }
 
         // 로그아웃
         var btnLogout = $("#btnLogout");

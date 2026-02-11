@@ -7,11 +7,15 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import java.io.IOException;
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 
@@ -78,5 +82,23 @@ public class AdminStatisticsController {
         LocalDate end = LocalDate.parse(endDate, FMT);
         JSONArray arr = statisticsService.getUserRanking(start, end, userId);
         return arr.toString();
+    }
+
+    @PostMapping("/export")
+    public ResponseEntity<byte[]> exportExcel(@RequestParam("adminId") String adminId,
+                                              @RequestParam("startDate") String startDate,
+                                              @RequestParam("endDate") String endDate,
+                                              @RequestParam(value = "userId", required = false) String userId) throws IOException {
+        log.debug("[statistics export] adminId={}, start={}, end={}, userId={}", adminId, startDate, endDate, userId);
+        LocalDate start = LocalDate.parse(startDate, FMT);
+        LocalDate end = LocalDate.parse(endDate, FMT);
+        byte[] bytes = statisticsService.exportExcel(start, end, userId);
+
+        String filename = "statistics_" + startDate + "_" + endDate + ".xlsx";
+        return ResponseEntity.ok()
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
+                .contentLength(bytes.length)
+                .body(bytes);
     }
 }

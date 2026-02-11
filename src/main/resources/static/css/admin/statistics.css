@@ -274,6 +274,11 @@ body {
     flex-wrap: wrap;
 }
 
+.filter-right {
+    display: flex;
+    align-items: center;
+}
+
 .filter-user {
     display: flex;
     align-items: center;
@@ -557,8 +562,26 @@ body {
 }
 
 .chart-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
     padding: 16px 20px;
     border-bottom: 1px solid var(--border);
+}
+
+.hourly-date-select {
+    padding: 5px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 13px;
+    color: var(--text);
+    background: var(--white);
+    cursor: pointer;
+    outline: none;
+}
+
+.hourly-date-select:focus {
+    border-color: var(--primary);
 }
 
 .chart-title {
