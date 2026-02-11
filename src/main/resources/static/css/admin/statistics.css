@@ -848,3 +848,159 @@ tbody td {
         padding: 0 16px;
     }
 }
+
+/* ── 비밀번호 변경 모달 ── */
+.btn-change-pw {
+    background: none;
+    border: none;
+    color: rgba(240, 240, 219, 0.5);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all var(--transition);
+    display: flex;
+}
+.btn-change-pw:hover {
+    color: var(--base);
+    background: rgba(240, 240, 219, 0.08);
+}
+.btn-change-pw svg {
+    width: 18px;
+    height: 18px;
+}
+
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.45);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.25s ease;
+    padding: 20px;
+}
+.modal-overlay.show {
+    opacity: 1;
+    visibility: visible;
+}
+.modal {
+    background: var(--white, #fff);
+    border-radius: var(--radius-lg-2, 10px);
+    box-shadow: var(--shadow-lg);
+    width: 100%;
+    max-width: 560px;
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    transform: translateY(16px) scale(0.97);
+    transition: transform 0.25s ease;
+}
+.modal-overlay.show .modal {
+    transform: translateY(0) scale(1);
+}
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 24px;
+    border-bottom: 1px solid var(--border);
+}
+.modal-title {
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: var(--text-dark);
+}
+.modal-close {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--text-light);
+    padding: 4px;
+    border-radius: 4px;
+    display: flex;
+    transition: all var(--transition);
+}
+.modal-close:hover {
+    background: var(--base);
+    color: var(--text-dark);
+}
+.modal-close svg {
+    width: 20px;
+    height: 20px;
+}
+.modal-body {
+    padding: 24px;
+    overflow-y: auto;
+    flex: 1;
+}
+.modal-footer {
+    padding: 16px 24px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
+.form-group {
+    margin-bottom: 18px;
+}
+.form-group:last-child {
+    margin-bottom: 0;
+}
+.form-label {
+    display: block;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text-dark);
+    margin-bottom: 6px;
+}
+.form-label .required {
+    color: var(--danger);
+    margin-left: 2px;
+}
+.form-input {
+    width: 100%;
+    padding: 9px 12px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 0.88rem;
+    font-family: inherit;
+    color: var(--text-dark);
+    background: var(--white, #fff);
+    outline: none;
+    transition: border-color var(--transition), box-shadow var(--transition);
+}
+.form-input:focus {
+    border-color: var(--primary);
+    box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.08);
+}
+
+.btn-outline {
+    background: var(--white, #fff);
+    color: var(--text-mid);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md, 10px);
+    padding: 10px 20px;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: all var(--transition);
+}
+.btn-outline:hover {
+    background: var(--base);
+    color: var(--text-dark);
+}
+
+.pw-error {
+    margin-top: 12px;
+    padding: 10px 14px;
+    background: #fdf2f2;
+    border: 1px solid var(--danger);
+    border-radius: var(--radius);
+    color: var(--danger);
+    font-size: 0.82rem;
+}

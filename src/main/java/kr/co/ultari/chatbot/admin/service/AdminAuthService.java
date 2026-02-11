@@ -7,6 +7,8 @@ import kr.co.ultari.chatbot.database.repository.MsgAdminRepository;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 
+import java.util.Date;
+
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpSession;
 
@@ -45,6 +47,16 @@ public class AdminAuthService {
         sessionStore.save(uuid, session);
 
         return rtn;
+    }
+
+    public String changePassword(String adminId, String currentPassword, String newPassword) {
+        MsgAdmin admin = adminRepository.findById(adminId).orElse(null);
+        if (admin == null) return "NoUser";
+        if (!admin.getPassword().equals(currentPassword)) return "WrongPassword";
+        admin.setPassword(newPassword);
+        admin.setUpdateDate(new Date());
+        adminRepository.save(admin);
+        return "ok";
     }
 
     public void logout(String uuid) {

@@ -153,6 +153,25 @@ body {
     color: rgba(240, 240, 219, 0.5);
 }
 
+.btn-change-pw {
+    background: none;
+    border: none;
+    color: rgba(240, 240, 219, 0.5);
+    cursor: pointer;
+    padding: 4px;
+    border-radius: 4px;
+    transition: all var(--transition);
+    display: flex;
+}
+.btn-change-pw:hover {
+    color: var(--base);
+    background: rgba(240, 240, 219, 0.08);
+}
+.btn-change-pw svg {
+    width: 18px;
+    height: 18px;
+}
+
 .btn-logout {
     background: none;
     border: none;
@@ -1160,6 +1179,16 @@ tbody td.center {
     color: var(--text-mid);
     text-align: center;
     line-height: 1.5;
+}
+
+.pw-error {
+    margin-top: 12px;
+    padding: 10px 14px;
+    background: #fdf2f2;
+    border: 1px solid var(--danger);
+    border-radius: var(--radius);
+    color: var(--danger);
+    font-size: 0.82rem;
 }
 
 .toast-container {

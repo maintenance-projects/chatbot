@@ -62,6 +62,17 @@ public class AdminLoginController {
         return ResponseEntity.ok(rtn);
     }
 
+    @PostMapping("/changePassword")
+    @ResponseBody
+    public String changePassword(HttpServletRequest request,
+                                 @RequestParam("adminId") String adminId,
+                                 @RequestParam("currentPassword") String currentPassword,
+                                 @RequestParam("newPassword") String newPassword) {
+        String sessionId = (String) request.getSession().getAttribute("sessionId");
+        if (sessionId == null || sessionStore.get(sessionId) == null) return "NoSession";
+        return authService.changePassword(adminId, currentPassword, newPassword);
+    }
+
     @PostMapping("/logout")
     public ResponseEntity<String> logout(HttpServletRequest request, @RequestParam("adminId") String adminId) {
         String sessionId = (String) request.getSession().getAttribute("sessionId");
