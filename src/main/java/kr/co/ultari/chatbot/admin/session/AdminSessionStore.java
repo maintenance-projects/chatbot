@@ -23,6 +23,8 @@ public class AdminSessionStore {
     }
 
     public void remove(String adminId) {
-        store.remove(adminId);
+        if (adminId != null) {
+            store.remove(adminId);
+        }
     }
 }

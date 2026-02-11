@@ -9,6 +9,13 @@
 
     /* ───── 타입 정의 ───── */
     var TYPES = ["CHAT", "DOCUMENT", "TEMPLATE", "DIALOG", "AUDIO"];
+    var TYPE_LABELS = {
+        CHAT:     "대화",
+        DOCUMENT: "문서",
+        TEMPLATE: "양식",
+        DIALOG:   "채팅요약",
+        AUDIO:    "통화요약"
+    };
     var TYPE_COLORS = {
         CHAT:     { border: "#30364F", bg: "rgba(48,54,79,0.1)",  bar: "rgba(48,54,79,0.7)",  dot: "#30364F" },
         DOCUMENT: { border: "#27ae60", bg: "rgba(39,174,96,0.1)", bar: "rgba(39,174,96,0.7)", dot: "#27ae60" },
@@ -133,7 +140,7 @@
                 var color = TYPE_COLORS[t] ? TYPE_COLORS[t].dot : "#999";
                 html += '<div class="type-chip">'
                     + '<span class="type-dot" style="background:' + color + ';"></span>'
-                    + '<span class="type-chip-label">' + t + '</span>'
+                    + '<span class="type-chip-label">' + TYPE_LABELS[t] + '</span>'
                     + '<span class="type-chip-value">' + count.toLocaleString() + '</span>'
                     + '</div>';
             });
@@ -165,7 +172,7 @@
                 if (hasData) {
                     var c = TYPE_COLORS[t];
                     datasets.push({
-                        label: t,
+                        label: TYPE_LABELS[t],
                         data: data,
                         borderColor: c.border,
                         backgroundColor: c.bg,
@@ -246,7 +253,7 @@
             if (hasData) {
                 var c = TYPE_COLORS[t];
                 datasets.push({
-                    label: t,
+                    label: TYPE_LABELS[t],
                     data: hourData[t],
                     backgroundColor: c.bar,
                     borderRadius: 3

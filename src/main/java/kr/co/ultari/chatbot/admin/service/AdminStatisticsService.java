@@ -124,6 +124,12 @@ public class AdminStatisticsService {
 
         // 타입 목록
         String[] TYPES = {"CHAT", "DOCUMENT", "TEMPLATE", "DIALOG", "AUDIO"};
+        java.util.Map<String, String> TYPE_LABELS = new java.util.HashMap<>();
+        TYPE_LABELS.put("CHAT", "대화");
+        TYPE_LABELS.put("DOCUMENT", "문서");
+        TYPE_LABELS.put("TEMPLATE", "양식");
+        TYPE_LABELS.put("DIALOG", "채팅요약");
+        TYPE_LABELS.put("AUDIO", "통화요약");
 
         // 시트1: 일별 통계
         List<Object[]> dailyRows = hasUser(userId)
@@ -165,7 +171,7 @@ public class AdminStatisticsService {
                 Cell dateCell = r.createCell(0);
                 dateCell.setCellValue(date);
                 dateCell.setCellStyle(dateStyle);
-                r.createCell(1).setCellValue(type);
+                r.createCell(1).setCellValue(TYPE_LABELS.get(type));
                 r.createCell(2).setCellValue(vals[0]);
                 r.createCell(3).setCellValue(vals[1]);
                 dayTotal += vals[1];
@@ -231,7 +237,7 @@ public class AdminStatisticsService {
                     Cell hourCell = r.createCell(1);
                     hourCell.setCellValue(hour + "시");
                     hourCell.setCellStyle(dateStyle);
-                    r.createCell(2).setCellValue(type);
+                    r.createCell(2).setCellValue(TYPE_LABELS.get(type));
                     r.createCell(3).setCellValue(count);
                     hourTotal += count;
                     rowIdx++;

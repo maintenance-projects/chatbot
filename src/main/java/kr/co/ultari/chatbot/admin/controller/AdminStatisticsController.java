@@ -94,9 +94,10 @@ public class AdminStatisticsController {
         LocalDate end = LocalDate.parse(endDate, FMT);
         byte[] bytes = statisticsService.exportExcel(start, end, userId);
 
-        String filename = "statistics_" + startDate + "_" + endDate + ".xlsx";
+        String filename = "AI사용통계_" + startDate + "_" + endDate + "_" + adminId + ".xlsx";
+        String encodedFilename = java.net.URLEncoder.encode(filename, "UTF-8").replaceAll("\\+", "%20");
         return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=\"" + filename + "\"")
+                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename*=UTF-8''" + encodedFilename)
                 .contentType(MediaType.parseMediaType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"))
                 .contentLength(bytes.length)
                 .body(bytes);

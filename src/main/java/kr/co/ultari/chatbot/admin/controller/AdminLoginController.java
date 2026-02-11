@@ -76,7 +76,9 @@ public class AdminLoginController {
     @PostMapping("/logout")
     public ResponseEntity<String> logout(HttpServletRequest request, @RequestParam("adminId") String adminId) {
         String sessionId = (String) request.getSession().getAttribute("sessionId");
-        authService.logout(sessionId);
+        if (sessionId != null) {
+            authService.logout(sessionId);
+        }
         return ResponseEntity.ok("ok");
     }
 
