@@ -7,7 +7,7 @@ import java.util.Date;
 
 @Data
 @Entity
-@Table(name = "MSG_ADMIN")
+@Table(name = "chatbot_admin")
 public class MsgAdmin {
 
     @Id
