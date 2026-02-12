@@ -85,7 +85,8 @@
         hideError();
 
         try {
-            const result = await performLoginAjax(adminId, password);
+            const rememberMe = !!rememberMeCheckbox?.checked;
+            const result = await performLoginAjax(adminId, password, rememberMe);
 
             if (result.code === "ok") {
                 saveCredentials(adminId);
@@ -121,7 +122,7 @@
         return true;
     }
 
-    function performLoginAjax(adminId, password) {
+    function performLoginAjax(adminId, password, rememberMe) {
         return new Promise((resolve, reject) => {
             if (!window.jQuery) {
                 reject(new Error("jQuery is not loaded"));
@@ -133,7 +134,11 @@
                 type: "POST",
                 contentType: "application/json; charset=UTF-8",
                 dataType: "text",
-                data: JSON.stringify({ adminId: adminId, password: password }),
+                data: JSON.stringify({
+                    adminId: adminId,
+                    password: password,
+                    rememberMe: !!rememberMe
+                }),
                 success: function (data, _status, xhr) {
                     const code = String(data || "").trim();
                     resolve({ code: code || String(xhr.status), status: xhr.status });

@@ -20,6 +20,9 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpServletRequest;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.concurrent.TimeUnit;
 import java.util.UUID;
 
 @Slf4j
@@ -55,8 +58,18 @@ public class AdminLoginController {
         String clientIp = getClientIp(httpRequest);
         String rtn = authService.login(request.getAdminId(), request.getPassword(), clientIp, uuid);
         if ("ok".equals(rtn)) {
+            long ttlSeconds = request.isRememberMe()
+                    ? TimeUnit.HOURS.toSeconds(10)
+                    : -1;
+            AdminSession session = sessionStore.get(uuid);
+            if (session != null) {
+                sessionStore.save(uuid, session, ttlSeconds);
+            }
             httpRequest.getSession(true)
                     .setAttribute("sessionId", uuid);
+            long effectiveTtl = ttlSeconds > 0 ? ttlSeconds : sessionStore.getDefaultTtlSeconds();
+            log.info("[admin login] adminId={}, rememberMe={}, sessionTtlSeconds={}",
+                    request.getAdminId(), request.isRememberMe(), effectiveTtl);
         }
 
         return ResponseEntity.ok(rtn);
@@ -90,10 +103,10 @@ public class AdminLoginController {
     @RequestMapping("/storage")
     public String storageIndex(HttpServletRequest request, Model model, @RequestParam(value="adminId", required = false) String a) {
         String sessionId = (String) request.getSession().getAttribute("sessionId");
-        if(!StringUtils.hasText(sessionId)) return "redirect:/admin/error";
+        if(!StringUtils.hasText(sessionId)) return buildSessionExpiredRedirect();
 
         AdminSession session = sessionStore.get(sessionId);
-        if(session==null) return "redirect:/admin/error";
+        if(session==null) return buildSessionExpiredRedirect();
 
         String adminId = session.getAdminId();
         log.debug("[storage index] adminId={}, sessionId={}", adminId, sessionId);
@@ -113,10 +126,10 @@ public class AdminLoginController {
     @RequestMapping("/statistics")
     public String statisticsIndex(HttpServletRequest request, Model model, @RequestParam(value="adminId", required = false) String a) {
         String sessionId = (String) request.getSession().getAttribute("sessionId");
-        if(!StringUtils.hasText(sessionId)) return "redirect:/admin/error";
+        if(!StringUtils.hasText(sessionId)) return buildSessionExpiredRedirect();
 
         AdminSession session = sessionStore.get(sessionId);
-        if(session==null) return "admin/error";
+        if(session==null) return buildSessionExpiredRedirect();
 
         String adminId = session.getAdminId();
         log.debug("[statistics index] adminId={}, sessionId={}", adminId, sessionId);
@@ -133,10 +146,10 @@ public class AdminLoginController {
     @RequestMapping("/master")
     public String masterIndex(HttpServletRequest request, Model model, @RequestParam(value="adminId", required = false) String a) {
         String sessionId = (String) request.getSession().getAttribute("sessionId");
-        if(!StringUtils.hasText(sessionId)) return "redirect:/admin/error";
+        if(!StringUtils.hasText(sessionId)) return buildSessionExpiredRedirect();
 
         AdminSession session = sessionStore.get(sessionId);
-        if(session==null) return "admin/error";
+        if(session==null) return buildSessionExpiredRedirect();
 
         String adminId = session.getAdminId();
         log.debug("[master index] adminId={}, sessionId={}", adminId, sessionId);
@@ -156,6 +169,16 @@ public class AdminLoginController {
             return forwarded.split(",")[0];
         }
         return request.getRemoteAddr();
+    }
+
+    private String buildSessionExpiredRedirect() {
+        String message;
+        try {
+            message = URLEncoder.encode("세션이 만료되었습니다. 다시 로그인해 주세요.", StandardCharsets.UTF_8.name());
+        } catch (java.io.UnsupportedEncodingException e) {
+            throw new IllegalStateException("UTF-8 encoding not supported", e);
+        }
+        return "redirect:/admin/error?code=401&message=" + message;
     }
 
 
