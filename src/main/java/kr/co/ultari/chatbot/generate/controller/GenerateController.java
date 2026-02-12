@@ -78,24 +78,24 @@ public class GenerateController {
 
             File f = new File(tempPath + File.separator + sessionId + File.separator + "dialog");
             if(!f.exists()) f.mkdirs();
-            // 2. ?�??경로
+            // 2. 저장 경로
             Path dirPath = Paths.get(f.getPath());
             Path filePath = dirPath.resolve(safeFilename);
 
             try {
-                // 3. ?�일 ?�??(??��?�기)
+                // 3. 파일 저장 (덮어쓰기)
                 Files.copy(
                         file.getInputStream(),
                         filePath,
                         StandardCopyOption.REPLACE_EXISTING
                 );
 
-                log.info("?�일 ?�???�료: {}", filePath);
+                log.info("파일 저장 완료: {}", filePath);
 
             } catch (IOException e) {
                 code="1111";
-                log.error("?�일 ?�???�패", e);
-                throw new RuntimeException("?�일 ?�??�??�류가 발생?�습?�다.", e);
+                log.error("파일 저장 실패", e);
+                throw new RuntimeException("파일 저장 중 오류가 발생했습니다.", e);
             }
 
         }
