@@ -95,6 +95,21 @@ public class AdminLoginController {
         return ResponseEntity.ok("ok");
     }
 
+    @PostMapping("/session/refresh")
+    @ResponseBody
+    public ResponseEntity<String> refreshSession(HttpServletRequest request) {
+        String sessionId = (String) request.getSession().getAttribute("sessionId");
+        if (!StringUtils.hasText(sessionId)) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("NoSession");
+        }
+        AdminSession session = sessionStore.get(sessionId);
+        if (session == null) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("NoSession");
+        }
+        long remainingSeconds = sessionStore.refresh(sessionId);
+        return ResponseEntity.ok(String.valueOf(remainingSeconds));
+    }
+
     @RequestMapping("/error")
     public String error() {
         return "admin/error";
@@ -118,6 +133,7 @@ public class AdminLoginController {
         model.addAttribute("storage", session.isAuthStorage());
         model.addAttribute("statistics", session.isAuthStatistics());
         model.addAttribute("master",session.isAuthMaster());
+        model.addAttribute("sessionRemainingSeconds", sessionStore.getRemainingSeconds(sessionId));
         model.addAttribute("countList",arr.toString());
 
         return "admin/storage";
@@ -139,6 +155,7 @@ public class AdminLoginController {
         model.addAttribute("storage", session.isAuthStorage());
         model.addAttribute("statistics", session.isAuthStatistics());
         model.addAttribute("master",session.isAuthMaster());
+        model.addAttribute("sessionRemainingSeconds", sessionStore.getRemainingSeconds(sessionId));
 
         return "admin/statistics";
     }
@@ -159,6 +176,7 @@ public class AdminLoginController {
         model.addAttribute("storage", session.isAuthStorage());
         model.addAttribute("statistics", session.isAuthStatistics());
         model.addAttribute("master",session.isAuthMaster());
+        model.addAttribute("sessionRemainingSeconds", sessionStore.getRemainingSeconds(sessionId));
 
         return "admin/master";
     }

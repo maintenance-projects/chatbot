@@ -221,6 +221,60 @@ body {
     gap: 12px;
 }
 
+.topbar-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.session-timer {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    background: var(--base);
+    font-size: 0.82rem;
+    color: var(--text-light);
+}
+
+.session-timer-value {
+    font-weight: 600;
+    color: var(--text-dark);
+    font-variant-numeric: tabular-nums;
+}
+
+.session-timer-note {
+    font-size: 0.75rem;
+    color: var(--danger);
+    display: none;
+}
+
+.session-timer-refresh {
+    border: none;
+    background: var(--primary);
+    color: var(--base);
+    font-size: 0.75rem;
+    padding: 4px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: background var(--transition);
+}
+
+.session-timer-refresh:hover {
+    background: var(--primary-light);
+}
+
+.session-timer.warning {
+    border-color: rgba(192, 57, 43, 0.4);
+    background: #fdf2f2;
+}
+
+.session-timer.warning .session-timer-note {
+    display: inline;
+}
+
 .btn-sidebar-toggle {
     display: none;
     background: none;

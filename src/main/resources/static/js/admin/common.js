@@ -18,6 +18,7 @@
         if (userAvatarEl) userAvatarEl.textContent = adminId.charAt(0).toUpperCase();
 
         bindPasswordChange(adminId);
+        initSessionCountdown();
 
         return true;
     }
@@ -136,6 +137,139 @@
                 closePwModal();
             }
         });
+    }
+
+    function initSessionCountdown() {
+        var timerEl = document.getElementById("sessionTimer");
+        if (!timerEl) return;
+
+        var remaining = parseInt(timerEl.getAttribute("data-remaining") || "0", 10);
+        var timerWrap = timerEl.closest(".session-timer");
+        var noteEl = document.getElementById("sessionTimerNote");
+        var refreshBtn = document.getElementById("sessionTimerRefresh");
+        var warned = false;
+        if (!Number.isFinite(remaining) || remaining < 0) {
+            remaining = 0;
+        }
+
+        function format(seconds) {
+            var hrs = Math.floor(seconds / 3600);
+            var mins = Math.floor((seconds % 3600) / 60);
+            var secs = seconds % 60;
+            var hh = String(hrs).padStart(2, "0");
+            var mm = String(mins).padStart(2, "0");
+            var ss = String(secs).padStart(2, "0");
+            return hh + ":" + mm + ":" + ss;
+        }
+
+        function update() {
+            timerEl.textContent = format(remaining);
+            if (timerWrap && noteEl) {
+                if (remaining > 0 && remaining <= 300) {
+                    timerWrap.classList.add("warning");
+                    if (!warned) {
+                        noteEl.textContent = "5분 이내 만료";
+                        warned = true;
+                    }
+                } else {
+                    timerWrap.classList.remove("warning");
+                    noteEl.textContent = "";
+                }
+            }
+        }
+
+        update();
+        if (remaining <= 0) return;
+
+        if (refreshBtn) {
+            refreshBtn.addEventListener("click", function () {
+                refreshSession();
+            });
+        }
+
+        var intervalId = setInterval(function () {
+            remaining -= 1;
+            if (remaining <= 0) {
+                remaining = 0;
+                update();
+                clearInterval(intervalId);
+                var message = "세션이 만료되었습니다. 다시 로그인해 주세요.";
+                window.location.href = "/admin/error?code=401&message=" + encodeURIComponent(message);
+                return;
+            }
+            update();
+        }, 1000);
+
+        bindAutoRefreshOnRequests();
+
+        function refreshSession() {
+            fetch("/admin/session/refresh", { method: "POST" })
+                .then(function (res) {
+                    if (res.status === 401) {
+                        return Promise.reject(new Error("NoSession"));
+                    }
+                    return res.text();
+                })
+                .then(function (text) {
+                    var next = parseInt(text || "0", 10);
+                    if (!Number.isFinite(next) || next <= 0) {
+                        return;
+                    }
+                    remaining = next;
+                    timerEl.setAttribute("data-remaining", String(next));
+                    update();
+                })
+                .catch(function () {
+                    var message = "세션이 만료되었습니다. 다시 로그인해 주세요.";
+                    window.location.href = "/admin/error?code=401&message=" + encodeURIComponent(message);
+                });
+        }
+
+        function bindAutoRefreshOnRequests() {
+            var refreshTargets = [
+                "/admin/storage",
+                "/admin/statistics",
+                "/admin/master",
+                "/admin/changePassword"
+            ];
+
+            function shouldRefresh(url) {
+                if (!url) return false;
+                for (var i = 0; i < refreshTargets.length; i++) {
+                    if (url.indexOf(refreshTargets[i]) === 0) {
+                        return true;
+                    }
+                }
+                return false;
+            }
+
+            if (window.jQuery && window.jQuery(document).ajaxComplete) {
+                window.jQuery(document).ajaxComplete(function (_event, _xhr, settings) {
+                    if (settings && settings.url && shouldRefresh(settings.url)) {
+                        refreshSession();
+                    }
+                });
+            }
+
+            if (window.fetch) {
+                var originalFetch = window.fetch;
+                if (!window.fetch.__sessionRefreshWrapped) {
+                    window.fetch = function (input, init) {
+                        var url = typeof input === "string" ? input : (input && input.url) || "";
+                        var result = originalFetch(input, init);
+                        if (shouldRefresh(url)) {
+                            result.then(function (res) {
+                                if (res && res.ok) {
+                                    refreshSession();
+                                }
+                            }).catch(function () {});
+                        }
+                        return result;
+                    };
+                    window.fetch.__sessionRefreshWrapped = true;
+                }
+            }
+        }
     }
 
     window.checkSession = checkSession;

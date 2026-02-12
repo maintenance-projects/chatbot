@@ -98,6 +98,16 @@
                         <span class="breadcrumb-current">통계</span>
                     </div>
                 </div>
+                <div class="topbar-right">
+                    <div class="session-timer">
+                        <span class="session-timer-label">세션 만료까지</span>
+                        <span class="session-timer-value" id="sessionTimer"
+                            th:attr="data-remaining=${sessionRemainingSeconds}"
+                            data-remaining="0">00:00:00</span>
+                        <span class="session-timer-note" id="sessionTimerNote"></span>
+                        <button type="button" class="session-timer-refresh" id="sessionTimerRefresh">연장</button>
+                    </div>
+                </div>
             </header>
 
             <main class="page-body">
