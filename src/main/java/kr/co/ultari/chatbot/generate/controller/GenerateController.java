@@ -10,6 +10,7 @@ import org.springframework.ui.Model;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
+import kr.co.ultari.chatbot.user.service.UserAuthService;
 
 import java.io.File;
 import java.io.IOException;
@@ -18,6 +19,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
+import javax.servlet.http.HttpServletRequest;
 
 @RequestMapping("/chatbot")
 @Controller
@@ -30,8 +32,31 @@ public class GenerateController {
     @Value("${ultari.interface-summary.url:}")
     String summaryUrl;
 
+    private final UserAuthService userAuthService;
+
+    public GenerateController(UserAuthService userAuthService) {
+        this.userAuthService = userAuthService;
+    }
+
+    @GetMapping("")
+    public String loginPage(@RequestParam(value = "error", required = false) String error, Model model) {
+        model.addAttribute("error", error);
+        return "chatbot-login";
+    }
+
+    @PostMapping("/login")
+    @ResponseBody
+    public String login(@RequestBody ChatbotLoginRequest request, HttpServletRequest httpRequest) {
+        String rtn = userAuthService.login(request.getUserId(), request.getPassword());
+        if ("ok".equals(rtn)) {
+            httpRequest.getSession(true)
+                    .setAttribute("chatbotUserId", request.getUserId());
+        }
+        return rtn;
+    }
+
     @RequestMapping("/{key}")
-    public String login(Model model, @PathVariable("key") String sessionId) {
+    public String login(Model model, @PathVariable("key") String sessionId, HttpServletRequest request) {
         JSONArray templateList = new JSONArray();
         JSONObject templateObject = new JSONObject();
 
