@@ -62,6 +62,7 @@ public class GenerateController {
 
         templateList.put(createTemplate("A001", "template.hwpx", "결재보고","000001"));
         templateList.put(createTemplate("A002", "template2.hwpx", "공지사항","000002"));
+        templateList.put(createTemplate("A003", "template3.hwpx", "회의록","000003"));
 
         log.debug(templateList.toString());
         model.addAttribute("sessionId",sessionId);
@@ -77,24 +78,24 @@ public class GenerateController {
 
             File f = new File(tempPath + File.separator + sessionId + File.separator + "dialog");
             if(!f.exists()) f.mkdirs();
-            // 2. 저장 경로
+            // 2. ?�??경로
             Path dirPath = Paths.get(f.getPath());
             Path filePath = dirPath.resolve(safeFilename);
 
             try {
-                // 3. 파일 저장 (덮어쓰기)
+                // 3. ?�일 ?�??(??��?�기)
                 Files.copy(
                         file.getInputStream(),
                         filePath,
                         StandardCopyOption.REPLACE_EXISTING
                 );
 
-                log.info("파일 저장 완료: {}", filePath);
+                log.info("?�일 ?�???�료: {}", filePath);
 
             } catch (IOException e) {
                 code="1111";
-                log.error("파일 저장 실패", e);
-                throw new RuntimeException("파일 저장 중 오류가 발생했습니다.", e);
+                log.error("?�일 ?�???�패", e);
+                throw new RuntimeException("?�일 ?�??�??�류가 발생?�습?�다.", e);
             }
 
         }
@@ -136,7 +137,7 @@ public class GenerateController {
         return json;
     }
 
-    // 테스트용
+    // ?�스?�용
     @RequestMapping("/summary")
     public String summary() {
         return "summary";
