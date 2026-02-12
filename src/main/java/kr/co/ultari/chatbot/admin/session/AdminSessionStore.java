@@ -11,7 +11,7 @@ import java.util.concurrent.TimeUnit;
 @Component
 public class AdminSessionStore {
 
-    @Value("${ultari.admin.session.ttl-seconds:330}")
+    @Value("${ultari.admin.session.ttl-seconds:3600}")
     private long ttlSeconds;
 
     private final Map<String, SessionEntry> store = new ConcurrentHashMap<>();

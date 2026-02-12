@@ -24,6 +24,6 @@
 </root>
 <logger name="org.springframework" level="WARN"/>
 <logger name="org.hibernate.SQL" level="WARN"/>
-<logger name="kr.co.ultari.chatbot" level="DEBUG"/>
+<logger name="kr.co.ultari.chatbot" level="INFO"/>
 
 </configuration>
