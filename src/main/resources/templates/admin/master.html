@@ -53,6 +53,16 @@
                     </svg>
                     계정 관리
                 </a>
+                <a href="/admin/guide" class="nav-item" data-page="guide">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                        <path d="M4 4.5A2.5 2.5 0 0 1 6.5 7H20" />
+                        <path d="M6.5 17V7" />
+                        <path d="M20 22V2" />
+                    </svg>
+                    가이드
+                </a>
             </nav>
 
             <div class="sidebar-footer">
@@ -99,6 +109,9 @@
                     </div>
                 </div>
                 <div class="topbar-right">
+                    <button type="button" class="btn btn-outline btn-sm btn-screen-guide" id="btnScreenGuide">
+                        화면 가이드
+                    </button>
                     <div class="session-timer">
                         <span class="session-timer-label">세션 만료까지</span>
                         <span class="session-timer-value" id="sessionTimer"
@@ -310,6 +323,14 @@
     </div>
 
     <div class="toast-container" id="toastContainer"></div>
+
+    <div class="screen-guide-overlay" id="screenGuideOverlay" aria-hidden="true">
+        <div class="screen-guide-dim" id="screenGuideDim"></div>
+        <div class="screen-guide-highlight-layer" id="screenGuideHighlightLayer"></div>
+        <button type="button" class="screen-guide-close-fab" id="btnCloseScreenGuide" aria-label="가이드 닫기">
+            닫기
+        </button>
+    </div>
 
     <script th:src="@{/js/admin/common.js}" src="/js/admin/common.js"></script>
     <script th:src="@{/js/admin/master.js}" src="/js/admin/master.js"></script>

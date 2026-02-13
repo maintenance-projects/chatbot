@@ -55,6 +55,7 @@ public class RelayController {
     @PostMapping("/template")
     @ResponseBody
     public String requestTemplate(@RequestBody RequestDTO req) {
+        log.debug(req.toString());
         return relayService.DocumentRelayTemplateService(req.getSessionId(), req.getMessage(), req.isDeepResearch(), null, req.getTemplateKey());
     }
 

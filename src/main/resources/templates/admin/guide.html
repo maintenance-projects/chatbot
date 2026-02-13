@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="ko">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>관리자 가이드</title>
+    <link rel="stylesheet" th:href="@{/css/admin/base.css}" href="/css/admin/base.css" />
+    <link rel="stylesheet" th:href="@{/css/admin/master.css}" href="/css/admin/master.css" />
+    <link rel="stylesheet" th:href="@{/css/admin/guide.css}" href="/css/admin/guide.css" />
+</head>
+
+<body th:attr="data-admin-id=${adminId}">
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <div class="admin-wrapper">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="#" class="sidebar-logo">
+                    <div class="sidebar-logo-icon">AT-I</div>
+                    <span class="sidebar-logo-text">관리자 페이지</span>
+                </a>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section-title">메뉴</div>
+                <a th:if="${storage}" href="/admin/storage" class="nav-item" data-page="storage">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                        <polyline points="14 2 14 8 20 8" />
+                        <line x1="16" y1="13" x2="8" y2="13" />
+                        <line x1="16" y1="17" x2="8" y2="17" />
+                        <polyline points="10 9 9 9 8 9" />
+                    </svg>
+                    문서 관리
+                </a>
+                <a th:if="${statistics}" href="/admin/statistics" class="nav-item" data-page="statistics">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <line x1="18" y1="20" x2="18" y2="10"></line>
+                        <line x1="12" y1="20" x2="12" y2="4"></line>
+                        <line x1="6" y1="20" x2="6" y2="14"></line>
+                    </svg>
+                    통계
+                </a>
+                <a th:if="${master}" href="/admin/master" class="nav-item" data-page="master">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                        <circle cx="9" cy="7" r="4" />
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87" />
+                        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                    </svg>
+                    관리자 관리
+                </a>
+                <a href="#" class="nav-item active" data-page="guide">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
+                        <path d="M4 4.5A2.5 2.5 0 0 1 6.5 7H20" />
+                        <path d="M6.5 17V7" />
+                        <path d="M20 22V2" />
+                    </svg>
+                    가이드
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="sidebar-user">
+                    <div class="sidebar-user-avatar" id="userAvatar">A</div>
+                    <div class="sidebar-user-info">
+                        <div class="sidebar-user-name" id="userName">admin</div>
+                        <div class="sidebar-user-role" th:text="${adminName}">관리자</div>
+                    </div>
+                    <button class="btn-change-pw" id="btnChangePw" title="비밀번호 변경">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                        </svg>
+                    </button>
+                    <button class="btn-logout" id="btnLogout" title="로그아웃">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" />
+                            <polyline points="16 17 21 12 16 7" />
+                            <line x1="21" y1="12" x2="9" y2="12" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <div class="main-content">
+            <header class="topbar">
+                <div class="topbar-left">
+                    <button class="btn-sidebar-toggle" id="btnSidebarToggle">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="3" y1="12" x2="21" y2="12" />
+                            <line x1="3" y1="6" x2="21" y2="6" />
+                            <line x1="3" y1="18" x2="21" y2="18" />
+                        </svg>
+                    </button>
+                    <div class="breadcrumb">
+                        <a href="#">홈</a>
+                        <span class="breadcrumb-sep">/</span>
+                        <span class="breadcrumb-current">가이드</span>
+                    </div>
+                </div>
+                <div class="topbar-right">
+                    <div class="session-timer">
+                        <span class="session-timer-label">세션 만료까지</span>
+                        <span class="session-timer-value" id="sessionTimer"
+                            th:attr="data-remaining=${sessionRemainingSeconds}"
+                            data-remaining="0">00:00:00</span>
+                        <span class="session-timer-note" id="sessionTimerNote"></span>
+                        <button type="button" class="session-timer-refresh" id="sessionTimerRefresh">연장</button>
+                    </div>
+                </div>
+            </header>
+
+            <main class="page-body">
+                <section class="guide-hero">
+                    <div>
+                        <p class="guide-kicker">ADMIN PLAYBOOK</p>
+                        <h1>관리자 페이지 주요 기능 한눈에 보기</h1>
+                        <p class="guide-sub">로그인 이후 자주 쓰는 흐름을 단계별로 정리했습니다. 아래 빠른 이동을 눌러 필요한 섹션으로 바로 이동하세요.</p>
+                        <div class="guide-actions">
+                            <a class="btn btn-primary" href="#guide-storage" data-scroll>문서 관리 바로가기</a>
+                            <a class="btn btn-outline" href="#guide-master" data-scroll>계정 관리 바로가기</a>
+                        </div>
+                    </div>
+                    <div class="guide-quick">
+                        <div class="quick-title">빠른 이동</div>
+                        <ul>
+                            <li><a href="#guide-session" data-scroll>로그인 · 세션 유지</a></li>
+                            <li><a href="#guide-storage" data-scroll>문서 관리</a></li>
+                            <li><a href="#guide-statistics" data-scroll>통계 보기</a></li>
+                            <li><a href="#guide-master" data-scroll>계정 관리</a></li>
+                            <li><a href="#guide-support" data-scroll>비밀번호/로그아웃</a></li>
+                            <li><a href="#guide-troubleshoot" data-scroll>문제 해결</a></li>
+                        </ul>
+                    </div>
+                </section>
+
+                <section id="guide-session" class="guide-section">
+                    <div class="section-header">
+                        <div class="section-eyebrow">01</div>
+                        <h2>로그인 · 세션 유지</h2>
+                    </div>
+                    <div class="section-body">
+                        <div class="guide-card">
+                            <h3>로그인</h3>
+                            <ol class="step-list">
+                                <li>/admin 페이지에서 관리자 ID와 비밀번호를 입력합니다.</li>
+                                <li>“자동 로그인”을 체크하면 10시간 동안 세션이 유지됩니다.</li>
+                                <li>로그인 성공 시 좌측 메뉴가 활성화되고 세션 타이머가 시작됩니다.</li>
+                            </ol>
+                        </div>
+                        <div class="guide-card">
+                            <h3>세션 타이머</h3>
+                            <p>우측 상단 “연장” 버튼을 누르거나 주요 기능 호출 시 자동으로 갱신됩니다. 5분 미만이면 경고 색상으로 바뀝니다.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="guide-storage" class="guide-section">
+                    <div class="section-header">
+                        <div class="section-eyebrow">02</div>
+                        <h2>문서 관리 (/admin/storage)</h2>
+                    </div>
+                    <div class="section-body grid">
+                        <div class="guide-card">
+                            <h3>파일 업로드</h3>
+                            <ol class="step-list">
+                                <li>“업로드” 버튼을 눌러 파일 선택 후 등록합니다.</li>
+                                <li>업로드가 끝나면 목록 상단에 최신 순으로 표시됩니다.</li>
+                                <li>파일 상태를 “사용/중지”로 토글해 챗봇 노출 여부를 즉시 제어합니다.</li>
+                            </ol>
+                        </div>
+                        <div class="guide-card">
+                            <h3>검색 · 정렬</h3>
+                            <ul class="bullet-list">
+                                <li>파일명/등록자/태그로 검색 후 Enter 또는 검색 아이콘을 클릭합니다.</li>
+                                <li>정렬 옵션(등록일, 이름 등)과 오름/내림차순을 조합해 원하는 순서를 맞춥니다.</li>
+                            </ul>
+                        </div>
+                        <div class="guide-card">
+                            <h3>삭제 · 복구</h3>
+                            <ul class="bullet-list">
+                                <li>행 우측 “삭제”를 누르면 확인 모달이 뜹니다.</li>
+                                <li>삭제 후에도 이력은 로그로 남으므로 실수 시 관리자에게 문의해 복구 가능합니다.</li>
+                            </ul>
+                        </div>
+                        <div class="guide-card highlight">
+                            <h3>TIP</h3>
+                            <p>여러 개의 파일을 한 번에 올릴 때는 50MB 이하로 나누면 업로드 실패를 줄일 수 있습니다.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="guide-statistics" class="guide-section">
+                    <div class="section-header">
+                        <div class="section-eyebrow">03</div>
+                        <h2>통계 (/admin/statistics)</h2>
+                    </div>
+                    <div class="section-body grid">
+                        <div class="guide-card">
+                            <h3>요약 보기</h3>
+                            <p>기간을 지정하고 “조회”를 누르면 전체 사용량, 성공/오류 비율, 사용자 수를 요약 카드로 확인합니다.</p>
+                        </div>
+                        <div class="guide-card">
+                            <h3>일/시간대 분석</h3>
+                            <ul class="bullet-list">
+                                <li>일별 탭: 날짜별 호출 건수와 답변 성공률을 확인합니다.</li>
+                                <li>시간대 탭: 시간대별 피크 타임을 찾아 운영 인력을 조정합니다.</li>
+                            </ul>
+                        </div>
+                        <div class="guide-card">
+                            <h3>상위 사용자</h3>
+                            <p>“사용자 랭킹” 표에서 자주 사용하는 계정을 확인하고 이상 패턴을 점검합니다.</p>
+                        </div>
+                        <div class="guide-card highlight">
+                            <h3>엑셀 내보내기</h3>
+                            <p>필터 적용 후 “엑셀 다운로드”를 누르면 동일 조건으로 XLSX 파일이 생성됩니다.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="guide-master" class="guide-section">
+                    <div class="section-header">
+                        <div class="section-eyebrow">04</div>
+                        <h2>계정 관리 (/admin/master)</h2>
+                    </div>
+                    <div class="section-body grid">
+                        <div class="guide-card">
+                            <h3>계정 추가</h3>
+                            <ol class="step-list">
+                                <li>“계정 추가” 버튼 클릭 → ID, 이름, 임시 비밀번호 입력.</li>
+                                <li>권한(문서/통계/마스터)을 체크 후 저장하면 즉시 반영됩니다.</li>
+                            </ol>
+                        </div>
+                        <div class="guide-card">
+                            <h3>수정</h3>
+                            <p>목록의 “수정”을 눌러 이름, IP, 권한을 변경합니다. 저장 후 바로 적용됩니다.</p>
+                        </div>
+                        <div class="guide-card">
+                            <h3>삭제</h3>
+                            <p>“삭제” 클릭 → 확인 후 제거됩니다. 본인 계정은 삭제할 수 없습니다(SelfDelete 방지).</p>
+                        </div>
+                        <div class="guide-card highlight">
+                            <h3>IP 제한</h3>
+                            <p>등록된 IP만 허용되도록 설정하면 외부 접속을 차단할 수 있습니다.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="guide-support" class="guide-section">
+                    <div class="section-header">
+                        <div class="section-eyebrow">05</div>
+                        <h2>비밀번호 변경 · 로그아웃</h2>
+                    </div>
+                    <div class="section-body">
+                        <div class="guide-card">
+                            <h3>비밀번호 변경</h3>
+                            <ol class="step-list">
+                                <li>좌측 하단 열쇠 아이콘을 눌러 모달을 엽니다.</li>
+                                <li>현재 비밀번호와 새 비밀번호를 입력 후 “변경”을 누릅니다.</li>
+                                <li>성공 시 토스트 알림이 표시됩니다.</li>
+                            </ol>
+                        </div>
+                        <div class="guide-card">
+                            <h3>로그아웃</h3>
+                            <p>좌측 하단 화살표 아이콘을 클릭하면 세션이 즉시 종료되고 로그인 화면으로 이동합니다.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="guide-troubleshoot" class="guide-section">
+                    <div class="section-header">
+                        <div class="section-eyebrow">06</div>
+                        <h2>문제 해결 체크리스트</h2>
+                    </div>
+                    <div class="section-body grid">
+                        <div class="guide-card">
+                            <h3>로그인 불가</h3>
+                            <ul class="bullet-list">
+                                <li>계정 잠금 여부를 마스터 관리자에게 확인합니다.</li>
+                                <li>IP 제한이 있는 경우 등록된 장소에서 접속하는지 확인합니다.</li>
+                            </ul>
+                        </div>
+                        <div class="guide-card">
+                            <h3>파일 업로드 실패</h3>
+                            <ul class="bullet-list">
+                                <li>파일 크기와 확장자를 확인하고 50MB 이하로 분할 업로드해 보세요.</li>
+                                <li>동일 파일명을 덮어쓰면 최신 버전으로 교체됩니다.</li>
+                            </ul>
+                        </div>
+                        <div class="guide-card">
+                            <h3>통계가 비어 있을 때</h3>
+                            <ul class="bullet-list">
+                                <li>조회 기간이 오늘 포함인지 확인하고, 날짜를 넉넉히 선택해 다시 조회합니다.</li>
+                                <li>필터(사용자 ID 등)를 모두 해제한 뒤 재조회합니다.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="pwModal">
+        <div class="modal" style="max-width:420px;">
+            <div class="modal-header">
+                <h3 class="modal-title">비밀번호 변경</h3>
+                <button class="modal-close" id="pwModalClose" type="button">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">현재 비밀번호</label>
+                    <input type="password" class="form-input" id="currentPassword" placeholder="현재 비밀번호를 입력하세요">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">새 비밀번호</label>
+                    <input type="password" class="form-input" id="newPassword" placeholder="새 비밀번호를 입력하세요">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">새 비밀번호 확인</label>
+                    <input type="password" class="form-input" id="confirmPassword" placeholder="다시 한 번 입력하세요">
+                    <p class="form-error" id="pwError" style="display:none;"></p>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" id="pwModalCancel" type="button">취소</button>
+                <button class="btn btn-primary" id="pwModalSave" type="button">변경</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="toastContainer" class="toast-container"></div>
+
+    <script th:src="@{/js/admin/common.js}" src="/js/admin/common.js"></script>
+    <script th:src="@{/js/admin/guide.js}" src="/js/admin/guide.js"></script>
+</body>
+
+</html>

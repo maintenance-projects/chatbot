@@ -230,6 +230,7 @@
                 "/admin/storage",
                 "/admin/statistics",
                 "/admin/master",
+                "/admin/guide",
                 "/admin/changePassword"
             ];
 

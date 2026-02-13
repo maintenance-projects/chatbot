@@ -181,6 +181,27 @@ public class AdminLoginController {
         return "admin/master";
     }
 
+    @RequestMapping("/guide")
+    public String guideIndex(HttpServletRequest request, Model model, @RequestParam(value="adminId", required = false) String a) {
+        String sessionId = (String) request.getSession().getAttribute("sessionId");
+        if(!StringUtils.hasText(sessionId)) return buildSessionExpiredRedirect();
+
+        AdminSession session = sessionStore.get(sessionId);
+        if(session==null) return buildSessionExpiredRedirect();
+
+        String adminId = session.getAdminId();
+        log.debug("[guide index] adminId={}, sessionId={}", adminId, sessionId);
+
+        model.addAttribute("adminId",session.getAdminId());
+        model.addAttribute("adminName", session.getAdminName());
+        model.addAttribute("storage", session.isAuthStorage());
+        model.addAttribute("statistics", session.isAuthStatistics());
+        model.addAttribute("master",session.isAuthMaster());
+        model.addAttribute("sessionRemainingSeconds", sessionStore.getRemainingSeconds(sessionId));
+
+        return "admin/guide";
+    }
+
     private String getClientIp(HttpServletRequest request) {
         String forwarded = request.getHeader("X-Forwarded-For");
         if (forwarded != null && !forwarded.isEmpty()) {

@@ -41,6 +41,20 @@
         statTotal: null
     };
 
+    var elBtnScreenGuide = $("#btnScreenGuide");
+    var elScreenGuideOverlay = $("#screenGuideOverlay");
+    var elScreenGuideDim = $("#screenGuideDim");
+    var elScreenGuideClose = $("#btnCloseScreenGuide");
+    var elScreenGuideLayer = $("#screenGuideHighlightLayer");
+    var isScreenGuideOpen = false;
+    var guideItems = [
+        { selector: ".stats-row", title: "요약 카드", text: "현재 등록된 전체 관리자 수를 확인합니다." },
+        { selector: ".search-group", title: "계정 검색", text: "관리자 ID/이름 기준으로 대상을 빠르게 찾습니다." },
+        { selector: "#btnAddAdmin", title: "계정 추가", text: "새 관리자 계정을 생성하고 초기 권한을 설정합니다." },
+        { selector: ".table-wrap", title: "계정 목록", text: "권한, IP, 등록일을 확인하고 수정/삭제를 수행합니다." },
+        { selector: "#adminTableBody", title: "행 동작 버튼", text: "각 계정별로 수정/삭제 작업을 실행합니다." }
+    ];
+
     /* ───── 유틸 ───── */
     function escapeHtml(str) {
         var div = document.createElement("div");
@@ -88,6 +102,160 @@
                 if (!res.ok) throw new Error("HTTP " + res.status);
                 return res.text();
             });
+    }
+
+    function clearScreenGuideHighlights() {
+        if (!elScreenGuideLayer) return;
+        elScreenGuideLayer.innerHTML = "";
+    }
+
+    function renderScreenGuideHighlights() {
+        if (!elScreenGuideLayer) return;
+        clearScreenGuideHighlights();
+
+        var occupiedTooltipRects = [];
+
+        function overlapArea(a, b) {
+            var x = Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left));
+            var y = Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
+            return x * y;
+        }
+
+        function intersectsAny(rect) {
+            for (var i = 0; i < occupiedTooltipRects.length; i++) {
+                if (overlapArea(rect, occupiedTooltipRects[i]) > 0) return true;
+            }
+            return false;
+        }
+
+        function clampRect(rect, width, height) {
+            var margin = 8;
+            var left = Math.max(margin, Math.min(rect.left, window.innerWidth - width - margin));
+            var top = Math.max(margin, Math.min(rect.top, window.innerHeight - height - margin));
+            return { left: left, top: top, right: left + width, bottom: top + height };
+        }
+
+        guideItems.forEach(function (item, idx) {
+            var target = document.querySelector(item.selector);
+            if (!target) return;
+
+            var rect = target.getBoundingClientRect();
+            if (!rect.width || !rect.height) return;
+
+            var pad = 6;
+            var box = document.createElement("div");
+            box.className = "screen-guide-highlight";
+            box.style.top = Math.max(rect.top - pad, 6) + "px";
+            box.style.left = Math.max(rect.left - pad, 6) + "px";
+            box.style.width = Math.min(rect.width + pad * 2, window.innerWidth - 12) + "px";
+            box.style.height = rect.height + pad * 2 + "px";
+
+            var badge = document.createElement("div");
+            badge.className = "screen-guide-badge";
+            badge.textContent = String(idx + 1);
+            badge.style.top = Math.max(rect.top - 16, 4) + "px";
+            badge.style.left = Math.max(rect.left - 4, 4) + "px";
+
+            var tooltip = document.createElement("div");
+            tooltip.className = "screen-guide-tooltip";
+            tooltip.innerHTML = '<div class="screen-guide-tooltip-title">'
+                + '<span class="guide-item-no">' + (idx + 1) + "</span>"
+                + "<span>" + item.title + "</span></div>"
+                + '<p class="screen-guide-tooltip-text">' + item.text + "</p>";
+            tooltip.style.left = "-9999px";
+            tooltip.style.top = "-9999px";
+            elScreenGuideLayer.appendChild(tooltip);
+
+            var tooltipWidth = tooltip.offsetWidth || (window.innerWidth <= 768 ? 220 : 260);
+            var tooltipHeight = tooltip.offsetHeight || 96;
+
+            var candidates = [
+                { left: rect.right + 10, top: rect.top },
+                { left: rect.left - tooltipWidth - 10, top: rect.top },
+                { left: rect.right + 10, top: rect.bottom - tooltipHeight },
+                { left: rect.left - tooltipWidth - 10, top: rect.bottom - tooltipHeight },
+                { left: rect.left, top: rect.bottom + 10 },
+                { left: rect.left, top: rect.top - tooltipHeight - 10 }
+            ];
+
+            var best = null;
+            var bestScore = Number.MAX_SAFE_INTEGER;
+            for (var c = 0; c < candidates.length; c++) {
+                var candidateRect = clampRect({ left: candidates[c].left, top: candidates[c].top }, tooltipWidth, tooltipHeight);
+                if (!intersectsAny(candidateRect)) {
+                    best = candidateRect;
+                    break;
+                }
+
+                var score = 0;
+                for (var o = 0; o < occupiedTooltipRects.length; o++) {
+                    score += overlapArea(candidateRect, occupiedTooltipRects[o]);
+                }
+                if (score < bestScore) {
+                    bestScore = score;
+                    best = candidateRect;
+                }
+            }
+
+            var shiftStep = 14;
+            var attempt = 0;
+            while (best && intersectsAny(best) && attempt < 20) {
+                var shifted = {
+                    left: best.left,
+                    top: best.top + shiftStep + attempt,
+                    right: best.right,
+                    bottom: best.bottom + shiftStep + attempt
+                };
+                best = clampRect(shifted, tooltipWidth, tooltipHeight);
+                attempt += 1;
+            }
+
+            if (!best) {
+                best = clampRect({ left: rect.right + 10, top: rect.top }, tooltipWidth, tooltipHeight);
+            }
+
+            tooltip.style.left = best.left + "px";
+            tooltip.style.top = best.top + "px";
+            occupiedTooltipRects.push(best);
+
+            elScreenGuideLayer.appendChild(box);
+            elScreenGuideLayer.appendChild(badge);
+            elScreenGuideLayer.appendChild(tooltip);
+        });
+    }
+
+    function closeScreenGuide() {
+        if (!elScreenGuideOverlay) return;
+        isScreenGuideOpen = false;
+        elScreenGuideOverlay.classList.remove("show");
+        elScreenGuideOverlay.setAttribute("aria-hidden", "true");
+        clearScreenGuideHighlights();
+    }
+
+    function openScreenGuide() {
+        if (!elScreenGuideOverlay) return;
+        renderScreenGuideHighlights();
+        isScreenGuideOpen = true;
+        elScreenGuideOverlay.classList.add("show");
+        elScreenGuideOverlay.setAttribute("aria-hidden", "false");
+    }
+
+    function bindScreenGuide() {
+        if (!elBtnScreenGuide || !elScreenGuideOverlay) return;
+
+        elBtnScreenGuide.addEventListener("click", openScreenGuide);
+        if (elScreenGuideClose) elScreenGuideClose.addEventListener("click", closeScreenGuide);
+        if (elScreenGuideDim) elScreenGuideDim.addEventListener("click", closeScreenGuide);
+
+        window.addEventListener("resize", function () {
+            if (isScreenGuideOpen) renderScreenGuideHighlights();
+        });
+        window.addEventListener("scroll", function () {
+            if (isScreenGuideOpen) renderScreenGuideHighlights();
+        }, true);
+        document.addEventListener("keydown", function (e) {
+            if (e.key === "Escape" && isScreenGuideOpen) closeScreenGuide();
+        });
     }
 
     /* ───── 권한 뱃지 SVG ───── */
@@ -412,6 +580,8 @@
                 overlay.classList.remove("show");
             });
         }
+
+        bindScreenGuide();
     }
 
     /* ───── 초기화 ───── */

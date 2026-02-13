@@ -1513,3 +1513,123 @@ tbody td.center {
     opacity: 1;
     visibility: visible;
 }
+
+.btn-screen-guide {
+    margin-right: 8px;
+}
+
+.screen-guide-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 1400;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s ease, visibility 0.2s ease;
+}
+
+.screen-guide-overlay.show {
+    opacity: 1;
+    visibility: visible;
+}
+
+.screen-guide-dim {
+    position: absolute;
+    inset: 0;
+    background: rgba(20, 24, 37, 0.56);
+}
+
+.screen-guide-highlight-layer {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.screen-guide-highlight {
+    position: fixed;
+    border: 2px solid #f0f0db;
+    border-radius: 10px;
+    box-shadow: 0 0 0 9999px rgba(20, 24, 37, 0.05), 0 0 0 3px rgba(240, 240, 219, 0.25);
+    z-index: 1401;
+}
+
+.screen-guide-badge {
+    position: fixed;
+    min-width: 24px;
+    height: 24px;
+    border-radius: 999px;
+    background: #f0f0db;
+    color: #30364f;
+    font-size: 0.78rem;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 8px;
+    z-index: 1402;
+}
+
+.screen-guide-tooltip {
+    position: fixed;
+    max-width: 260px;
+    background: #ffffff;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    box-shadow: var(--shadow-md);
+    padding: 10px 12px;
+    color: var(--text-dark);
+    z-index: 1403;
+}
+
+.screen-guide-tooltip-title {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 600;
+    font-size: 0.84rem;
+}
+
+.screen-guide-tooltip-title .guide-item-no {
+    display: inline-flex;
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.68rem;
+    color: #30364f;
+    background: #f0f0db;
+}
+
+.screen-guide-tooltip-text {
+    margin-top: 4px;
+    font-size: 0.82rem;
+    color: var(--text-mid);
+    line-height: 1.4;
+}
+
+.screen-guide-close-fab {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    z-index: 2;
+    border: none;
+    border-radius: 999px;
+    background: #f0f0db;
+    color: #30364f;
+    font-size: 0.84rem;
+    font-weight: 600;
+    padding: 8px 14px;
+    cursor: pointer;
+    box-shadow: var(--shadow-sm);
+}
+
+.screen-guide-close-fab:hover {
+    background: #ffffff;
+}
+
+@media (max-width:768px) {
+    .btn-screen-guide {
+        margin-right: 0;
+    }
+}
+

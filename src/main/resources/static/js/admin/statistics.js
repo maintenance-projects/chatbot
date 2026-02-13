@@ -39,6 +39,22 @@
     var elUserBadgeText = $("#userFilterText");
     var elUserBadgeRemove = $("#userFilterRemove");
     var elTypeSummary = $("#typeSummary");
+    var elBtnScreenGuide = $("#btnScreenGuide");
+    var elScreenGuideOverlay = $("#screenGuideOverlay");
+    var elScreenGuideDim = $("#screenGuideDim");
+    var elScreenGuideClose = $("#btnCloseScreenGuide");
+    var elScreenGuideLayer = $("#screenGuideHighlightLayer");
+
+    var guideItems = [
+        { selector: "#btnApplyDate", title: "조회 버튼", text: "기간 조건을 기준으로 요약/차트/랭킹을 갱신합니다." },
+        { selector: "#btnExport", title: "엑셀 다운로드", text: "현재 필터 조건으로 통계 엑셀 파일을 내려받습니다." },
+        { selector: ".filter-user", title: "사용자 검색", text: "특정 사용자 ID로 결과를 좁혀서 분석할 수 있습니다." },
+        { selector: ".stats-row-2", title: "요약 카드", text: "총 요청 수와 고유 사용자 수를 빠르게 확인합니다." },
+        { selector: ".chart-grid", title: "차트 영역", text: "일별 추이와 시간대별 분포를 시각적으로 비교합니다." },
+        { selector: "#hourlyDateSelect", title: "시간대별 날짜 선택", text: "특정 날짜를 선택하여 해당일의 시간대별 분포를 확인합니다." },
+        { selector: ".table-card", title: "사용자 랭킹", text: "요청량 상위 사용자를 유형별 합계와 함께 확인합니다." }
+    ];
+    var isScreenGuideOpen = false;
 
     /* ───── 유틸 ───── */
     function formatDate(d) {
@@ -82,6 +98,204 @@
             toast.classList.add("removing");
             toast.addEventListener("animationend", function () { toast.remove(); });
         }, 3000);
+    }
+
+    function clearScreenGuideHighlights() {
+        if (!elScreenGuideLayer) return;
+        elScreenGuideLayer.innerHTML = "";
+    }
+
+    function renderScreenGuideHighlights() {
+        if (!elScreenGuideLayer) return;
+        clearScreenGuideHighlights();
+        var occupiedTooltipRects = [];
+
+        function overlapArea(a, b) {
+            var x = Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left));
+            var y = Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
+            return x * y;
+        }
+
+        function intersectsAny(rect) {
+            for (var i = 0; i < occupiedTooltipRects.length; i++) {
+                if (overlapArea(rect, occupiedTooltipRects[i]) > 0) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function clampRect(rect, width, height) {
+            var margin = 8;
+            var left = Math.max(margin, Math.min(rect.left, window.innerWidth - width - margin));
+            var top = Math.max(margin, Math.min(rect.top, window.innerHeight - height - margin));
+            return {
+                left: left,
+                top: top,
+                right: left + width,
+                bottom: top + height
+            };
+        }
+
+        guideItems.forEach(function (item, idx) {
+            var target = document.querySelector(item.selector);
+            if (!target) return;
+
+            var rect = target.getBoundingClientRect();
+            if (!rect.width || !rect.height) return;
+
+            var pad = 6;
+            var box = document.createElement("div");
+            box.className = "screen-guide-highlight";
+            box.style.top = Math.max(rect.top - pad, 6) + "px";
+            box.style.left = Math.max(rect.left - pad, 6) + "px";
+            box.style.width = Math.min(rect.width + pad * 2, window.innerWidth - 12) + "px";
+            box.style.height = rect.height + pad * 2 + "px";
+
+            var badge = document.createElement("div");
+            badge.className = "screen-guide-badge";
+            badge.textContent = String(idx + 1);
+            badge.style.top = Math.max(rect.top - 16, 4) + "px";
+            badge.style.left = Math.max(rect.left - 4, 4) + "px";
+
+            var tooltip = document.createElement("div");
+            tooltip.className = "screen-guide-tooltip";
+            tooltip.innerHTML = '<div class="screen-guide-tooltip-title">'
+                + '<span class="guide-item-no">' + (idx + 1) + "</span>"
+                + "<span>" + item.title + "</span></div>"
+                + '<p class="screen-guide-tooltip-text">' + item.text + "</p>";
+            tooltip.style.left = "-9999px";
+            tooltip.style.top = "-9999px";
+            elScreenGuideLayer.appendChild(tooltip);
+
+            var tooltipWidth = tooltip.offsetWidth || (window.innerWidth <= 768 ? 220 : 260);
+            var tooltipHeight = tooltip.offsetHeight || 96;
+
+            var candidates;
+            if (idx === 2) {
+                candidates = [
+                    { left: rect.right + 10, top: rect.top },
+                    { left: rect.left, top: rect.bottom + 10 },
+                    { left: rect.right + 10, top: rect.bottom - tooltipHeight },
+                    { left: rect.left, top: rect.top - tooltipHeight - 10 },
+                    { left: rect.left - tooltipWidth - 10, top: rect.top }
+                ];
+            } else if (idx === 4) {
+                candidates = [
+                    { left: rect.left - tooltipWidth - 10, top: rect.top },
+                    { left: rect.left - tooltipWidth - 10, top: rect.bottom - tooltipHeight },
+                    { left: rect.left, top: rect.bottom + 10 },
+                    { left: rect.left, top: rect.top - tooltipHeight - 10 },
+                    { left: rect.right + 10, top: rect.top },
+                    { left: rect.right + 10, top: rect.bottom - tooltipHeight }
+                ];
+            } else if (idx === 5) {
+                candidates = [
+                    { left: rect.right + 10, top: rect.top },
+                    { left: rect.left, top: rect.top - tooltipHeight - 10 },
+                    { left: rect.right + 10, top: rect.bottom - tooltipHeight },
+                    { left: rect.left, top: rect.bottom + 10 },
+                    { left: rect.left - tooltipWidth - 10, top: rect.top }
+                ];
+            } else {
+                candidates = [
+                    { left: rect.right + 10, top: rect.top },
+                    { left: rect.left - tooltipWidth - 10, top: rect.top },
+                    { left: rect.right + 10, top: rect.bottom - tooltipHeight },
+                    { left: rect.left - tooltipWidth - 10, top: rect.bottom - tooltipHeight },
+                    { left: rect.left, top: rect.bottom + 10 },
+                    { left: rect.left, top: rect.top - tooltipHeight - 10 }
+                ];
+            }
+
+            var best = null;
+            var bestScore = Number.MAX_SAFE_INTEGER;
+            for (var c = 0; c < candidates.length; c++) {
+                var candidateRect = clampRect({
+                    left: candidates[c].left,
+                    top: candidates[c].top
+                }, tooltipWidth, tooltipHeight);
+
+                if (!intersectsAny(candidateRect)) {
+                    best = candidateRect;
+                    break;
+                }
+
+                var score = 0;
+                for (var o = 0; o < occupiedTooltipRects.length; o++) {
+                    score += overlapArea(candidateRect, occupiedTooltipRects[o]);
+                }
+                if (score < bestScore) {
+                    bestScore = score;
+                    best = candidateRect;
+                }
+            }
+
+            var shiftStep = 14;
+            var attempt = 0;
+            while (best && intersectsAny(best) && attempt < 20) {
+                var shifted = {
+                    left: best.left,
+                    top: best.top + shiftStep + attempt,
+                    right: best.right,
+                    bottom: best.bottom + shiftStep + attempt
+                };
+                best = clampRect(shifted, tooltipWidth, tooltipHeight);
+                attempt += 1;
+            }
+
+            if (!best) {
+                best = clampRect({ left: rect.right + 10, top: rect.top }, tooltipWidth, tooltipHeight);
+            }
+
+            tooltip.style.left = best.left + "px";
+            tooltip.style.top = best.top + "px";
+            occupiedTooltipRects.push(best);
+
+            elScreenGuideLayer.appendChild(box);
+            elScreenGuideLayer.appendChild(badge);
+            elScreenGuideLayer.appendChild(tooltip);
+        });
+    }
+
+    function closeScreenGuide() {
+        if (!elScreenGuideOverlay) return;
+        isScreenGuideOpen = false;
+        elScreenGuideOverlay.classList.remove("show");
+        elScreenGuideOverlay.setAttribute("aria-hidden", "true");
+        clearScreenGuideHighlights();
+    }
+
+    function openScreenGuide() {
+        if (!elScreenGuideOverlay) return;
+        renderScreenGuideHighlights();
+        isScreenGuideOpen = true;
+        elScreenGuideOverlay.classList.add("show");
+        elScreenGuideOverlay.setAttribute("aria-hidden", "false");
+    }
+
+    function bindScreenGuide() {
+        if (!elBtnScreenGuide || !elScreenGuideOverlay) return;
+
+        elBtnScreenGuide.addEventListener("click", openScreenGuide);
+        if (elScreenGuideClose) {
+            elScreenGuideClose.addEventListener("click", closeScreenGuide);
+        }
+        if (elScreenGuideDim) {
+            elScreenGuideDim.addEventListener("click", closeScreenGuide);
+        }
+
+        window.addEventListener("resize", function () {
+            if (isScreenGuideOpen) renderScreenGuideHighlights();
+        });
+        window.addEventListener("scroll", function () {
+            if (isScreenGuideOpen) renderScreenGuideHighlights();
+        }, true);
+        document.addEventListener("keydown", function (e) {
+            if (e.key === "Escape" && isScreenGuideOpen) {
+                closeScreenGuide();
+            }
+        });
     }
 
     function escapeHtml(str) {
@@ -431,6 +645,8 @@
                 overlay.classList.remove("show");
             });
         }
+
+        bindScreenGuide();
     }
 
     /* ───── 초기화 ───── */

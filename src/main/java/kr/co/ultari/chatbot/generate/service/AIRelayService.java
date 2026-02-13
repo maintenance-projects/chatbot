@@ -499,17 +499,19 @@ public class AIRelayService {
                 "  }";
 
         String templateJson3 = "{\n" +
-                "    \"meeting_title\": \"회의 안건\",\n" +
-                "    \"datetime\": \"일시\",\n" +
-                "    \"person_in_charge\": \"담당자\",\n" +
-                "    \"location\": \"장소\",\n" +
-                "    \"attendee_count\": \"참석 인원수\",\n" +
-                "    \"agenda\": \"주요 안건\",\n" +
+                "    \"meeting_title\": \"1분기 운영 현황 점검 및 향후 추진 계획 논의\",\n" +
+                "    \"datetime\": \"2026년 2월 12일 (목) 10:00 ~ 11:30\",\n" +
+                "    \"person_in_charge\": \"홍 길동\",\n" +
+                "    \"location\": \"본사 3층 회의실\",\n" +
+                "    \"attendee_count\": \"팀장, 각 파트 담당자 외 5명\",\n" +
+                "    \"agenda\": \"1분기 운영 현황 공유\",\n" +
                 "    \"attendees\": [\n" +
-                "      {\"affiliation\": \"소속\", \"name\": \"이름\"}\n" +
+                "      {\"affiliation\": \"운영기획팀\", \"name\": \"김 도현\"},\n" +
+                "      {\"affiliation\": \"경영지원팀\", \"name\": \"박 지훈\"},\n" +
+                "      {\"affiliation\": \"서비스운영팀\", \"name\": \"이 수민\"}\n" +
                 "    ],\n" +
-                "    \"meeting_content_lines\": [\"회의 내용 1줄\", \"회의 내용 2줄\"],\n" +
-                "    \"meeting_result_lines\": [\"회의 결과 1줄\", \"회의 결과 2줄\"]\n" +
+                "    \"meeting_content_lines\": [\"1월 대비 2월 업무 요청 건수가 증가함.\", \"특정 부서에 업무가 집중되는 현상이 발생하고 있어 업무 분산 방안이 필요하다는 의견이 제기됨.\", \"일부 업무는 처리 지연 사례가 있었으며, 원인은 인력 공백 및 우선순위 조정 미흡으로 분석됨.\"],\n" +
+                "    \"meeting_result_lines\": [\"업무 요청 접수 시 우선순위 기준을 명확히 정의하기로 함.\", \"각 파트별 주간 업무 현황을 공유하는 체계를 강화하기로 함.\"]\n" +
                 "  }";
 
         //요청 횟수 증가
