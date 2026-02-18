@@ -17,6 +17,7 @@
         DIALOG:   "채팅요약",
         AUDIO:    "통화요약"
     };
+
     var TYPE_COLORS = {
         CHAT:     { border: "#30364F", bg: "rgba(48,54,79,0.1)",  bar: "rgba(48,54,79,0.7)",  dot: "#30364F" },
         DOCUMENT: { border: "#27ae60", bg: "rgba(39,174,96,0.1)", bar: "rgba(39,174,96,0.7)", dot: "#27ae60" },
