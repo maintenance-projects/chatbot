@@ -505,11 +505,47 @@ body {
     padding: 8px 16px;
     font-size: 0.85rem;
     box-shadow: var(--shadow-sm);
-    transition: box-shadow var(--transition);
+    transition: all var(--transition);
+    cursor: pointer;
+    user-select: none;
 }
 
 .type-chip:hover {
     box-shadow: var(--shadow-md);
+    transform: translateY(-1px);
+}
+
+.type-chip.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: var(--white);
+}
+
+.type-chip.active .type-chip-label {
+    color: var(--white);
+}
+
+.type-chip.active .type-chip-value {
+    color: var(--white);
+}
+
+.type-chip-all {
+    background: var(--base);
+    border-color: var(--primary);
+}
+
+.type-chip-all.active {
+    background: var(--primary);
+    border-color: var(--primary);
+}
+
+.type-chip-all .type-chip-label {
+    color: var(--text-dark);
+    font-weight: 600;
+}
+
+.type-chip-all.active .type-chip-label {
+    color: var(--white);
 }
 
 .type-dot {

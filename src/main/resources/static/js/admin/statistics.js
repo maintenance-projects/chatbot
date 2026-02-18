@@ -6,6 +6,7 @@
     let hourlyChart = null;
     let adminId = "";
     let searchUserId = "";
+    let selectedTypes = []; // 선택된 타입 목록 (빈 배열이면 전체)
 
     /* ───── 타입 정의 ───── */
     var TYPES = ["CHAT", "DOCUMENT", "TEMPLATE", "DIALOG", "AUDIO"];
@@ -172,12 +173,28 @@
             var tooltipHeight = tooltip.offsetHeight || 96;
 
             var candidates;
-            if (idx === 2) {
+            if (idx === 0) {
+                candidates = [
+                    { left: rect.left - tooltipWidth - 10, top: rect.top },
+                    { left: rect.left, top: rect.top - tooltipHeight - 10 },
+                    { left: rect.left - tooltipWidth - 10, top: rect.bottom - tooltipHeight },
+                    { left: rect.left, top: rect.bottom + 10 },
+                    { left: rect.right + 10, top: rect.top }
+                ];
+            } else if (idx === 1) {
                 candidates = [
                     { left: rect.right + 10, top: rect.top },
                     { left: rect.left, top: rect.bottom + 10 },
                     { left: rect.right + 10, top: rect.bottom - tooltipHeight },
                     { left: rect.left, top: rect.top - tooltipHeight - 10 },
+                    { left: rect.left - tooltipWidth - 10, top: rect.top }
+                ];
+            } else if (idx === 2) {
+                candidates = [
+                    { left: rect.right + 10, top: rect.top },
+                    { left: rect.left, top: rect.top - tooltipHeight - 10 },
+                    { left: rect.right + 10, top: rect.bottom - tooltipHeight },
+                    { left: rect.left, top: rect.bottom + 10 },
                     { left: rect.left - tooltipWidth - 10, top: rect.top }
                 ];
             } else if (idx === 4) {
@@ -349,17 +366,64 @@
             // 타입별 칩 렌더링
             var tc = data.typeCounts || {};
             var html = "";
+
+            // 전체 칩 추가
+            var isAllActive = selectedTypes.length === 0;
+            html += '<div class="type-chip type-chip-all' + (isAllActive ? ' active' : '') + '" data-type="ALL">'
+                + '<span class="type-chip-label">전체</span>'
+                + '</div>';
+
             TYPES.forEach(function (t) {
                 var count = tc[t] || 0;
                 var color = TYPE_COLORS[t] ? TYPE_COLORS[t].dot : "#999";
-                html += '<div class="type-chip">'
+                var isActive = selectedTypes.length === 0 || selectedTypes.indexOf(t) !== -1;
+                html += '<div class="type-chip' + (isActive ? ' active' : '') + '" data-type="' + t + '">'
                     + '<span class="type-dot" style="background:' + color + ';"></span>'
                     + '<span class="type-chip-label">' + TYPE_LABELS[t] + '</span>'
                     + '<span class="type-chip-value">' + count.toLocaleString() + '</span>'
                     + '</div>';
             });
             elTypeSummary.innerHTML = html;
+            bindTypeChipEvents();
         }).catch(function () { showToast("요약 데이터를 불러올 수 없습니다.", "error"); });
+    }
+
+    function bindTypeChipEvents() {
+        var chips = elTypeSummary.querySelectorAll(".type-chip");
+        chips.forEach(function (chip) {
+            chip.addEventListener("click", function () {
+                var type = chip.getAttribute("data-type");
+                handleTypeToggle(type);
+            });
+        });
+    }
+
+    function handleTypeToggle(type) {
+        if (type === "ALL") {
+            selectedTypes = [];
+        } else {
+            var idx = selectedTypes.indexOf(type);
+            if (idx === -1) {
+                selectedTypes.push(type);
+            } else {
+                selectedTypes.splice(idx, 1);
+            }
+        }
+
+        // 칩 스타일 업데이트
+        var chips = elTypeSummary.querySelectorAll(".type-chip");
+        chips.forEach(function (chip) {
+            var chipType = chip.getAttribute("data-type");
+            if (chipType === "ALL") {
+                chip.classList.toggle("active", selectedTypes.length === 0);
+            } else {
+                chip.classList.toggle("active", selectedTypes.length === 0 || selectedTypes.indexOf(chipType) !== -1);
+            }
+        });
+
+        // 차트 업데이트
+        loadDailyChart();
+        renderHourlyChart();
     }
 
     /* ───── 일별 차트 ───── */
@@ -380,7 +444,8 @@
             var displayLabels = labels.map(function (d) { return d.substring(5); });
 
             var datasets = [];
-            TYPES.forEach(function (t) {
+            var typesToShow = selectedTypes.length === 0 ? TYPES : selectedTypes;
+            typesToShow.forEach(function (t) {
                 var data = labels.map(function (d) { return dateMap[d][t]; });
                 var hasData = data.some(function (v) { return v > 0; });
                 if (hasData) {
@@ -462,7 +527,8 @@
         var labels = Array.from({ length: 24 }, function (_, i) { return i + "시"; });
 
         var datasets = [];
-        TYPES.forEach(function (t) {
+        var typesToShow = selectedTypes.length === 0 ? TYPES : selectedTypes;
+        typesToShow.forEach(function (t) {
             var hasData = hourData[t].some(function (v) { return v > 0; });
             if (hasData) {
                 var c = TYPE_COLORS[t];
