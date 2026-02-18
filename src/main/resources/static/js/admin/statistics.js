@@ -407,6 +407,10 @@
                 selectedTypes.push(type);
             } else {
                 selectedTypes.splice(idx, 1);
+                // 마지막 타입까지 해제되면 전체로 되돌림
+                if (selectedTypes.length === 0) {
+                    selectedTypes = [];
+                }
             }
         }
 
@@ -421,66 +425,73 @@
             }
         });
 
-        // 차트 업데이트
-        loadDailyChart();
+        // 캐시된 데이터로 차트만 업데이트 (API 재호출 없음)
+        renderDailyChart();
         renderHourlyChart();
     }
 
     /* ───── 일별 차트 ───── */
+    var dailyRawData = [];
+
     function loadDailyChart() {
         postData("/admin/statistics/daily").then(function (rows) {
-            var dateMap = {};
-            rows.forEach(function (r) {
-                if (!dateMap[r.date]) {
-                    dateMap[r.date] = {};
-                    TYPES.forEach(function (t) { dateMap[r.date][t] = 0; });
-                }
-                if (dateMap[r.date][r.type] !== undefined) {
-                    dateMap[r.date][r.type] = r.totalCount;
-                }
-            });
-
-            var labels = Object.keys(dateMap).sort();
-            var displayLabels = labels.map(function (d) { return d.substring(5); });
-
-            var datasets = [];
-            var typesToShow = selectedTypes.length === 0 ? TYPES : selectedTypes;
-            typesToShow.forEach(function (t) {
-                var data = labels.map(function (d) { return dateMap[d][t]; });
-                var hasData = data.some(function (v) { return v > 0; });
-                if (hasData) {
-                    var c = TYPE_COLORS[t];
-                    datasets.push({
-                        label: TYPE_LABELS[t],
-                        data: data,
-                        borderColor: c.border,
-                        backgroundColor: c.bg,
-                        borderWidth: 2,
-                        fill: true,
-                        tension: 0.3,
-                        pointRadius: 3,
-                        pointHoverRadius: 5
-                    });
-                }
-            });
-
-            if (dailyChart) dailyChart.destroy();
-            dailyChart = new Chart($("#dailyChart"), {
-                type: "line",
-                data: { labels: displayLabels, datasets: datasets },
-                options: {
-                    responsive: true,
-                    maintainAspectRatio: false,
-                    interaction: { mode: "index", intersect: false },
-                    plugins: {
-                        legend: { position: "top", labels: { usePointStyle: true, padding: 16 } }
-                    },
-                    scales: {
-                        y: { beginAtZero: true, ticks: { precision: 0 } }
-                    }
-                }
-            });
+            dailyRawData = rows;
+            renderDailyChart();
         }).catch(function () { showToast("일별 통계를 불러올 수 없습니다.", "error"); });
+    }
+
+    function renderDailyChart() {
+        var dateMap = {};
+        dailyRawData.forEach(function (r) {
+            if (!dateMap[r.date]) {
+                dateMap[r.date] = {};
+                TYPES.forEach(function (t) { dateMap[r.date][t] = 0; });
+            }
+            if (dateMap[r.date][r.type] !== undefined) {
+                dateMap[r.date][r.type] = r.totalCount;
+            }
+        });
+
+        var labels = Object.keys(dateMap).sort();
+        var displayLabels = labels.map(function (d) { return d.substring(5); });
+
+        var datasets = [];
+        var typesToShow = selectedTypes.length === 0 ? TYPES : selectedTypes;
+        typesToShow.forEach(function (t) {
+            var data = labels.map(function (d) { return dateMap[d][t]; });
+            var hasData = data.some(function (v) { return v > 0; });
+            if (hasData) {
+                var c = TYPE_COLORS[t];
+                datasets.push({
+                    label: TYPE_LABELS[t],
+                    data: data,
+                    borderColor: c.border,
+                    backgroundColor: c.bg,
+                    borderWidth: 2,
+                    fill: true,
+                    tension: 0.3,
+                    pointRadius: 3,
+                    pointHoverRadius: 5
+                });
+            }
+        });
+
+        if (dailyChart) dailyChart.destroy();
+        dailyChart = new Chart($("#dailyChart"), {
+            type: "line",
+            data: { labels: displayLabels, datasets: datasets },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: "index", intersect: false },
+                plugins: {
+                    legend: { position: "top", labels: { usePointStyle: true, padding: 16 } }
+                },
+                scales: {
+                    y: { beginAtZero: true, ticks: { precision: 0 } }
+                }
+            }
+        });
     }
 
     /* ───── 시간대별 차트 ───── */
