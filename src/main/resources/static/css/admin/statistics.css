@@ -516,17 +516,17 @@ body {
 }
 
 .type-chip.active {
-    background: var(--primary);
-    border-color: var(--primary);
-    color: var(--white);
+    background: rgba(var(--primary-rgb), 0.12);
+    border-color: rgba(var(--primary-rgb), 0.35);
+    color: var(--primary);
 }
 
 .type-chip.active .type-chip-label {
-    color: var(--white);
+    color: var(--primary);
 }
 
 .type-chip.active .type-chip-value {
-    color: var(--white);
+    color: var(--primary-dark);
 }
 
 .type-chip-all {
@@ -535,8 +535,8 @@ body {
 }
 
 .type-chip-all.active {
-    background: var(--primary);
-    border-color: var(--primary);
+    background: rgba(var(--primary-rgb), 0.12);
+    border-color: rgba(var(--primary-rgb), 0.35);
 }
 
 .type-chip-all .type-chip-label {
@@ -545,7 +545,7 @@ body {
 }
 
 .type-chip-all.active .type-chip-label {
-    color: var(--white);
+    color: var(--primary);
 }
 
 .type-dot {

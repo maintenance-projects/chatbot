@@ -1,14 +1,14 @@
 (function () {
     "use strict";
 
-    /* ───── 상태 ───── */
     let dailyChart = null;
     let hourlyChart = null;
     let adminId = "";
     let searchUserId = "";
-    let selectedTypes = []; // 선택된 타입 목록 (빈 배열이면 전체)
+    let selectedDailyDate = "";
+    let dailyLabels = [];
+    let selectedTypes = [];
 
-    /* ───── 타입 정의 ───── */
     var TYPES = ["CHAT", "DOCUMENT", "TEMPLATE", "DIALOG", "AUDIO"];
     var TYPE_LABELS = {
         CHAT:     "대화",
@@ -25,7 +25,6 @@
         AUDIO:    { border: "#d35400", bg: "rgba(211,84,0,0.1)",  bar: "rgba(211,84,0,0.7)",  dot: "#d35400" }
     };
 
-    /* ───── DOM ───── */
     var $ = function (sel) { return document.querySelector(sel); };
     var $$ = function (sel) { return document.querySelectorAll(sel); };
 
@@ -45,19 +44,18 @@
     var elScreenGuideDim = $("#screenGuideDim");
     var elScreenGuideClose = $("#btnCloseScreenGuide");
     var elScreenGuideLayer = $("#screenGuideHighlightLayer");
-
     var guideItems = [
         { selector: "#btnApplyDate", title: "조회 버튼", text: "기간 조건을 기준으로 요약/차트/랭킹을 갱신합니다." },
         { selector: "#btnExport", title: "엑셀 다운로드", text: "현재 필터 조건으로 통계 엑셀 파일을 내려받습니다." },
-        { selector: ".filter-user", title: "사용자 검색", text: "특정 사용자 ID로 결과를 좁혀서 분석할 수 있습니다." },
-        { selector: ".stats-row-2", title: "요약 카드", text: "총 요청 수와 고유 사용자 수를 빠르게 확인합니다." },
-        { selector: ".chart-grid", title: "차트 영역", text: "일별 추이와 시간대별 분포를 시각적으로 비교합니다." },
+        { selector: ".filter-user", title: "사용자 검색", text: "특정 사용자 ID로 결과를 좁혀 분석합니다." },
+        { selector: ".stats-row-2", title: "요약 카드", text: "총 요청 건수와 사용자 수를 빠르게 확인합니다." },
+        { selector: ".chart-grid", title: "차트 영역", text: "일별 추이와 시간대별 분포를 함께 비교합니다." },
+        { selector: "#dailyChart", title: "일별 추이 클릭", text: "날짜를 클릭하면 시간대별 날짜가 자동 변경되고 포인트가 강조됩니다." },
         { selector: "#hourlyDateSelect", title: "시간대별 날짜 선택", text: "특정 날짜를 선택하여 해당일의 시간대별 분포를 확인합니다." },
-        { selector: ".table-card", title: "사용자 랭킹", text: "요청량 상위 사용자를 유형별 합계와 함께 확인합니다." }
+        { selector: ".table-card", title: "사용자 랭킹", text: "요청 상위 사용자와 유형별 합계를 확인합니다." }
     ];
-    var isScreenGuideOpen = false;
+var isScreenGuideOpen = false;
 
-    /* ───── 유틸 ───── */
     function formatDate(d) {
         var yyyy = d.getFullYear();
         var mm = String(d.getMonth() + 1).padStart(2, "0");
@@ -321,13 +319,12 @@
         return div.innerHTML;
     }
 
-    /* ───── 사용자 필터 ───── */
     function applyUserFilter() {
         var val = elUserInput.value.trim();
         if (!val) { clearUserFilter(); return; }
         searchUserId = val;
         elUserBadge.style.display = "";
-        elUserBadgeText.textContent = "사용자: " + val;
+        elUserBadgeText.textContent = "사용자 " + val;
         elBtnUserClear.style.display = "";
         loadAll();
     }
@@ -340,7 +337,6 @@
         loadAll();
     }
 
-    /* ───── API 호출 ───── */
     function postData(url, params) {
         var fd = new FormData();
         fd.append("adminId", adminId);
@@ -357,17 +353,14 @@
             });
     }
 
-    /* ───── 요약 카드 + 타입 칩 갱신 ───── */
     function loadSummary() {
         postData("/admin/statistics/summary").then(function (data) {
             animateNumber($("#statTotal"), data.totalCount || 0);
             animateNumber($("#statUsers"), data.userCount || 0);
 
-            // 타입별 칩 렌더링
             var tc = data.typeCounts || {};
             var html = "";
 
-            // 전체 칩 추가
             var isAllActive = selectedTypes.length === 0;
             html += '<div class="type-chip type-chip-all' + (isAllActive ? ' active' : '') + '" data-type="ALL">'
                 + '<span class="type-chip-label">전체</span>'
@@ -385,7 +378,7 @@
             });
             elTypeSummary.innerHTML = html;
             bindTypeChipEvents();
-        }).catch(function () { showToast("요약 데이터를 불러올 수 없습니다.", "error"); });
+        }).catch(function () { showToast("요약 데이터를 불러오지 못했습니다.", "error"); });
     }
 
     function bindTypeChipEvents() {
@@ -407,14 +400,12 @@
                 selectedTypes.push(type);
             } else {
                 selectedTypes.splice(idx, 1);
-                // 마지막 타입까지 해제되면 전체로 되돌림
                 if (selectedTypes.length === 0) {
                     selectedTypes = [];
                 }
             }
         }
 
-        // 칩 스타일 업데이트
         var chips = elTypeSummary.querySelectorAll(".type-chip");
         chips.forEach(function (chip) {
             var chipType = chip.getAttribute("data-type");
@@ -425,19 +416,17 @@
             }
         });
 
-        // 캐시된 데이터로 차트만 업데이트 (API 재호출 없음)
         renderDailyChart();
         renderHourlyChart();
     }
 
-    /* ───── 일별 차트 ───── */
     var dailyRawData = [];
 
     function loadDailyChart() {
         postData("/admin/statistics/daily").then(function (rows) {
             dailyRawData = rows;
             renderDailyChart();
-        }).catch(function () { showToast("일별 통계를 불러올 수 없습니다.", "error"); });
+        }).catch(function () { showToast("일별 통계를 불러오지 못했습니다.", "error"); });
     }
 
     function renderDailyChart() {
@@ -453,7 +442,11 @@
         });
 
         var labels = Object.keys(dateMap).sort();
-        var displayLabels = labels.map(function (d) { return d.substring(5); });
+        dailyLabels = labels;
+        if (selectedDailyDate && dailyLabels.indexOf(selectedDailyDate) === -1) {
+            selectedDailyDate = "";
+        }
+        var displayLabels = dailyLabels.map(function (d) { return d.substring(5); });
 
         var datasets = [];
         var typesToShow = selectedTypes.length === 0 ? TYPES : selectedTypes;
@@ -462,6 +455,7 @@
             var hasData = data.some(function (v) { return v > 0; });
             if (hasData) {
                 var c = TYPE_COLORS[t];
+                var labelByIndex = dailyLabels;
                 datasets.push({
                     label: TYPE_LABELS[t],
                     data: data,
@@ -470,13 +464,29 @@
                     borderWidth: 2,
                     fill: true,
                     tension: 0.3,
-                    pointRadius: 3,
-                    pointHoverRadius: 5
+                    pointRadius: function (ctx) {
+                        if (!selectedDailyDate) return 3;
+                        return labelByIndex[ctx.dataIndex] === selectedDailyDate ? 6 : 2;
+                    },
+                    pointHoverRadius: function (ctx) {
+                        if (!selectedDailyDate) return 5;
+                        return labelByIndex[ctx.dataIndex] === selectedDailyDate ? 8 : 5;
+                    },
+                    pointBackgroundColor: function (ctx) {
+                        if (!selectedDailyDate) return c.border;
+                        return labelByIndex[ctx.dataIndex] === selectedDailyDate ? c.border : "rgba(0,0,0,0.15)";
+                    }
                 });
             }
         });
 
-        if (dailyChart) dailyChart.destroy();
+        if (dailyChart) {
+            dailyChart.data.labels = displayLabels;
+            dailyChart.data.datasets = datasets;
+            dailyChart.update("none");
+            return;
+        }
+
         dailyChart = new Chart($("#dailyChart"), {
             type: "line",
             data: { labels: displayLabels, datasets: datasets },
@@ -484,6 +494,15 @@
                 responsive: true,
                 maintainAspectRatio: false,
                 interaction: { mode: "index", intersect: false },
+                onClick: function (evt, elements) {
+                    if (!elements || elements.length === 0) return;
+                    var idx = elements[0].index;
+                    if (dailyLabels[idx]) {
+                        selectedDailyDate = dailyLabels[idx];
+                        setHourlyDate(selectedDailyDate);
+                        renderDailyChart();
+                    }
+                },
                 plugins: {
                     legend: { position: "top", labels: { usePointStyle: true, padding: 16 } }
                 },
@@ -494,34 +513,46 @@
         });
     }
 
-    /* ───── 시간대별 차트 ───── */
     var hourlyRawData = [];
     var elHourlyDateSelect = $("#hourlyDateSelect");
+
+    function setHourlyDate(date) {
+        if (!date || !elHourlyDateSelect) return;
+        var hasOption = false;
+        for (var i = 0; i < elHourlyDateSelect.options.length; i++) {
+            if (elHourlyDateSelect.options[i].value === date) {
+                hasOption = true;
+                break;
+            }
+        }
+        if (!hasOption) return;
+        if (elHourlyDateSelect.value !== date) {
+            elHourlyDateSelect.value = date;
+        }
+        renderHourlyChart();
+    }
 
     function loadHourlyChart() {
         postData("/admin/statistics/hourly").then(function (rows) {
             hourlyRawData = rows;
 
-            // 날짜 목록 추출
             var dates = [];
             rows.forEach(function (r) {
                 if (dates.indexOf(r.date) === -1) dates.push(r.date);
             });
             dates.sort();
 
-            // select 옵션 구성
             var html = "";
             dates.forEach(function (d) {
                 html += '<option value="' + d + '">' + d + '</option>';
             });
             elHourlyDateSelect.innerHTML = html;
 
-            // 마지막 날짜 선택 후 렌더링
             if (dates.length > 0) {
                 elHourlyDateSelect.value = dates[dates.length - 1];
             }
             renderHourlyChart();
-        }).catch(function () { showToast("시간대별 통계를 불러올 수 없습니다.", "error"); });
+        }).catch(function () { showToast("시간대별 통계를 불러오지 못했습니다.", "error"); });
     }
 
     function renderHourlyChart() {
@@ -535,7 +566,7 @@
             }
         });
 
-        var labels = Array.from({ length: 24 }, function (_, i) { return i + "시"; });
+         var labels = Array.from({ length: 24 }, function (_, i) { return i + "시"; });
 
         var datasets = [];
         var typesToShow = selectedTypes.length === 0 ? TYPES : selectedTypes;
@@ -571,7 +602,6 @@
         });
     }
 
-    /* ───── 사용자 랭킹 ───── */
     function loadRanking() {
         postData("/admin/statistics/ranking").then(function (rows) {
             var userMap = {};
@@ -623,10 +653,9 @@
                     + "</tr>";
             });
             elRankingBody.innerHTML = html;
-        }).catch(function () { showToast("사용자 랭킹을 불러올 수 없습니다.", "error"); });
+        }).catch(function () { showToast("사용자 랭킹을 불러오지 못했습니다.", "error"); });
     }
 
-    /* ───── 전체 갱신 ───── */
     function loadAll() {
         loadSummary();
         loadDailyChart();
@@ -634,9 +663,7 @@
         loadRanking();
     }
 
-    /* ───── 이벤트 바인딩 ───── */
     function bindEvents() {
-        // 프리셋 버튼
         $$(".filter-btn").forEach(function (btn) {
             btn.addEventListener("click", function () {
                 $$(".filter-btn").forEach(function (b) { b.classList.remove("active"); });
@@ -646,20 +673,21 @@
             });
         });
 
-        // 날짜 직접 조회
         elBtnApply.addEventListener("click", function () {
             if (!elStartDate.value || !elEndDate.value) {
-                showToast("시작일과 종료일을 입력해주세요.", "error");
+                showToast("시작일과 종료일을 입력해 주세요.", "error");
                 return;
             }
             $$(".filter-btn").forEach(function (b) { b.classList.remove("active"); });
             loadAll();
         });
 
-        // 시간대별 날짜 선택
-        elHourlyDateSelect.addEventListener("change", renderHourlyChart);
+        elHourlyDateSelect.addEventListener("change", function () {
+            selectedDailyDate = elHourlyDateSelect.value;
+            renderHourlyChart();
+            renderDailyChart();
+        });
 
-        // 사용자 검색
         elBtnUserSearch.addEventListener("click", applyUserFilter);
         elBtnUserClear.addEventListener("click", clearUserFilter);
         elUserBadgeRemove.addEventListener("click", clearUserFilter);
@@ -667,7 +695,6 @@
             if (e.key === "Enter") applyUserFilter();
         });
 
-        // 엑셀 다운로드
         var btnExport = $("#btnExport");
         if (btnExport) {
             btnExport.addEventListener("click", function () {
@@ -692,7 +719,6 @@
             });
         }
 
-        // 로그아웃
         var btnLogout = $("#btnLogout");
         if (btnLogout) {
             btnLogout.addEventListener("click", function () {
@@ -706,7 +732,6 @@
             });
         }
 
-        // 사이드바 토글 (모바일)
         var btnToggle = $("#btnSidebarToggle");
         var sidebar = $("#sidebar");
         var overlay = $("#sidebarOverlay");
@@ -726,7 +751,6 @@
         bindScreenGuide();
     }
 
-    /* ───── 초기화 ───── */
     function init() {
         if (!checkSession()) return;
         adminId = sessionStorage.getItem("adminId") || "";
