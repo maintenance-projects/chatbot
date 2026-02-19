@@ -502,7 +502,7 @@ body {
     background: var(--white);
     border: 1px solid var(--border);
     border-radius: var(--radius);
-    padding: 8px 16px;
+    padding: 8px 12px 8px 14px;
     font-size: 0.85rem;
     box-shadow: var(--shadow-sm);
     transition: all var(--transition);
@@ -515,9 +515,23 @@ body {
     transform: translateY(-1px);
 }
 
+.type-chip:focus-visible {
+    outline: 2px solid rgba(var(--primary-rgb), 0.45);
+    outline-offset: 2px;
+}
+
+.type-chip:not(.active) .type-chip-label {
+    color: var(--text-light);
+}
+
+.type-chip:not(.active) .type-chip-value {
+    color: var(--text-mid);
+}
+
 .type-chip.active {
-    background: rgba(var(--primary-rgb), 0.12);
-    border-color: rgba(var(--primary-rgb), 0.35);
+    background: var(--white);
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(var(--primary-rgb), 0.35);
     color: var(--primary);
 }
 
@@ -535,8 +549,9 @@ body {
 }
 
 .type-chip-all.active {
-    background: rgba(var(--primary-rgb), 0.12);
-    border-color: rgba(var(--primary-rgb), 0.35);
+    background: var(--base);
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(var(--primary-rgb), 0.35);
 }
 
 .type-chip-all .type-chip-label {
@@ -564,6 +579,25 @@ body {
     font-weight: 700;
     color: var(--text-dark);
     font-variant-numeric: tabular-nums;
+}
+
+.type-chip-state {
+    margin-left: 2px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    border: 1px solid #dde3ed;
+    background: #f4f6fa;
+    color: #7f8a9f;
+    font-size: 0.68rem;
+    font-weight: 700;
+    letter-spacing: 0.04em;
+    line-height: 1.2;
+}
+
+.type-chip.active .type-chip-state {
+    border-color: var(--primary);
+    background: rgba(var(--primary-rgb), 0.08);
+    color: var(--primary-dark);
 }
 
 .stat-card {

@@ -375,6 +375,7 @@ var isScreenGuideOpen = false;
                     + '<span class="type-dot" style="background:' + color + ';"></span>'
                     + '<span class="type-chip-label">' + TYPE_LABELS[t] + '</span>'
                     + '<span class="type-chip-value">' + count.toLocaleString() + '</span>'
+                    + '<span class="type-chip-state">' + (isActive ? "ON" : "OFF") + '</span>'
                     + '</div>';
             });
             elTypeSummary.innerHTML = html;
@@ -385,7 +386,16 @@ var isScreenGuideOpen = false;
     function bindTypeChipEvents() {
         var chips = elTypeSummary.querySelectorAll(".type-chip");
         chips.forEach(function (chip) {
+            chip.setAttribute("role", "button");
+            chip.setAttribute("tabindex", "0");
+            chip.setAttribute("aria-pressed", chip.classList.contains("active") ? "true" : "false");
             chip.addEventListener("click", function () {
+                var type = chip.getAttribute("data-type");
+                handleTypeToggle(type);
+            });
+            chip.addEventListener("keydown", function (e) {
+                if (e.key !== "Enter" && e.key !== " ") return;
+                e.preventDefault();
                 var type = chip.getAttribute("data-type");
                 handleTypeToggle(type);
             });
@@ -410,10 +420,18 @@ var isScreenGuideOpen = false;
         var chips = elTypeSummary.querySelectorAll(".type-chip");
         chips.forEach(function (chip) {
             var chipType = chip.getAttribute("data-type");
+            var isActive = false;
             if (chipType === "ALL") {
-                chip.classList.toggle("active", selectedTypes.length === 0);
+                isActive = selectedTypes.length === 0;
             } else {
-                chip.classList.toggle("active", selectedTypes.length === 0 || selectedTypes.indexOf(chipType) !== -1);
+                isActive = selectedTypes.length === 0 || selectedTypes.indexOf(chipType) !== -1;
+            }
+            chip.classList.toggle("active", isActive);
+            chip.setAttribute("aria-pressed", isActive ? "true" : "false");
+
+            var stateEl = chip.querySelector(".type-chip-state");
+            if (stateEl) {
+                stateEl.textContent = isActive ? "ON" : "OFF";
             }
         });
 
