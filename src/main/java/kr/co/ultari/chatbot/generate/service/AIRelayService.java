@@ -34,6 +34,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Slf4j
 @Service
 public class AIRelayService {
+    private static final long SSE_TIMEOUT_MS = 300_000L;
 
     @Value("${ultari.ai-gateway.chat-url:}")
     private String AI_CHAT_URL;
@@ -162,7 +163,7 @@ public class AIRelayService {
     }
 
     public SseEmitter ChatRelayServiceStream(RequestDTO requestDTO, MultipartFile file) {
-        SseEmitter emitter = new SseEmitter(0L); // timeout 없음
+        SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MS);
         AtomicBoolean completed = new AtomicBoolean(false);
 
         aiUsageService.increase(
@@ -204,7 +205,7 @@ public class AIRelayService {
                                 // - 이미 "data: {...}\n\n" 같은 SSE 조각일 수도 있고
                                 // - 그냥 JSON 문자열 조각일 수도 있음
                                 // 아래는 OpenAI 스타일 SSE(data: {...})를 최대한 content(delta)로 뽑는 파서
-                                String delta = extractDelta(rawChunk);
+                                String delta = SseDeltaExtractor.extractDelta(rawChunk);
 
                                 // 뽑히면 delta로 보내고, 아니면 rawChunk를 그대로 보냄(최소 동작 보장)
                                 String payload = (delta != null && !delta.isEmpty()) ? delta : rawChunk;
@@ -243,7 +244,7 @@ public class AIRelayService {
     }
 
     public SseEmitter ChatRelayServiceAudioStream(RequestDTO requestDTO, MultipartFile file) {
-        SseEmitter emitter = new SseEmitter(0L); // timeout 없음
+        SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MS);
         AtomicBoolean completed = new AtomicBoolean(false);
 
         aiUsageService.increase(
@@ -287,7 +288,7 @@ public class AIRelayService {
                                 // - 이미 "data: {...}\n\n" 같은 SSE 조각일 수도 있고
                                 // - 그냥 JSON 문자열 조각일 수도 있음
                                 // 아래는 OpenAI 스타일 SSE(data: {...})를 최대한 content(delta)로 뽑는 파서
-                                String delta = extractDelta(rawChunk);
+                                String delta = SseDeltaExtractor.extractDelta(rawChunk);
 
                                 // 뽑히면 delta로 보내고, 아니면 rawChunk를 그대로 보냄(최소 동작 보장)
                                 String payload = (delta != null && !delta.isEmpty()) ? delta : rawChunk;
@@ -325,7 +326,7 @@ public class AIRelayService {
     }
 
     public SseEmitter ChatRelayServiceStream(RequestDTO requestDTO) {
-        SseEmitter emitter = new SseEmitter(0L); // timeout 없음
+        SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MS);
         AtomicBoolean completed = new AtomicBoolean(false);
 
         // 요청 횟수 증가(기존과 동일) :contentReference[oaicite:6]{index=6}
@@ -369,7 +370,7 @@ public class AIRelayService {
                                 // - 이미 "data: {...}\n\n" 같은 SSE 조각일 수도 있고
                                 // - 그냥 JSON 문자열 조각일 수도 있음
                                 // 아래는 OpenAI 스타일 SSE(data: {...})를 최대한 content(delta)로 뽑는 파서
-                                String delta = extractDelta(rawChunk);
+                                String delta = SseDeltaExtractor.extractDelta(rawChunk);
 
                                 // 뽑히면 delta로 보내고, 아니면 rawChunk를 그대로 보냄(최소 동작 보장)
                                 String payload = (delta != null && !delta.isEmpty()) ? delta : rawChunk;
@@ -404,56 +405,6 @@ public class AIRelayService {
         }
 
         return emitter;
-    }
-
-    private String extractDelta(String raw) {
-        if (raw == null) return null;
-
-        // 여러 줄이 섞여올 수 있어 line 단위 처리
-        StringBuilder out = new StringBuilder();
-        String[] lines = raw.split("\n");
-        for (String line : lines) {
-            String s = line.trim();
-            if (s.isEmpty()) continue;
-
-            if (s.startsWith("data:")) {
-                String data = s.substring(5).trim();
-                if (data.equals("[DONE]")) continue;
-
-                // JSON이면 delta.content 우선 추출
-                try {
-                    JSONObject obj = new JSONObject(data);
-
-                    // OpenAI: choices[0].delta.content
-                    if (obj.has("choices")) {
-                        var choices = obj.getJSONArray("choices");
-                        if (!choices.isEmpty()) {
-                            var c0 = choices.getJSONObject(0);
-
-                            if (c0.has("delta")) {
-                                var delta = c0.getJSONObject("delta");
-                                if (delta.has("content")) out.append(delta.getString("content"));
-                            } else if (c0.has("message")) {
-                                var msg = c0.getJSONObject("message");
-                                if (msg.has("content")) out.append(msg.getString("content"));
-                            }
-                        }
-                    } else if (obj.has("content")) {
-                        out.append(obj.getString("content"));
-                    } else if (obj.has("percent")) {
-                        out.append(obj.getString("percent"));
-                    }
-                } catch (Exception ignore) {
-                    // JSON 파싱 실패면 그냥 데이터 텍스트로 붙임
-                    out.append(data);
-                }
-            } else {
-                // SSE 포맷이 아닌 경우 그대로
-                out.append(line);
-            }
-        }
-
-        return out.toString();
     }
 
     public String DocumentRelayTemplateService(String sessionId, String message, boolean deep, MultipartFile file, String templateKey) {

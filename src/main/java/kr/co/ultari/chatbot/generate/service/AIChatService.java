@@ -34,6 +34,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Slf4j
 @Service
 public class AIChatService {
+    private static final long SSE_TIMEOUT_MS = 300_000L;
 
     @Value("${ultari.ai.url:}")
     private String AI_API_URL;
@@ -239,7 +240,7 @@ public class AIChatService {
     }
 
     public SseEmitter ChatRelayServiceStream(RequestDTO requestDTO) {
-        SseEmitter emitter = new SseEmitter(0L);
+        SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MS);
 
         final AtomicBoolean closed = new AtomicBoolean(false);
         final AtomicBoolean doneSent = new AtomicBoolean(false);
