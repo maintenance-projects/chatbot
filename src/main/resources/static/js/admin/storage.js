@@ -8,7 +8,7 @@
     var searchQuery = "";
     var sortField = "registDate";
     var sortOrder = "desc";
-    var pendingFile = null;
+    var pendingFiles = [];
     var confirmCallback = null;
     var isSearchMode = false;
     var activeStatusPopup = null;
@@ -982,7 +982,7 @@
     function openDocModal() {
         dom.docModalTitle.textContent = "문서 추가";
         dom.docUploader.value = getAdminId();
-        pendingFile = null;
+        pendingFiles = [];
         dom.fileInput.value = "";
         dom.filePreviewWrap.innerHTML = "";
         dom.docModal.classList.add("show");
@@ -990,7 +990,9 @@
 
     function closeDocModal() {
         dom.docModal.classList.remove("show");
-        pendingFile = null;
+        pendingFiles = [];
+        if (dom.fileInput) dom.fileInput.value = "";
+        if (dom.filePreviewWrap) dom.filePreviewWrap.innerHTML = "";
     }
 
     function openConfirm(title, msg, cb) {
@@ -1005,29 +1007,53 @@
         confirmCallback = null;
     }
 
-    function handleFileSelect(file) {
-        if (!file) return;
-        pendingFile = file;
-        dom.filePreviewWrap.innerHTML =
-            '<div class="file-preview">' +
-            '<span class="file-preview-name">' +
-            escapeHtml(file.name) +
-            "</span>" +
-            '<span class="file-preview-size">' +
-            formatBytes(file.size) +
-            "</span>" +
-            '<button class="file-preview-remove" type="button" id="removeFileBtn">' +
-            '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
-            "</button></div>";
-
-        var rm = $("#removeFileBtn");
-        if (rm) {
-            rm.addEventListener("click", function () {
-                pendingFile = null;
-                dom.fileInput.value = "";
-                dom.filePreviewWrap.innerHTML = "";
-            });
+    function renderPendingFiles() {
+        if (!dom.filePreviewWrap) return;
+        if (!pendingFiles.length) {
+            dom.filePreviewWrap.innerHTML = "";
+            return;
         }
+
+        var html = "";
+        for (var i = 0; i < pendingFiles.length; i++) {
+            var file = pendingFiles[i];
+            html +=
+                '<div class="file-preview">' +
+                '<span class="file-preview-name">' +
+                escapeHtml(file.name) +
+                "</span>" +
+                '<span class="file-preview-size">' +
+                formatBytes(file.size) +
+                "</span>" +
+                '<button class="file-preview-remove" type="button" data-remove-index="' + i + '">' +
+                '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
+                "</button></div>";
+        }
+        dom.filePreviewWrap.innerHTML = html;
+    }
+
+    function fileKey(file) {
+        return [file.name || "", file.size || 0, file.lastModified || 0].join("|");
+    }
+
+    function handleFileSelect(files, append) {
+        if (!files || !files.length) return;
+
+        var next = append ? pendingFiles.slice() : [];
+        var seen = {};
+        for (var i = 0; i < next.length; i++) seen[fileKey(next[i])] = true;
+
+        for (var j = 0; j < files.length; j++) {
+            var f = files[j];
+            if (!f) continue;
+            var key = fileKey(f);
+            if (seen[key]) continue;
+            seen[key] = true;
+            next.push(f);
+        }
+
+        pendingFiles = next;
+        renderPendingFiles();
     }
 
     function showStatusPopup(badgeEl, key, currentIsUse) {
@@ -1146,7 +1172,7 @@
     }
 
     function uploadFile() {
-        if (!pendingFile) {
+        if (!pendingFiles.length) {
             toast("파일을 선택해주세요.", "error");
             return;
         }
@@ -1155,36 +1181,50 @@
         dom.docModalSave.disabled = true;
 
         var id = getAdminId();
-        var formData = new FormData();
-        formData.append("adminId", id);
-        formData.append("file", pendingFile);
+        var files = pendingFiles.slice();
+        var successCount = 0;
+        var failCount = 0;
+        var chain = Promise.resolve();
 
-        fetch("/admin/storage/add", { method: "POST", body: formData })
-            .then(function (res) {
-                return res.text();
-            })
-            .then(function (data) {
-                dom.docModalSave.disabled = false;
-                if (String(data || "").trim() === "ok") {
-                    toast("문서가 추가되었습니다.", "success");
-                    closeDocModal();
-                    resetPaging();
-                    clearAllCaches();
-                    ui.pageBlockStart = 1;
-                    currentPage = 1;
-                    if (isSearchMode) fetchSearchPage(1);
-                    else fetchListPage(1);
-                } else {
-                    toast("문서 추가에 실패했습니다.", "error");
-                    showLoading(false);
-                }
-            })
-            .catch(function (err) {
-                dom.docModalSave.disabled = false;
-                console.error("uploadFile error:", err);
-                toast("문서 추가 중 오류가 발생했습니다.", "error");
-                showLoading(false);
+        files.forEach(function (file) {
+            chain = chain.then(function () {
+                var formData = new FormData();
+                formData.append("adminId", id);
+                formData.append("file", file);
+
+                return fetch("/admin/storage/add", { method: "POST", body: formData })
+                    .then(function (res) { return res.text(); })
+                    .then(function (data) {
+                        if (String(data || "").trim() === "ok") successCount++;
+                        else failCount++;
+                    })
+                    .catch(function () {
+                        failCount++;
+                    });
             });
+        });
+
+        chain.then(function () {
+            dom.docModalSave.disabled = false;
+
+            if (failCount === 0) {
+                toast(successCount + "개 문서가 추가되었습니다.", "success");
+            } else if (successCount === 0) {
+                toast("문서 추가에 실패했습니다.", "error");
+                showLoading(false);
+                return;
+            } else {
+                toast("일부 문서만 추가되었습니다. 성공 " + successCount + "건, 실패 " + failCount + "건", "error");
+            }
+
+            closeDocModal();
+            resetPaging();
+            clearAllCaches();
+            ui.pageBlockStart = 1;
+            currentPage = 1;
+            if (isSearchMode) fetchSearchPage(1);
+            else fetchListPage(1);
+        });
     }
 
     function bindEvents() {
@@ -1346,7 +1386,18 @@
 
         if (dom.fileInput) {
             dom.fileInput.addEventListener("change", function (e) {
-                handleFileSelect(e.target.files[0]);
+                handleFileSelect(e.target.files, false);
+            });
+        }
+
+        if (dom.filePreviewWrap) {
+            dom.filePreviewWrap.addEventListener("click", function (e) {
+                var removeBtn = e.target.closest("[data-remove-index]");
+                if (!removeBtn) return;
+                var idx = parseInt(removeBtn.getAttribute("data-remove-index"), 10);
+                if (isNaN(idx) || idx < 0 || idx >= pendingFiles.length) return;
+                pendingFiles.splice(idx, 1);
+                renderPendingFiles();
             });
         }
 
@@ -1361,7 +1412,7 @@
             dom.fileUploadArea.addEventListener("drop", function (e) {
                 e.preventDefault();
                 dom.fileUploadArea.classList.remove("dragover");
-                if (e.dataTransfer.files.length) handleFileSelect(e.dataTransfer.files[0]);
+                if (e.dataTransfer.files.length) handleFileSelect(e.dataTransfer.files, true);
             });
         }
 
