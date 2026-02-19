@@ -187,7 +187,6 @@ public class AdminStorageService {
         return rtn.get();
     }
 
-
     public JSONObject getCommonFileSearch(String adminId, String type, String context, int size, int page, String orderType, String order) {
         JSONObject rtn = new JSONObject();
 
