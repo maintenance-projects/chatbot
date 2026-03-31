@@ -148,6 +148,48 @@ textarea {
     display: block;
 }
 
+.cb-lang-wrap {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+}
+
+.cb-lang-dropdown {
+    display: none;
+    position: absolute;
+    bottom: calc(100% + 12px);
+    right: 0;
+    margin: 0;
+    padding: 6px 0;
+    list-style: none;
+    min-width: 120px;
+    background: #fff;
+    border-radius: 10px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+    z-index: 9999;
+}
+
+.cb-lang-dropdown.is-open {
+    display: block;
+}
+
+.cb-lang-dropdown li {
+    padding: 10px 16px;
+    font-size: 13px;
+    color: #333;
+    cursor: pointer;
+    transition: background 0.12s;
+}
+
+.cb-lang-dropdown li:hover {
+    background: #f0f4ff;
+}
+
+.cb-lang-dropdown li.is-active {
+    color: #3d8def;
+    font-weight: 600;
+}
+
 .cb-searchbar {
     display: none;
     padding: 10px 12px;
@@ -554,7 +596,7 @@ textarea {
 }
 
 .cb-inputwrap.has-chips .cb-input {
-    padding-top: 34px;
+    padding-top: 2px;
 }
 
 .cb-inputbar {
@@ -583,17 +625,13 @@ textarea {
 }
 
 .cb-chiprow {
-    position: absolute;
-    left: 12px;
-    right: 12px;
-    top: 10px;
     display: none;
     flex-wrap: wrap;
-    gap: var(--cb-chip-gap);
-    padding: 0;
+    gap: var(--cb-chip-gap, 6px);
+    padding: 0 4px;
     min-width: 0;
-    z-index: 30;
     pointer-events: auto;
+    order: -1;
 }
 
 .cb-chiprow.is-open {
@@ -928,6 +966,63 @@ textarea {
     background: #fff;
     color: #047857;
     margin-right: 6px;
+}
+
+.cb-translate-badge {
+    font-size: 10px;
+    color: rgba(255, 255, 255, 0.55);
+    margin-bottom: 4px;
+}
+
+#cbTranslateTag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    color: #1d4ed8;
+    border: 0;
+    border-radius: 999px;
+    cursor: pointer;
+    user-select: none;
+    line-height: 1;
+    height: 27px;
+    background: rgba(37, 99, 235, 0.1);
+    padding-left: 8px;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: geometricPrecision;
+}
+
+#cbTranslateTag:hover {
+    background: rgba(37, 99, 235, 0.18);
+}
+
+#cbTranslateTag .cb-tag__icon {
+    width: 12px;
+    height: 12px;
+    stroke: #1d4ed8;
+}
+
+#cbTranslateTag .cb-transtag__label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1;
+    max-width: 160px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    padding-top: 1px;
+}
+
+#cbTranslateTag .cb-transtag__x {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 18px;
+    height: 18px;
+    border-radius: 999px;
+    background: #fff;
+    color: #1d4ed8;
+    margin-right: 4px;
 }
 
 .cb-filecard {

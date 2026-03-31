@@ -10,6 +10,7 @@
     <link rel="stylesheet" th:href="@{/css/dialog.css}" />
 
     <script th:src="@{/jquery/jquery-3.7.1.min.js}"></script>
+    <script th:src="@{/js/i18n.js}"></script>
     <script th:src="@{/js/dialog.js}"></script>
 
     <script th:inline="javascript">
@@ -249,6 +250,25 @@
                                 <line x1="9" y1="15" x2="15" y2="15"></line>
                             </svg>
                         </button>
+
+                        <div class="cb-lang-wrap" id="cbLangWrap">
+                            <button class="cb-pop__item" id="cbLangBtn" type="button" role="menuitem"
+                                aria-expanded="false" aria-haspopup="true" data-tooltip="번역">
+                                <svg width="16px" height="16px" viewBox="0 0 24 24"
+                                    xmlns="http://www.w3.org/2000/svg" fill="none" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="12" cy="12" r="10"></circle>
+                                    <line x1="2" y1="12" x2="22" y2="12"></line>
+                                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10
+                                             15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+                                </svg>
+                            </button>
+                            <ul class="cb-lang-dropdown" id="cbLangDropdown" role="menu" aria-hidden="true">
+                                <li role="menuitem" data-lang="en">영어</li>
+                                <li role="menuitem" data-lang="ja">일본어</li>
+                                <li role="menuitem" data-lang="zh">중국어</li>
+                            </ul>
+                        </div>
                     </div>
 
                     <div class="cb-pop" id="cbPop" aria-hidden="true"></div>

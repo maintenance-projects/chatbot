@@ -41,6 +41,99 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const docsBtn = document.getElementById("cbDocsBtn");
 
+    /* ── 번역 선택 (translate chip) ── */
+    let selectedTranslate = null; // e.g. "en", "ja", "zh" or null
+    let translateTag = null;
+
+    const langBtn = document.getElementById("cbLangBtn");
+    const langDropdown = document.getElementById("cbLangDropdown");
+
+    function ensureTranslateTag() {
+        if (translateTag) return translateTag;
+        translateTag = document.createElement("button");
+        translateTag.type = "button";
+        translateTag.id = "cbTranslateTag";
+        translateTag.setAttribute("aria-pressed", "false");
+        translateTag.innerHTML = `
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round" class="cb-tag__icon" style="flex-shrink:0">
+        <circle cx="12" cy="12" r="10"></circle>
+        <line x1="2" y1="12" x2="22" y2="12"></line>
+        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+      </svg>
+      <span class="cb-transtag__label"></span>
+      <span class="cb-transtag__x" aria-hidden="true">×</span>
+    `;
+        translateTag.addEventListener("click", (e) => {
+            e.preventDefault();
+            setTranslate(null);
+            input.focus();
+        });
+        mountChip(translateTag);
+        translateTag.style.display = "none";
+        updateChipRow();
+        return translateTag;
+    }
+
+    function setTranslate(code) {
+        selectedTranslate = code || null;
+        const tag = ensureTranslateTag();
+        if (!tag) return;
+        if (!selectedTranslate) {
+            tag.style.display = "none";
+            tag.setAttribute("aria-pressed", "false");
+            const labelEl = tag.querySelector(".cb-transtag__label");
+            if (labelEl) labelEl.textContent = "";
+    
+            updateChipRow();
+            return;
+        }
+        tag.style.display = "";
+        tag.setAttribute("aria-pressed", "true");
+        const labelEl = tag.querySelector(".cb-transtag__label");
+        if (labelEl) labelEl.textContent = TRANSLATE.getLabel(selectedTranslate);
+
+        updateChipRow();
+    }
+
+
+
+    if (langBtn && langDropdown) {
+        function updateLangDropdown() {
+            langDropdown.querySelectorAll("li").forEach(li => {
+                li.classList.toggle("is-active", li.getAttribute("data-lang") === selectedTranslate);
+            });
+        }
+
+        langBtn.addEventListener("click", (e) => {
+            e.stopPropagation();
+            const open = langDropdown.classList.toggle("is-open");
+            langBtn.setAttribute("aria-expanded", open ? "true" : "false");
+            langDropdown.setAttribute("aria-hidden", open ? "false" : "true");
+            updateLangDropdown();
+        });
+
+        langDropdown.addEventListener("click", (e) => {
+            const li = e.target.closest("li[data-lang]");
+            if (!li) return;
+            const code = li.getAttribute("data-lang");
+            setTranslate(selectedTranslate === code ? null : code);
+            updateLangDropdown();
+            langDropdown.classList.remove("is-open");
+            langBtn.setAttribute("aria-expanded", "false");
+            langDropdown.setAttribute("aria-hidden", "true");
+        });
+
+        document.addEventListener("click", (e) => {
+            if (!langBtn.contains(e.target) && !langDropdown.contains(e.target)) {
+                langDropdown.classList.remove("is-open");
+                langBtn.setAttribute("aria-expanded", "false");
+                langDropdown.setAttribute("aria-hidden", "true");
+            }
+        });
+    }
+    /* ── end 번역 선택 ── */
+
     const documentListPopup = document.createElement("div");
     documentListPopup.className = "document-list-popup";
     documentListPopup.style.display = "none";
@@ -340,13 +433,17 @@ document.addEventListener("DOMContentLoaded", () => {
         return stack;
     }
 
-    function addUserMessage(text) {
+    function addUserMessage(text, translateTo) {
         endUserCardStack();
         const now = formatTime(new Date());
         const raw = String(text ?? "");
+        const transBadge = translateTo
+            ? `<div class="cb-translate-badge">${escapeHtml(TRANSLATE.getLabel(translateTo))} 번역</div>`
+            : "";
         const html = `
       <div class="cb-msg cb-msg--user">
         <div class="cb-bubble">
+          ${transBadge}
           <div class="cb-bubble__text">
             <pre data-rawtext="${escapeHtml(raw)}">${escapeHtml(raw)}</pre>
           </div>
@@ -483,7 +580,7 @@ document.addEventListener("DOMContentLoaded", () => {
               <img src="/img/ic-select-w.png" class="cb-filecard__icon" alt="" />
               <div class="cb-filecard__meta_w">
                 <div class="cb-filecard__name">${escapeHtml(name)}</div>
-                <div class="cb-filecard__badge">양식</div>
+                <div class="cb-filecard__badge">${escapeHtml("양식")}</div>
               </div>
             </div>
           </div>
@@ -621,11 +718,11 @@ document.addEventListener("DOMContentLoaded", () => {
             const disCls = isPdf ? "" : " is-disabled";
             const tip = isPdf ? "미리보기" : "PDF 파일만 미리보기가 제공됩니다.";
 
-            const meta = d.page ? `${d.page} 페이지` : (d.ext ? d.ext.toUpperCase() : "FILE");
+            const meta = d.page ? `${d.page} p.` : (d.ext ? d.ext.toUpperCase() : "FILE");
 
             return `
       <div class="cb-refrow" data-url="${escapeHtml(d.url || "")}" data-ext="${escapeHtml(d.ext || "")}" data-name="${escapeHtml(d.source || "문서")}">
-        <button class="cb-refmain" type="button" aria-label="출처 열기">
+        <button class="cb-refmain" type="button" aria-label="출처">
           <div class="cb-ref__name">${escapeHtml(d.source || "문서")}</div>
           <div class="cb-ref__meta">${escapeHtml(meta)}</div>
         </button>
@@ -1106,7 +1203,8 @@ document.addEventListener("DOMContentLoaded", () => {
         const hasAny =
             (researchTag && researchTag.style.display !== "none") ||
             (templateTag && templateTag.style.display !== "none") ||
-            (documentTag && documentTag.style.display !== "none");
+            (documentTag && documentTag.style.display !== "none") ||
+            (translateTag && translateTag.style.display !== "none");
 
         chipRow.classList.toggle("is-open", !!hasAny);
         chipRow.setAttribute("aria-hidden", hasAny ? "false" : "true");
@@ -1540,11 +1638,11 @@ document.addEventListener("DOMContentLoaded", () => {
         closeDocPopup();
     });
 
-    function sendTextMessage(msg, targetNameOverride) {
+    function sendTextMessage(msg, targetNameOverride, translateTo) {
         closeTray();
         closeGuideModal();
         const m = String(msg || "").trim();
-        if (m) addUserMessage(m);
+        if (m) addUserMessage(m, translateTo);
 
         input.value = "";
         autoResizeInput();
@@ -1563,6 +1661,7 @@ document.addEventListener("DOMContentLoaded", () => {
             isContinue: cont.isContinue,
             targetFileName: targetName,
         };
+        if (translateTo) payload.translate_to = translateTo;
         if (cont.threadId) payload.threadId = cont.threadId;
 
         streamEventText(
@@ -1712,7 +1811,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 finalizeUploadProgress(uploadHandle);
 
                 if (botHandle && botHandle.msgEl) botHandle.msgEl.remove();
-                addBotMessage(err && err.message ? String(err.message) : "업로드 처리 중 오류가 발생했습니다.");
+                addBotMessage(err && err.message ? String(err.message) : "업로드 중 오류가 발생했습니다.");
             })
             .finally(() => {
                 setSending(false);
@@ -1829,6 +1928,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const tpl = selectedTemplate ? { ...selectedTemplate } : null;
         const tplKey = tpl ? tpl.key || "" : "";
         const docName = selectedDocument && selectedDocument.name ? String(selectedDocument.name) : "";
+        const translateTo = selectedTranslate || "";
 
         if (!msg && !tplKey) return;
 
@@ -1837,11 +1937,15 @@ document.addEventListener("DOMContentLoaded", () => {
             setTemplate(null);
         }
 
+        if (translateTo) {
+            setTranslate(null);
+        }
+
         input.value = "";
         autoResizeInput();
 
         if (tplKey) {
-            if (msg) addUserMessage(msg);
+            if (msg) addUserMessage(msg, translateTo);
             requestTemplateDownload(msg, tplKey);
             return;
         }
@@ -1849,11 +1953,11 @@ document.addEventListener("DOMContentLoaded", () => {
         if (docName) {
             addUserDocMessageByName(docName);
             setSelectedDocument(null);
-            sendTextMessage(msg, docName);
+            sendTextMessage(msg, docName, translateTo);
             return;
         }
 
-        sendTextMessage(msg, "");
+        sendTextMessage(msg, "", translateTo);
     }
 
     sendBtn.addEventListener("click", (e) => {
