@@ -77,7 +77,7 @@ public class RelayController {
         log.info("fileName = {}, sessionId = {}",file.getOriginalFilename(), sessionId);
         //return relayService.ChatRelayServiceAudioStream(sessionId, file);
 
-        RequestDTO req = new RequestDTO(sessionId, message, templateKey, null, deepRsrch, isContinue, null);
+        RequestDTO req = new RequestDTO(sessionId, message, templateKey, null, deepRsrch, isContinue, null, null);
         if(StringUtils.hasText(file.getOriginalFilename())) {
             String safeFilename = Paths.get(file.getOriginalFilename()).getFileName().toString();
 

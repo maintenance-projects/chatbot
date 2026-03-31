@@ -85,6 +85,7 @@ public class AIRelayService {
         body.put("attachFile_extension","");
         body.put("attachFile_bin","");
         body.put("deepResearch",requestDTO.isDeepResearch());
+        if(!StringUtils.isEmpty(requestDTO.getTranslate_to())) body.put("translate_to", requestDTO.getTranslate_to());
 
         //요청 횟수 증가
         aiUsageService.increase(

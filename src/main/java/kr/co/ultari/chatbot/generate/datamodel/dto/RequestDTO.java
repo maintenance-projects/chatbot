@@ -23,4 +23,7 @@ public class RequestDTO {
 
     @Builder.Default
     private String targetFileName = "";
+
+    @Builder.Default
+    private String translate_to = "";
 }
