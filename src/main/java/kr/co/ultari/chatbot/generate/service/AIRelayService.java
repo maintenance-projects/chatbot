@@ -512,11 +512,14 @@ public class AIRelayService {
         if(requestDTO.isContinue()) {
             builder.part("thread_id",requestDTO.getThreadId());
             builder.part("response", requestDTO.getMessage());
+            if(!StringUtils.isEmpty(requestDTO.getTranslate_to())) builder.part("translate_to",requestDTO.getTranslate_to());
         } else if(StringUtils.hasText(requestDTO.getTargetFileName())) {
             builder.part("message", requestDTO.getMessage());
             builder.part("target_filename", requestDTO.getTargetFileName());
+            if(!StringUtils.isEmpty(requestDTO.getTranslate_to())) builder.part("translate_to",requestDTO.getTranslate_to());
         } else {
             builder.part("message", requestDTO.getMessage());
+            if(!StringUtils.isEmpty(requestDTO.getTranslate_to())) builder.part("translate_to",requestDTO.getTranslate_to());
         }
 
         return builder;
