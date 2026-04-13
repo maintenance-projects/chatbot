@@ -24,7 +24,7 @@ public class DefaultController {
     @Value("${ultari.ai.temp.path:tmp}")
     String tempPath;
 
-    @Value("${ultari.ai-gateway.download-url:http://10.0.0.111:8000/documents/download}")
+    @Value("${ultari.ai-gateway.download-url:http://10.0.0.31:8000/documents/download}")
     String AI_DOWNLOAD_URL;
 
     @RequestMapping("favicon.ico")

@@ -16,6 +16,7 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.stereotype.Service;
+import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.multipart.MultipartFile;
@@ -36,14 +37,20 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class AIRelayService {
     private static final long SSE_TIMEOUT_MS = 300_000L;
 
-    @Value("${ultari.ai-gateway.chat-url:}")
-    private String AI_CHAT_URL;
+    @Value("${ultari.ai-gateway.chat-default-url:}")
+    private String AI_CHAT_DEFAULT_URL;
+
+    @Value("${ultari.ai-gateway.chat-open-url:}")
+    private String AI_CHAT_OPEN_URL;
 
     @Value("${ultari.ai-gateway.upload-url:}")
     private String AI_UPLOAD_URL;
 
     @Value("${ultari.ai-gateway.template-url:}")
     private String AI_TEMPLATE_URL;
+
+    @Value("${ultari.ai-gateway.meeting-template-url:}")
+    private String AI_MEETING_TEMPLATE_URL;
 
     @Value("${ultari.ai-gateway.call-summary-url:}")
     private String AI_CALL_SUMMARY_URL;
@@ -57,7 +64,7 @@ public class AIRelayService {
     @Value("${ultari.ai-gateway.doc-summary-url:}")
     private String AI_DOC_SUMMARY_URL;
 
-    @Value("${ultari.ai-gateway.chat-history-url:http://10.0.0.111:8000/history}")
+    @Value("${ultari.ai-gateway.chat-history-url:http://10.0.0.31:8000/history}")
     private String AI_CHAT_HISTORY_URL;
 
     @Autowired
@@ -97,7 +104,7 @@ public class AIRelayService {
         CompletableFuture<String> future =
                 CompletableFuture.supplyAsync(() -> {
                     try {
-                        return WebUtilsCustom.requestMultipart(AI_CHAT_URL, requestDTO.getSessionId(), body);
+                        return WebUtilsCustom.requestMultipart(AI_CHAT_OPEN_URL, requestDTO.getSessionId(), body);
                     } catch (Exception e) {
                         log.error("",e);
                         return "AI 서버 연결에 실패하였습니다... 😥";
@@ -142,7 +149,7 @@ public class AIRelayService {
                     builder.part("deepResearch", deep);
 
                     try {
-                        String response = aiClientService.callAI(AI_CHAT_URL, sessionId, builder);
+                        String response = aiClientService.callAI(AI_CHAT_OPEN_URL, sessionId, builder);
                         JSONObject res = new JSONObject(response);
                         return StringUtilsCustom.removeThinkTag(res.getJSONArray("choices")
                                 .getJSONObject(0)
@@ -362,7 +369,8 @@ public class AIRelayService {
         // 진짜 스트리밍: AI Gateway 스트림(Flux)을 subscribe 해서 emitter로 바로 흘림
         try {
             disposableHolder[0] = aiClientService
-                    .callAIStream(StringUtils.hasText(requestDTO.getTargetFileName())?AI_CHAT_PRIVATE_URL:AI_CHAT_URL, requestDTO, builder)
+                    //.callAIStream(StringUtils.hasText(requestDTO.getTargetFileName())?AI_CHAT_PRIVATE_URL:AI_CHAT_OPEN_URL, requestDTO, builder) 20260410
+                    .callAIStream(AI_CHAT_DEFAULT_URL, requestDTO, builder)
                     .subscribe(
                             rawChunk -> {
                                 if (completed.get()) return;
@@ -483,13 +491,17 @@ public class AIRelayService {
                         builder.part("template_name", "template2.hwpx");
                         builder.part("context_data", templateJson2);
                     } else if(templateKey.equals("A003")) {
-                        builder.part("template_name", "template3.hwpx");
-                        builder.part("context_data", templateJson3);
+                        /*builder.part("template_name", "template3.hwpx");
+                        builder.part("context_data", templateJson3);*/
+                        builder.part("raw_text",message);
+                        if(!ObjectUtils.isEmpty(file)) builder.part("file", file);
+                        builder.part("expires_in",36000);
+                        builder.part("one_time",false);
                     }
                     builder.part("one_time",false);
 
                     try {
-                        String response = aiClientService.callAI(AI_TEMPLATE_URL, builder);
+                        String response = aiClientService.callAI(templateKey.equals("A003")?AI_MEETING_TEMPLATE_URL:AI_TEMPLATE_URL, builder);
                         JSONObject res = new JSONObject(response);
                         return res.toString();
                     } catch (Exception e) {

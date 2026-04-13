@@ -24,7 +24,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class AICsvService {
     private static final long SSE_TIMEOUT_MS = 300_000L;
 
-    @Value("${ultari.ai-gateway.dialog-summary-url:http://10.0.0.111:8000/convert/dialogue-summary}")
+    @Value("${ultari.ai-gateway.dialog-summary-url:http://10.0.0.31:8000/convert/dialogue-summary}")
     String AI_DIALOG_URL;
 
     @Autowired

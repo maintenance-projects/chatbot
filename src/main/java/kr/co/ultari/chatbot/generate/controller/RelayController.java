@@ -54,9 +54,9 @@ public class RelayController {
 
     @PostMapping("/template")
     @ResponseBody
-    public String requestTemplate(@RequestBody RequestDTO req) {
+    public String requestTemplate(@RequestParam(value = "file", required = false) MultipartFile file, @RequestBody RequestDTO req) {
         log.debug(req.toString());
-        return relayService.DocumentRelayTemplateService(req.getSessionId(), req.getMessage(), req.isDeepResearch(), null, req.getTemplateKey());
+        return relayService.DocumentRelayTemplateService(req.getSessionId(), req.getMessage(), req.isDeepResearch(), file, req.getTemplateKey());
     }
 
     @PostMapping("/upload")

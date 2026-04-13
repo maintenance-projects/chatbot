@@ -24,22 +24,22 @@ import java.util.concurrent.atomic.AtomicReference;
 @Service
 public class AdminStorageService {
 
-    @Value("${ultari.ai-gateway.common-doc-list:http://10.0.0.111:8000/admin/get_documents}")
+    @Value("${ultari.ai-gateway.common-doc-list:http://10.0.0.31:8000/admin/get_documents}")
     String AI_COMMON_DOC_LIST_URL;
 
-    @Value("${ultari.ai-gateway.common-doc-add:http://10.0.0.111:8000/admin/add_documents}")
+    @Value("${ultari.ai-gateway.common-doc-add:http://10.0.0.31:8000/admin/add_documents}")
     String AI_COMMON_DOC_ADD_URL;
 
-    @Value("${ultari.ai-gateway.common-doc-del:http://10.0.0.111:8000/admin/del_documents}")
+    @Value("${ultari.ai-gateway.common-doc-del:http://10.0.0.31:8000/admin/del_documents}")
     String AI_COMMON_DOC_DEL_URL;
 
-    @Value("${ultari.ai-gateway.common-doc-srch:http://10.0.0.111:8000/admin/documents/search}")
+    @Value("${ultari.ai-gateway.common-doc-srch:http://10.0.0.31:8000/admin/documents/search}")
     String AI_COMMON_DOC_SRCH_URL;
 
-    @Value("${ultari.ai-gateway.common-doc-usage:http://10.0.0.111:8000/admin/documents/[key]/toggle}")
+    @Value("${ultari.ai-gateway.common-doc-usage:http://10.0.0.31:8000/admin/documents/[key]/toggle}")
     String AI_COMMON_DOC_USAGE_URL;
 
-    @Value("${ultari.ai-gateway.common-doc-count:http://10.0.0.111:8000/admin/documents/count}")
+    @Value("${ultari.ai-gateway.common-doc-count:http://10.0.0.31:8000/admin/documents/count}")
     String AI_COMMON_DOC_COUNT_URL;
 
     @Autowired
