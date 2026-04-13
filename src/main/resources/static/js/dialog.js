@@ -30,6 +30,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const actionSelect = document.getElementById("cbActionSelect");
     const actionUpResearch = document.getElementById("cbActionUpResearch");
     const fileInput = document.getElementById("cbFileInput");
+    const tplFileInput = document.getElementById("cbTplFileInput");
 
     const guideBtn = document.getElementById("cbGuideBtn");
     const guideModal = document.getElementById("cbGuideModal");
@@ -147,6 +148,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let selectedTemplate = null;
     let templateTag = null;
+    let templateAttachBtn = null;
+    let selectedTemplateFile = null;
+    let templateFileTag = null;
 
     let selectedDocument = null;
     let documentTag = null;
@@ -592,6 +596,54 @@ document.addEventListener("DOMContentLoaded", () => {
         stack.insertAdjacentHTML("beforeend", html);
         scrollToBottom();
         if (isSearchOpen() && searchInput && searchInput.value.trim()) rebuildHighlights(searchInput.value);
+    }
+
+    function addUserTemplateWithFileMessage(tpl, file) {
+        const name = tpl && tpl.name ? String(tpl.name) : "양식";
+        const fname = file && file.name ? String(file.name) : "";
+        const ext = getExt(fname);
+        const badge = ext ? ext.toUpperCase() : "FILE";
+        const id = `cbUpload_${Date.now()}_${Math.random().toString(16).slice(2)}`;
+
+        const html = `
+      <div class="cb-msg cb-msg--user cb-msg--card cb-msg--upload-progress" data-upload-id="${id}" data-copytext="${escapeHtml(name + (fname ? " / " + fname : ""))}" data-filename="${escapeHtml(fname)}" data-upload-done="false">
+        <div class="cb-bubble cb-bubble--card">
+          <div class="cb-bubble__text">
+            <div class="cb-filecard" role="group" aria-label="양식 선택">
+              <img src="/img/ic-select-w.png" class="cb-filecard__icon" alt="" />
+              <div class="cb-filecard__meta_w">
+                <div class="cb-filecard__name">${escapeHtml(name)}</div>
+                <div class="cb-filecard__badge">${escapeHtml("양식")}</div>
+              </div>
+            </div>
+            ${fname ? `<div class="cb-tplfile-attach">
+              <span class="cb-tplfile-attach__name">${escapeHtml(fname)}</span>
+              <span class="cb-tplfile-attach__badge">${escapeHtml(badge)}</span>
+            </div>` : ""}
+            <div class="cb-upload-status">업로드 준비 중...</div>
+            <div class="cb-upload-progress-wrap">
+              <div class="cb-upload-progress-bar">
+                <div class="cb-upload-progress-fill" style="width: 0%"></div>
+              </div>
+              <div class="cb-upload-progress-text">0%</div>
+            </div>
+          </div>
+          ${actionsHtml({ copy: false })}
+        </div>
+      </div>
+    `;
+        const stack = ensureUserCardStack();
+        stack.insertAdjacentHTML("beforeend", html);
+
+        const msgEl = body.querySelector(`.cb-msg[data-upload-id="${id}"]`);
+        const progressFill = msgEl ? msgEl.querySelector(".cb-upload-progress-fill") : null;
+        const progressText = msgEl ? msgEl.querySelector(".cb-upload-progress-text") : null;
+        const statusText = msgEl ? msgEl.querySelector(".cb-upload-status") : null;
+
+        scrollToBottom();
+        if (isSearchOpen() && searchInput && searchInput.value.trim()) rebuildHighlights(searchInput.value);
+
+        return { msgEl, progressFill, progressText, statusText, id };
     }
 
     function addBotMessage(text) {
@@ -1203,6 +1255,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const hasAny =
             (researchTag && researchTag.style.display !== "none") ||
             (templateTag && templateTag.style.display !== "none") ||
+            (templateFileTag && templateFileTag.style.display !== "none") ||
             (documentTag && documentTag.style.display !== "none") ||
             (translateTag && translateTag.style.display !== "none");
 
@@ -1307,6 +1360,66 @@ document.addEventListener("DOMContentLoaded", () => {
         updateChipRow();
     }
 
+    function ensureTemplateFileTag() {
+        if (templateFileTag) return templateFileTag;
+        templateFileTag = document.createElement("span");
+        templateFileTag.id = "cbTemplateFileTag";
+        templateFileTag.innerHTML = `<svg class="cb-tplfile__icon" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M13 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><polyline points="13 2 13 9 20 9"/></svg><span class="cb-tplfile__name"></span><button type="button" class="cb-tplfile__x" aria-label="첨부파일 제거">×</button>`;
+        templateFileTag.querySelector(".cb-tplfile__x").addEventListener("click", (e) => {
+            e.stopPropagation();
+            setTemplateFile(null);
+        });
+        mountChip(templateFileTag);
+        templateFileTag.style.display = "none";
+        return templateFileTag;
+    }
+
+    function setTemplateFile(file) {
+        selectedTemplateFile = file || null;
+        const tag = ensureTemplateFileTag();
+        const attachBtn = ensureTemplateAttachBtn();
+        if (!selectedTemplateFile) {
+            tag.style.display = "none";
+            // 회의록 템플릿이 아직 선택된 상태면 버튼 다시 보여줌
+            if (attachBtn) attachBtn.style.display = (selectedTemplate && selectedTemplate.key === "A003") ? "" : "none";
+            updateChipRow();
+            return;
+        }
+        const nameEl = tag.querySelector(".cb-tplfile__name");
+        if (nameEl) nameEl.textContent = selectedTemplateFile.name;
+        tag.style.display = "";
+        // 파일이 있으면 버튼 숨김
+        if (attachBtn) attachBtn.style.display = "none";
+        updateChipRow();
+    }
+
+    function ensureTemplateAttachBtn() {
+        if (templateAttachBtn) return templateAttachBtn;
+        templateAttachBtn = document.createElement("button");
+        templateAttachBtn.type = "button";
+        templateAttachBtn.id = "cbTemplateAttachBtn";
+        templateAttachBtn.setAttribute("aria-label", "첨부파일 추가");
+        templateAttachBtn.setAttribute("data-tooltip", "첨부파일 추가");
+        templateAttachBtn.innerHTML = `<svg class="cb-tplattach__icon" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg><span class="cb-tplattach__label">첨부파일 추가</span>`;
+        templateAttachBtn.addEventListener("click", (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const tmpInput = document.createElement("input");
+            tmpInput.type = "file";
+            tmpInput.style.display = "none";
+            document.body.appendChild(tmpInput);
+            tmpInput.addEventListener("change", () => {
+                const file = tmpInput.files && tmpInput.files[0] ? tmpInput.files[0] : null;
+                document.body.removeChild(tmpInput);
+                if (file) setTemplateFile(file);
+            });
+            tmpInput.click();
+        });
+        mountChip(templateAttachBtn);
+        templateAttachBtn.style.display = "none";
+        return templateAttachBtn;
+    }
+
     function setTemplate(tpl) {
         if (tpl && isResearchMode) setResearchMode(false);
         selectedTemplate = tpl ? { ...tpl } : null;
@@ -1318,6 +1431,9 @@ document.addEventListener("DOMContentLoaded", () => {
             tag.setAttribute("aria-pressed", "false");
             const labelEl = tag.querySelector(".cb-tpltag__label");
             if (labelEl) labelEl.textContent = "";
+            const attachBtn = ensureTemplateAttachBtn();
+            if (attachBtn) attachBtn.style.display = "none";
+            setTemplateFile(null);
             updateChipRow();
             return;
         }
@@ -1326,6 +1442,8 @@ document.addEventListener("DOMContentLoaded", () => {
         tag.setAttribute("aria-pressed", "true");
         const labelEl = tag.querySelector(".cb-tpltag__label");
         if (labelEl) labelEl.textContent = selectedTemplate.name || "양식";
+        const attachBtn = ensureTemplateAttachBtn();
+        if (attachBtn) attachBtn.style.display = selectedTemplate.key === "A003" ? "" : "none";
         updateChipRow();
     }
 
@@ -1705,7 +1823,7 @@ document.addEventListener("DOMContentLoaded", () => {
             });
     }
 
-    function uploadFile(file, messageText, templateKey, onDone) {
+    function uploadFile(file, messageText, templateKey, onDone, existingHandle) {
         if (!file) {
             if (typeof onDone === "function") onDone();
             return;
@@ -1716,8 +1834,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const msg = String(messageText || "").trim();
 
-        const uploadHandle = addUserFileMessageWithProgress(file);
-        if (msg) addUserMessage(msg);
+        const uploadHandle = existingHandle || addUserFileMessageWithProgress(file);
+        if (!existingHandle && msg) addUserMessage(msg);
 
         const cont = consumeContinueFlag();
 
@@ -1927,13 +2045,16 @@ document.addEventListener("DOMContentLoaded", () => {
         const msg = String(input.value || "").trim();
         const tpl = selectedTemplate ? { ...selectedTemplate } : null;
         const tplKey = tpl ? tpl.key || "" : "";
+        const attachedFile = selectedTemplateFile || null;
         const docName = selectedDocument && selectedDocument.name ? String(selectedDocument.name) : "";
         const translateTo = selectedTranslate || "";
 
         if (!msg && !tplKey) return;
 
         if (tpl) {
-            addUserTemplateMessage(tpl);
+            if (!attachedFile) {
+                addUserTemplateMessage(tpl);
+            }
             setTemplate(null);
         }
 
@@ -1945,8 +2066,17 @@ document.addEventListener("DOMContentLoaded", () => {
         autoResizeInput();
 
         if (tplKey) {
-            if (msg) addUserMessage(msg, translateTo);
-            requestTemplateDownload(msg, tplKey);
+            if (attachedFile) {
+                const handle = addUserTemplateWithFileMessage(tpl, attachedFile);
+                if (msg) addUserMessage(msg, translateTo);
+                uploadFile(attachedFile, msg, tplKey, () => {
+                    input.focus();
+                    autoResizeInput();
+                }, handle);
+            } else {
+                if (msg) addUserMessage(msg, translateTo);
+                requestTemplateDownload(msg, tplKey);
+            }
             return;
         }
 
@@ -1999,6 +2129,17 @@ document.addEventListener("DOMContentLoaded", () => {
             closeDocPopup();
             closeGuideModal();
             startImmediateUpload(first);
+        });
+    }
+
+    if (tplFileInput) {
+        tplFileInput.addEventListener("change", () => {
+            const files = tplFileInput.files ? Array.from(tplFileInput.files) : [];
+            tplFileInput.value = "";
+            if (!files.length) return;
+            const first = files[0];
+            if (!first) return;
+            setTemplateFile(first);
         });
     }
 

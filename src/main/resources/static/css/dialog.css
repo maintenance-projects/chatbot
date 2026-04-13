@@ -918,6 +918,88 @@ textarea {
     color: #0f172a;
 }
 
+#cbTemplateAttachBtn {
+    display: inline-flex;
+    align-items: center;
+    gap: 3px;
+    height: 27px;
+    padding: 0 10px 0 8px;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(15, 23, 42, 0.06);
+    color: #0f172a;
+    cursor: pointer;
+    flex-shrink: 0;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: geometricPrecision;
+}
+
+#cbTemplateAttachBtn:hover {
+    background: rgba(15, 23, 42, 0.13);
+}
+
+#cbTemplateFileTag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    height: 27px;
+    padding: 0 4px 0 9px;
+    border-radius: 999px;
+    background: rgba(37, 99, 235, 0.1);
+    color: #1d4ed8;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: geometricPrecision;
+    max-width: 200px;
+}
+
+#cbTemplateFileTag .cb-tplfile__icon {
+    flex-shrink: 0;
+    stroke: #1d4ed8;
+}
+
+#cbTemplateFileTag .cb-tplfile__name {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    line-height: 1;
+    padding-top: 1px;
+}
+
+#cbTemplateFileTag .cb-tplfile__x {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    border: 0;
+    border-radius: 999px;
+    background: rgba(37, 99, 235, 0.15);
+    color: #1d4ed8;
+    cursor: pointer;
+    font-size: 13px;
+    line-height: 1;
+}
+
+#cbTemplateFileTag .cb-tplfile__x:hover {
+    background: rgba(37, 99, 235, 0.28);
+}
+
+#cbTemplateAttachBtn .cb-tplattach__icon {
+    flex-shrink: 0;
+}
+
+#cbTemplateAttachBtn .cb-tplattach__label {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    line-height: 1;
+    padding-top: 1px;
+}
+
 #cbDocumentTag {
     display: inline-flex;
     align-items: center;
@@ -1074,6 +1156,41 @@ textarea {
 .cb-filecard__badge {
     font-size: 11px;
     opacity: 0.7;
+}
+
+.cb-tplfile-attach {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.cb-msg--upload-progress .cb-bubble__text .cb-upload-status {
+    margin-left: 0;
+    margin-top: 8px;
+}
+
+.cb-msg--upload-progress .cb-bubble__text .cb-upload-progress-wrap {
+    margin-top: 4px;
+}
+
+.cb-tplfile-attach__name {
+    font-size: 11px;
+    font-weight: 500;
+    opacity: 0.9;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    max-width: 160px;
+}
+
+.cb-tplfile-attach__badge {
+    font-size: 10px;
+    font-weight: 600;
+    opacity: 0.7;
+    flex-shrink: 0;
 }
 
 .cb-viewer {
