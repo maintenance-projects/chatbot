@@ -1839,14 +1839,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const cont = consumeContinueFlag();
 
+        const requestData = {
+            sessionId: sessionId,
+            message: msg,
+            templateKey: templateKey || "",
+            deepResearch: false,
+            isContinue: cont.isContinue,
+            threadId: cont.threadId || "",
+        };
         const formData = new FormData();
         formData.append("file", file);
-        formData.append("sessionId", sessionId);
-        formData.append("deepResearch", "false");
-        formData.append("templateKey", templateKey || "");
-        formData.append("message", msg);
-        formData.append("isContinue", cont.isContinue ? "true" : "false");
-        if (cont.threadId) formData.append("threadId", cont.threadId);
+        formData.append("request", new Blob([JSON.stringify(requestData)], { type: "application/json" }), "request.json");
 
         setSending(true);
         let botHandle = null;
