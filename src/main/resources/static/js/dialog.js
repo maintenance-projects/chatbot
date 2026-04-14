@@ -1075,7 +1075,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     if (j && j.stage && hasPercent && !j.type) {
                         if (j.stage === "done") {
                             if (typeof onPercent === "function") onPercent(j.percent, j.message || "완료");
-                            if (typeof onDone === "function") onDone(j.message || "");
+                            if (typeof onDone === "function") onDone(j.data ? JSON.stringify(j.data) : (j.message || ""));
                         } else {
                             if (typeof onPercent === "function") onPercent(j.percent, j.message || "");
                         }
