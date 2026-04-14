@@ -1964,96 +1964,58 @@ document.addEventListener("DOMContentLoaded", () => {
         fd.append("templateKey", String(templateKey || ""));
         if (attachedFile) fd.append("file", attachedFile, attachedFile.name);
 
-        if (attachedFile && uploadHandle) {
-            // SSE 스트리밍 방식 (첨부파일 있을 때)
-            let botHandle = null;
+        let botHandle = null;
 
-            try {
-                await streamEventText(
-                    "/api/chat/template",
-                    { method: "POST", headers: { Accept: "text/event-stream" }, body: fd, credentials: "same-origin" },
-                    {
-                        acceptRefs: true,
-                        onPercent: (percent, message) => {
-                            updateUploadProgress(uploadHandle, percent, message);
-                        },
-                        onProgress: (step) => {
-                            const s = String(step || "").trim();
-                            if (s) updateUploadProgress(uploadHandle, uploadHandle._lastPercent || 0, s);
-                        },
-                        onText: (t) => {
-                            if (!botHandle) botHandle = addBotStreamLoadingMessage(true);
-                            startStreaming(botHandle);
-                            appendStreamText(botHandle, t);
-                        },
-                        onFirstToken: () => {
-                            finalizeUploadProgress(uploadHandle);
-                            if (!botHandle) botHandle = addBotStreamLoadingMessage(true);
-                            startStreaming(botHandle);
-                        },
-                        onRefs: (docs) => {
-                            if (!botHandle) botHandle = addBotStreamLoadingMessage(true);
-                            applyStreamRefs(botHandle, docs);
-                        },
-                        onDone: (doneMsg) => {
-                            finalizeUploadProgress(uploadHandle);
-                            if (botHandle) {
-                                endStreaming(botHandle);
-                            }
-                            // done 이벤트에 download_url이 있으면 첨부 메시지 표시
-                            if (doneMsg) {
-                                try {
-                                    const d = JSON.parse(doneMsg);
-                                    if (d && d.success && d.download_url) {
-                                        if (botHandle && botHandle.msgEl) botHandle.msgEl.remove();
-                                        addBotAttachmentMessage({ filename: d.filename || "generated_template", download_url: d.download_url }, { allowView: true });
-                                    }
-                                } catch (e) { /* not JSON, ignore */ }
-                            }
-                        },
-                    }
-                );
-            } catch (err) {
-                finalizeUploadProgress(uploadHandle);
-                if (botHandle && botHandle.msgEl) botHandle.msgEl.remove();
-                addBotMessage(err && err.message ? String(err.message) : "요청 처리 중 오류가 발생했습니다.");
-            } finally {
-                setSending(false);
-                input.focus();
-                autoResizeInput();
-            }
-        } else {
-            // JSON 방식 (수기 작성, 첨부파일 없을 때)
-            const botHandle = addBotStreamLoadingMessage(false);
-            try {
-                const res = await fetch("/api/chat/template", {
-                    method: "POST",
-                    body: fd,
-                    credentials: "same-origin",
-                });
-                if (!res.ok) {
-                    let t = "";
-                    try { t = await res.text(); } catch (e) { }
-                    throw new Error(t || "요청 처리 중 오류가 발생했습니다.");
+        try {
+            await streamEventText(
+                "/api/chat/template",
+                { method: "POST", headers: { Accept: "text/event-stream" }, body: fd, credentials: "same-origin" },
+                {
+                    acceptRefs: true,
+                    onPercent: (percent, message) => {
+                        if (uploadHandle) updateUploadProgress(uploadHandle, percent, message);
+                    },
+                    onProgress: (step) => {
+                        const s = String(step || "").trim();
+                        if (s && uploadHandle) updateUploadProgress(uploadHandle, uploadHandle._lastPercent || 0, s);
+                    },
+                    onText: (t) => {
+                        if (!botHandle) botHandle = addBotStreamLoadingMessage(true);
+                        startStreaming(botHandle);
+                        appendStreamText(botHandle, t);
+                    },
+                    onFirstToken: () => {
+                        if (uploadHandle) finalizeUploadProgress(uploadHandle);
+                        if (!botHandle) botHandle = addBotStreamLoadingMessage(true);
+                        startStreaming(botHandle);
+                    },
+                    onRefs: (docs) => {
+                        if (!botHandle) botHandle = addBotStreamLoadingMessage(true);
+                        applyStreamRefs(botHandle, docs);
+                    },
+                    onDone: (doneMsg) => {
+                        if (uploadHandle) finalizeUploadProgress(uploadHandle);
+                        if (botHandle) endStreaming(botHandle);
+                        if (doneMsg) {
+                            try {
+                                const d = JSON.parse(doneMsg);
+                                if (d && d.success && d.download_url) {
+                                    if (botHandle && botHandle.msgEl) botHandle.msgEl.remove();
+                                    addBotAttachmentMessage({ filename: d.filename || "generated_template", download_url: d.download_url }, { allowView: true });
+                                }
+                            } catch (e) { /* not JSON, ignore */ }
+                        }
+                    },
                 }
-
-                const data = await res.json();
-                if (botHandle && botHandle.msgEl) botHandle.msgEl.remove();
-
-                if (!data || data.success !== true || !data.download_url) {
-                    addBotMessage("양식 생성에 실패했습니다.");
-                    return;
-                }
-
-                addBotAttachmentMessage({ filename: data.filename || "generated_template", download_url: data.download_url }, { allowView: true });
-            } catch (err) {
-                if (botHandle && botHandle.msgEl) botHandle.msgEl.remove();
-                addBotMessage(err && err.message ? String(err.message) : "요청 처리 중 오류가 발생했습니다.");
-            } finally {
-                setSending(false);
-                input.focus();
-                autoResizeInput();
-            }
+            );
+        } catch (err) {
+            if (uploadHandle) finalizeUploadProgress(uploadHandle);
+            if (botHandle && botHandle.msgEl) botHandle.msgEl.remove();
+            addBotMessage(err && err.message ? String(err.message) : "요청 처리 중 오류가 발생했습니다.");
+        } finally {
+            setSending(false);
+            input.focus();
+            autoResizeInput();
         }
     }
 
@@ -2120,9 +2082,6 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!msg && !tplKey) return;
 
         if (tpl) {
-            if (!attachedFile) {
-                addUserTemplateMessage(tpl);
-            }
             setTemplate(null);
         }
 
@@ -2134,10 +2093,7 @@ document.addEventListener("DOMContentLoaded", () => {
         autoResizeInput();
 
         if (tplKey) {
-            let uploadHandle = null;
-            if (attachedFile) {
-                uploadHandle = addUserTemplateWithFileMessage(tpl, attachedFile);
-            }
+            const uploadHandle = addUserTemplateWithFileMessage(tpl, attachedFile);
             if (msg) addUserMessage(msg, translateTo);
             requestTemplateDownload(msg, tplKey, attachedFile, uploadHandle);
             return;
