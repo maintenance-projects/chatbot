@@ -1947,31 +1947,18 @@ document.addEventListener("DOMContentLoaded", () => {
         const cont = consumeContinueFlag();
 
         try {
-            let fetchOptions;
-            const payload = {
-                sessionId: sessionId,
-                message: msg,
-                deepResearch: "false",
-                templateKey: String(templateKey || ""),
-                isContinue: cont.isContinue,
-            };
-            if (cont.threadId) payload.threadId = cont.threadId;
+            const fd = new FormData();
+            fd.append("sessionId", sessionId);
+            fd.append("message", msg);
+            fd.append("deepResearch", "false");
+            fd.append("templateKey", String(templateKey || ""));
+            if (attachedFile) fd.append("file", attachedFile, attachedFile.name);
 
-            if (attachedFile) {
-                const fd = new FormData();
-                fd.append("request", new Blob([JSON.stringify(payload)], { type: "application/json" }), "request.json");
-                fd.append("file", attachedFile, attachedFile.name);
-                fetchOptions = { method: "POST", body: fd, credentials: "same-origin" };
-            } else {
-                fetchOptions = {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json; charset=UTF-8" },
-                    body: JSON.stringify(payload),
-                    credentials: "same-origin",
-                };
-            }
-
-            const res = await fetch("/api/chat/template", fetchOptions);
+            const res = await fetch("/api/chat/template", {
+                method: "POST",
+                body: fd,
+                credentials: "same-origin",
+            });
             if (!res.ok) {
                 let t = "";
                 try {
