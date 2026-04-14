@@ -1839,17 +1839,14 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const cont = consumeContinueFlag();
 
-        const requestData = {
-            sessionId: sessionId,
-            message: msg,
-            templateKey: templateKey || "",
-            deepResearch: false,
-            isContinue: cont.isContinue,
-            threadId: cont.threadId || "",
-        };
         const formData = new FormData();
         formData.append("file", file);
-        formData.append("request", new Blob([JSON.stringify(requestData)], { type: "application/json" }), "request.json");
+        formData.append("sessionId", sessionId);
+        formData.append("deepResearch", "false");
+        formData.append("templateKey", templateKey || "");
+        formData.append("message", msg);
+        formData.append("isContinue", cont.isContinue ? "true" : "false");
+        if (cont.threadId) formData.append("threadId", cont.threadId);
 
         setSending(true);
         let botHandle = null;
@@ -1942,7 +1939,7 @@ document.addEventListener("DOMContentLoaded", () => {
             });
     }
 
-    async function requestTemplateDownload(messageText, templateKey) {
+    async function requestTemplateDownload(messageText, templateKey, attachedFile) {
         const msg = String(messageText || "").trim();
         setSending(true);
         const handle = addBotStreamLoadingMessage(false);
@@ -1950,6 +1947,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const cont = consumeContinueFlag();
 
         try {
+            let fetchOptions;
             const payload = {
                 sessionId: sessionId,
                 message: msg,
@@ -1959,12 +1957,21 @@ document.addEventListener("DOMContentLoaded", () => {
             };
             if (cont.threadId) payload.threadId = cont.threadId;
 
-            const res = await fetch("/api/chat/template", {
-                method: "POST",
-                headers: { "Content-Type": "application/json; charset=UTF-8" },
-                body: JSON.stringify(payload),
-                credentials: "same-origin",
-            });
+            if (attachedFile) {
+                const fd = new FormData();
+                fd.append("request", new Blob([JSON.stringify(payload)], { type: "application/json" }), "request.json");
+                fd.append("file", attachedFile, attachedFile.name);
+                fetchOptions = { method: "POST", body: fd, credentials: "same-origin" };
+            } else {
+                fetchOptions = {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json; charset=UTF-8" },
+                    body: JSON.stringify(payload),
+                    credentials: "same-origin",
+                };
+            }
+
+            const res = await fetch("/api/chat/template", fetchOptions);
             if (!res.ok) {
                 let t = "";
                 try {
@@ -2070,16 +2077,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
         if (tplKey) {
             if (attachedFile) {
-                const handle = addUserTemplateWithFileMessage(tpl, attachedFile);
-                if (msg) addUserMessage(msg, translateTo);
-                uploadFile(attachedFile, msg, tplKey, () => {
-                    input.focus();
-                    autoResizeInput();
-                }, handle);
-            } else {
-                if (msg) addUserMessage(msg, translateTo);
-                requestTemplateDownload(msg, tplKey);
+                addUserTemplateWithFileMessage(tpl, attachedFile);
             }
+            if (msg) addUserMessage(msg, translateTo);
+            requestTemplateDownload(msg, tplKey, attachedFile);
             return;
         }
 
