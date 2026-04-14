@@ -1070,6 +1070,18 @@ document.addEventListener("DOMContentLoaded", () => {
                     }
 
                     const hasPercent = j && typeof j.percent !== "undefined";
+
+                    // stage + percent 형식 (template SSE: {"stage":"extract","percent":5,"message":"..."})
+                    if (j && j.stage && hasPercent && !j.type) {
+                        if (j.stage === "done") {
+                            if (typeof onPercent === "function") onPercent(j.percent, j.message || "완료");
+                            if (typeof onDone === "function") onDone(j.message || "");
+                        } else {
+                            if (typeof onPercent === "function") onPercent(j.percent, j.message || "");
+                        }
+                        continue;
+                    }
+
                     if (j && (j.type === "percent") && hasPercent) {
                         if (typeof onPercent === "function") onPercent(j.percent, j.message || "");
                         continue;
@@ -1939,50 +1951,109 @@ document.addEventListener("DOMContentLoaded", () => {
             });
     }
 
-    async function requestTemplateDownload(messageText, templateKey, attachedFile) {
+    async function requestTemplateDownload(messageText, templateKey, attachedFile, uploadHandle) {
         const msg = String(messageText || "").trim();
         setSending(true);
-        const handle = addBotStreamLoadingMessage(false);
 
         const cont = consumeContinueFlag();
 
-        try {
-            const fd = new FormData();
-            fd.append("sessionId", sessionId);
-            fd.append("message", msg);
-            fd.append("deepResearch", "false");
-            fd.append("templateKey", String(templateKey || ""));
-            if (attachedFile) fd.append("file", attachedFile, attachedFile.name);
+        const fd = new FormData();
+        fd.append("sessionId", sessionId);
+        fd.append("message", msg);
+        fd.append("deepResearch", "false");
+        fd.append("templateKey", String(templateKey || ""));
+        if (attachedFile) fd.append("file", attachedFile, attachedFile.name);
 
-            const res = await fetch("/api/chat/template", {
-                method: "POST",
-                body: fd,
-                credentials: "same-origin",
-            });
-            if (!res.ok) {
-                let t = "";
-                try {
-                    t = await res.text();
-                } catch (e) { }
-                throw new Error(t || "요청 처리 중 오류가 발생했습니다.");
+        if (attachedFile && uploadHandle) {
+            // SSE 스트리밍 방식 (첨부파일 있을 때)
+            let botHandle = null;
+
+            try {
+                await streamEventText(
+                    "/api/chat/template",
+                    { method: "POST", headers: { Accept: "text/event-stream" }, body: fd, credentials: "same-origin" },
+                    {
+                        acceptRefs: true,
+                        onPercent: (percent, message) => {
+                            updateUploadProgress(uploadHandle, percent, message);
+                        },
+                        onProgress: (step) => {
+                            const s = String(step || "").trim();
+                            if (s) updateUploadProgress(uploadHandle, uploadHandle._lastPercent || 0, s);
+                        },
+                        onText: (t) => {
+                            if (!botHandle) botHandle = addBotStreamLoadingMessage(true);
+                            startStreaming(botHandle);
+                            appendStreamText(botHandle, t);
+                        },
+                        onFirstToken: () => {
+                            finalizeUploadProgress(uploadHandle);
+                            if (!botHandle) botHandle = addBotStreamLoadingMessage(true);
+                            startStreaming(botHandle);
+                        },
+                        onRefs: (docs) => {
+                            if (!botHandle) botHandle = addBotStreamLoadingMessage(true);
+                            applyStreamRefs(botHandle, docs);
+                        },
+                        onDone: (doneMsg) => {
+                            finalizeUploadProgress(uploadHandle);
+                            if (botHandle) {
+                                endStreaming(botHandle);
+                            }
+                            // done 이벤트에 download_url이 있으면 첨부 메시지 표시
+                            if (doneMsg) {
+                                try {
+                                    const d = JSON.parse(doneMsg);
+                                    if (d && d.success && d.download_url) {
+                                        if (botHandle && botHandle.msgEl) botHandle.msgEl.remove();
+                                        addBotAttachmentMessage({ filename: d.filename || "generated_template", download_url: d.download_url }, { allowView: true });
+                                    }
+                                } catch (e) { /* not JSON, ignore */ }
+                            }
+                        },
+                    }
+                );
+            } catch (err) {
+                finalizeUploadProgress(uploadHandle);
+                if (botHandle && botHandle.msgEl) botHandle.msgEl.remove();
+                addBotMessage(err && err.message ? String(err.message) : "요청 처리 중 오류가 발생했습니다.");
+            } finally {
+                setSending(false);
+                input.focus();
+                autoResizeInput();
             }
+        } else {
+            // JSON 방식 (수기 작성, 첨부파일 없을 때)
+            const botHandle = addBotStreamLoadingMessage(false);
+            try {
+                const res = await fetch("/api/chat/template", {
+                    method: "POST",
+                    body: fd,
+                    credentials: "same-origin",
+                });
+                if (!res.ok) {
+                    let t = "";
+                    try { t = await res.text(); } catch (e) { }
+                    throw new Error(t || "요청 처리 중 오류가 발생했습니다.");
+                }
 
-            const data = await res.json();
-            if (handle && handle.msgEl) handle.msgEl.remove();
+                const data = await res.json();
+                if (botHandle && botHandle.msgEl) botHandle.msgEl.remove();
 
-            if (!data || data.success !== true || !data.download_url) {
-                addBotMessage("양식 생성에 실패했습니다.");
-                return;
+                if (!data || data.success !== true || !data.download_url) {
+                    addBotMessage("양식 생성에 실패했습니다.");
+                    return;
+                }
+
+                addBotAttachmentMessage({ filename: data.filename || "generated_template", download_url: data.download_url }, { allowView: true });
+            } catch (err) {
+                if (botHandle && botHandle.msgEl) botHandle.msgEl.remove();
+                addBotMessage(err && err.message ? String(err.message) : "요청 처리 중 오류가 발생했습니다.");
+            } finally {
+                setSending(false);
+                input.focus();
+                autoResizeInput();
             }
-
-            addBotAttachmentMessage({ filename: data.filename || "generated_template", download_url: data.download_url }, { allowView: true });
-        } catch (err) {
-            if (handle && handle.msgEl) handle.msgEl.remove();
-            addBotMessage(err && err.message ? String(err.message) : "요청 처리 중 오류가 발생했습니다.");
-        } finally {
-            setSending(false);
-            input.focus();
-            autoResizeInput();
         }
     }
 
@@ -2063,11 +2134,12 @@ document.addEventListener("DOMContentLoaded", () => {
         autoResizeInput();
 
         if (tplKey) {
+            let uploadHandle = null;
             if (attachedFile) {
-                addUserTemplateWithFileMessage(tpl, attachedFile);
+                uploadHandle = addUserTemplateWithFileMessage(tpl, attachedFile);
             }
             if (msg) addUserMessage(msg, translateTo);
-            requestTemplateDownload(msg, tplKey, attachedFile);
+            requestTemplateDownload(msg, tplKey, attachedFile, uploadHandle);
             return;
         }
 
