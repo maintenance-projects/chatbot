@@ -837,8 +837,8 @@ document.addEventListener("DOMContentLoaded", () => {
         <div class="cb-bubble">
           <div class="cb-bubble__text">
             <div class="cb-clarify" style="display:none">AT-I에게 좀 더 자세한 정보를 제공해 주세요.</div>
-            <div class="cb-progress" style="display:none">
-              <span class="cb-progress__text"></span>
+            <div class="cb-progress" style="display:flex">
+              <span class="cb-progress__text">질문의 의도를 파악하고 있습니다.</span>
             </div>
             <pre style="display:none" data-rawtext=""></pre>
             ${refsHtml}
@@ -1054,6 +1054,11 @@ document.addEventListener("DOMContentLoaded", () => {
                     return;
                 }
 
+                if (eventName === "start" && !data) {
+                    if (typeof onProgress === "function") onProgress("질문의 의도를 파악하고 있습니다.");
+                    continue;
+                }
+
                 if (!data) continue;
 
                 if (data.startsWith("{") || data.startsWith("[")) {
@@ -1145,7 +1150,8 @@ document.addEventListener("DOMContentLoaded", () => {
                     }
 
                     if (j && j.type === "answer") {
-                        const content = String(j.content || "");
+                        const raw = String(j.content || "");
+                        const content = first ? raw.trimStart() : raw;
                         if (content) {
                             if (first) {
                                 first = false;
