@@ -230,7 +230,7 @@ public class AIRelayService {
                                 try {
                                     emitter.send(SseEmitter.event().name("error").data("AI 서버 연결에 실패하였습니다... 😥"));
                                 } catch (IOException ignored) {}
-                                emitter.completeWithError(err);
+                                emitter.complete();
                             },
                             () -> {
                                 cachedService.FilesCacheClear(requestDTO.getSessionId());
@@ -313,7 +313,7 @@ public class AIRelayService {
                                 try {
                                     emitter.send(SseEmitter.event().name("error").data("AI 서버 연결에 실패하였습니다... 😥"));
                                 } catch (IOException ignored) {}
-                                emitter.completeWithError(err);
+                                emitter.complete();
                             },
                             () -> {
                                 if (completed.get()) return;
@@ -396,7 +396,7 @@ public class AIRelayService {
                                 try {
                                     emitter.send(SseEmitter.event().name("error").data("AI 서버 연결에 실패하였습니다... 😥"));
                                 } catch (IOException ignored) {}
-                                emitter.completeWithError(err);
+                                emitter.complete();
                             },
                             () -> {
                                 if (completed.get()) return;
@@ -416,7 +416,10 @@ public class AIRelayService {
         return emitter;
     }
 
-    public String DocumentRelayTemplateService(String sessionId, String message, boolean deep, MultipartFile file, String templateKey) {
+    public SseEmitter DocumentRelayTemplateService(String sessionId, String message, boolean deep, MultipartFile file, String templateKey) {
+        SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MS);
+        AtomicBoolean completed = new AtomicBoolean(false);
+
         String templateJson = "{\n" +
                 "    \"doc_number\": \"신사복지 제2026-0042호\",\n" +
                 "    \"draft_date\": \"2026. 01. 20.\",\n" +
@@ -475,48 +478,82 @@ public class AIRelayService {
                 "  }";
 
         //요청 횟수 증가
-        aiUsageService.increase(
-                sessionId,
-                sessionId,
-                "TEMPLATE"
-        );
+        aiUsageService.increase(sessionId, sessionId, "TEMPLATE");
 
-        CompletableFuture<String> future =
-                CompletableFuture.supplyAsync(() -> {
-                    MultipartBodyBuilder builder = new MultipartBodyBuilder();
-                    if(templateKey.equals("A001")) {
-                        builder.part("template_name", "template.hwpx");
-                        builder.part("context_data", templateJson);
-                    } else if(templateKey.equals("A002")) {
-                        builder.part("template_name", "template2.hwpx");
-                        builder.part("context_data", templateJson2);
-                    } else if(templateKey.equals("A003")) {
-                        /*builder.part("template_name", "template3.hwpx");
-                        builder.part("context_data", templateJson3);*/
-                        builder.part("raw_text",message);
-                        if(!ObjectUtils.isEmpty(file)) builder.part("file", file);
-                        builder.part("expires_in",36000);
-                        builder.part("one_time",false);
-                    }
-                    builder.part("one_time",false);
+        MultipartBodyBuilder builder = new MultipartBodyBuilder();
+        if (templateKey.equals("A001")) {
+            builder.part("template_name", "template.hwpx");
+            builder.part("context_data", templateJson);
+        } else if (templateKey.equals("A002")) {
+            builder.part("template_name", "template2.hwpx");
+            builder.part("context_data", templateJson2);
+        } else if (templateKey.equals("A003")) {
+            builder.part("raw_text", message);
+            if (!ObjectUtils.isEmpty(file)) builder.part("file", file.getResource());
+            builder.part("expires_in", 36000);
+            builder.part("one_time", false);
+        }
+        builder.part("one_time", false);
 
-                    try {
-                        String response = aiClientService.callAI(templateKey.equals("A003")?AI_MEETING_TEMPLATE_URL:AI_TEMPLATE_URL, builder);
-                        JSONObject res = new JSONObject(response);
-                        return res.toString();
-                    } catch (Exception e) {
-                        log.error("",e);
-                        return "AI 서버 연결에 실패하였습니다... 😥";
-                    }
+        String requestUrl = templateKey.equals("A003") ? AI_MEETING_TEMPLATE_URL : AI_TEMPLATE_URL;
 
-                }, aiExecutor);
+        final Disposable[] disposableHolder = new Disposable[1];
+        emitter.onCompletion(() -> {
+            completed.set(true);
+            if (disposableHolder[0] != null) disposableHolder[0].dispose();
+        });
+        emitter.onTimeout(() -> {
+            completed.set(true);
+            if (disposableHolder[0] != null) disposableHolder[0].dispose();
+        });
+        emitter.onError(e -> {
+            completed.set(true);
+            if (disposableHolder[0] != null) disposableHolder[0].dispose();
+        });
 
         try {
-            return future.get(180, TimeUnit.SECONDS);
+            emitter.send(SseEmitter.event().name("start").data(""));
+        } catch (IOException ignored) {}
+
+        try {
+            disposableHolder[0] = aiClientService
+                    .callAIStream(requestUrl, builder)
+                    .subscribe(
+                            rawChunk -> {
+                                if (completed.get()) return;
+                                String delta = SseDeltaExtractor.extractDelta(rawChunk);
+                                log.debug("delta={}", delta);
+                                String payload = (delta != null && !delta.isEmpty()) ? delta : rawChunk;
+                                try {
+                                    emitter.send(SseEmitter.event().name("delta").data(payload));
+                                } catch (IOException e) {
+                                    completed.set(true);
+                                    if (disposableHolder[0] != null) disposableHolder[0].dispose();
+                                }
+                            },
+                            err -> {
+                                if (completed.get()) return;
+                                try {
+                                    emitter.send(SseEmitter.event().name("error").data("AI 서버 연결에 실패하였습니다... 😥"));
+                                } catch (IOException ignored) {}
+                                emitter.complete();
+                            },
+                            () -> {
+                                if (completed.get()) return;
+                                try {
+                                    emitter.send(SseEmitter.event().name("done").data(""));
+                                } catch (IOException ignored) {}
+                                emitter.complete();
+                            }
+                    );
         } catch (Exception e) {
-            log.error("", e);
-            return "AI 서버 응답이 지연되고 있습니다. 다시 시도해 주시기 바랍니다... 😥";
+            try {
+                emitter.send(SseEmitter.event().name("error").data("AI 서버 연결에 실패하였습니다... 😥"));
+            } catch (IOException ignored) {}
+            emitter.completeWithError(e);
         }
+
+        return emitter;
     }
 
     public MultipartBodyBuilder setBuilder(RequestDTO requestDTO) {

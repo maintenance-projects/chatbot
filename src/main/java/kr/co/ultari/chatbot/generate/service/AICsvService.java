@@ -1,6 +1,7 @@
 package kr.co.ultari.chatbot.generate.service;
 
 import kr.co.ultari.chatbot.database.service.AIUsageService;
+import kr.co.ultari.chatbot.utils.StringUtilsCustom;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import lombok.var;
@@ -81,6 +82,7 @@ public class AICsvService {
 
                                 // 뽑히면 delta로 보내고, 아니면 rawChunk를 그대로 보냄(최소 동작 보장)
                                 String payload = (delta != null && !delta.isEmpty()) ? delta : rawChunk;
+                                payload = StringUtilsCustom.removeThinkTag(payload);
 
                                 try {
                                     emitter.send(SseEmitter.event().name("delta").data(payload));
@@ -94,7 +96,7 @@ public class AICsvService {
                                 try {
                                     emitter.send(SseEmitter.event().name("error").data("AI 서버 연결에 실패하였습니다... 😥"));
                                 } catch (IOException ignored) {}
-                                emitter.completeWithError(err);
+                                emitter.complete();
                             },
                             () -> {
                                 if (completed.get()) return;

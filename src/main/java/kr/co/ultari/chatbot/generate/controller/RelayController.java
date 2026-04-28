@@ -52,11 +52,16 @@ public class RelayController {
         return ResponseEntity.ok(new ResponseDTO(answer));
     }
 
-    @PostMapping("/template")
-    @ResponseBody
-    public String requestTemplate(@RequestParam(value = "file", required = false) MultipartFile file, @RequestBody RequestDTO req) {
-        log.debug(req.toString());
-        return relayService.DocumentRelayTemplateService(req.getSessionId(), req.getMessage(), req.isDeepResearch(), file, req.getTemplateKey());
+    @PostMapping(value = "/template", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter requestTemplate(
+            @RequestParam(value = "file", required = false) MultipartFile file,
+            @RequestParam("sessionId") String sessionId,
+            @RequestParam(value = "message", required = false) String message,
+            @RequestParam(value = "deepResearch", defaultValue = "false") boolean deepResearch,
+            @RequestParam(value = "templateKey", required = false) String templateKey) {
+        log.debug("sessionId={}, message={}, deepResearch={}, templateKey={}", sessionId, message, deepResearch, templateKey);
+        log.debug("isFile={}", file != null ? file.getOriginalFilename() : "null");
+        return relayService.DocumentRelayTemplateService(sessionId, message, deepResearch, file, templateKey);
     }
 
     @PostMapping("/upload")
