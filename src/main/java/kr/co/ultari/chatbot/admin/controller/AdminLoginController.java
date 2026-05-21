@@ -6,7 +6,6 @@ import kr.co.ultari.chatbot.admin.service.AdminStorageService;
 import kr.co.ultari.chatbot.admin.session.AdminSession;
 import kr.co.ultari.chatbot.admin.session.AdminSessionStore;
 import lombok.extern.slf4j.Slf4j;
-import oracle.jrockit.jfr.StringConstantPool;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;

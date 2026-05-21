@@ -120,14 +120,6 @@ public class GenerateController {
         return "summary";
     }
 
-    @RequestMapping("/csv/upload/test")
-    public String summaryPageTest(@RequestParam("file") String fileName, @RequestParam("sessionId") String sessionId, Model model) {
-
-        model.addAttribute("fileName", fileName);
-        model.addAttribute("sessionId", sessionId);
-        return "summary";
-    }
-
     protected JSONObject createTemplate(String key, String fileName, String name, String sort) {
         JSONObject json = new JSONObject();
         json.put("key",key);

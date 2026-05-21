@@ -15,6 +15,8 @@ public class AIThreadPoolConfig {
         executor.setMaxPoolSize(30);
         executor.setQueueCapacity(100);
         executor.setThreadNamePrefix("ai-executor-");
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(30);
         executor.initialize();
         return executor;
     }
