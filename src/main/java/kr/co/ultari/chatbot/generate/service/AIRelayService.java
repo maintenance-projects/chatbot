@@ -214,7 +214,7 @@ public class AIRelayService {
                                 // - 그냥 JSON 문자열 조각일 수도 있음
                                 // 아래는 OpenAI 스타일 SSE(data: {...})를 최대한 content(delta)로 뽑는 파서
                                 String delta = SseDeltaExtractor.extractDelta(rawChunk);
-
+                                log.debug("delta={}", delta);
                                 // 뽑히면 delta로 보내고, 아니면 rawChunk를 그대로 보냄(최소 동작 보장)
                                 String payload = (delta != null && !delta.isEmpty()) ? delta : rawChunk;
 
@@ -297,7 +297,7 @@ public class AIRelayService {
                                 // - 그냥 JSON 문자열 조각일 수도 있음
                                 // 아래는 OpenAI 스타일 SSE(data: {...})를 최대한 content(delta)로 뽑는 파서
                                 String delta = SseDeltaExtractor.extractDelta(rawChunk);
-
+                                log.debug("delta={}", delta);
                                 // 뽑히면 delta로 보내고, 아니면 rawChunk를 그대로 보냄(최소 동작 보장)
                                 String payload = (delta != null && !delta.isEmpty()) ? delta : rawChunk;
 
@@ -380,6 +380,7 @@ public class AIRelayService {
                                 // - 그냥 JSON 문자열 조각일 수도 있음
                                 // 아래는 OpenAI 스타일 SSE(data: {...})를 최대한 content(delta)로 뽑는 파서
                                 String delta = SseDeltaExtractor.extractDelta(rawChunk);
+                                log.debug("delta={}", delta);
 
                                 // 뽑히면 delta로 보내고, 아니면 rawChunk를 그대로 보냄(최소 동작 보장)
                                 String payload = (delta != null && !delta.isEmpty()) ? delta : rawChunk;

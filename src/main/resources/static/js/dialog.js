@@ -181,7 +181,12 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function renderRichText(raw) {
-        const esc = escapeHtml(raw || "");
+        if (typeof marked !== "undefined" && marked.parse) {
+            try {
+                return marked.parse(String(raw || ""), { breaks: true });
+            } catch (e) { /* fallback below */ }
+        }
+        var esc = escapeHtml(raw || "");
         return esc.replace(/\*\*([^*]+?)\*\*/g, "<strong>$1</strong>");
     }
 
@@ -409,7 +414,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const direct = msgEl.getAttribute("data-copytext");
         if (direct != null) return String(direct || "");
 
-        const pre = msgEl.querySelector(".cb-bubble__text pre[data-rawtext]");
+        const pre = msgEl.querySelector(".cb-bubble__text [data-rawtext]");
         if (pre) return pre.getAttribute("data-rawtext") || "";
 
         const bubbleText = msgEl.querySelector(".cb-bubble__text");
@@ -655,7 +660,7 @@ document.addEventListener("DOMContentLoaded", () => {
       <div class="cb-msg cb-msg--bot">
         <div class="cb-bubble">
           <div class="cb-bubble__text">
-            <pre data-rawtext="${escapeHtml(clean)}">${renderRichText(clean)}</pre>
+            <div class="cb-md" data-rawtext="${escapeHtml(clean)}">${renderRichText(clean)}</div>
           </div>
           <div class="cb-meta">${now}</div>
           ${actionsHtml({ copy: true })}
@@ -840,7 +845,7 @@ document.addEventListener("DOMContentLoaded", () => {
             <div class="cb-progress" style="display:flex">
               <span class="cb-progress__text">질문의 의도를 파악하고 있습니다.</span>
             </div>
-            <pre style="display:none" data-rawtext=""></pre>
+            <div class="cb-md" style="display:none" data-rawtext=""></div>
             ${refsHtml}
           </div>
           <div class="cb-meta"></div>
@@ -850,7 +855,7 @@ document.addEventListener("DOMContentLoaded", () => {
     `;
         body.insertAdjacentHTML("beforeend", html);
         const msgEl = body.querySelector(`.cb-msg[data-stream-id="${id}"]`);
-        const preEl = msgEl ? msgEl.querySelector(".cb-bubble__text pre") : null;
+        const preEl = msgEl ? msgEl.querySelector(".cb-bubble__text .cb-md") : null;
         const metaEl = msgEl ? msgEl.querySelector(".cb-meta") : null;
         const progressEl = msgEl ? msgEl.querySelector(".cb-progress") : null;
         const progressTextEl = progressEl ? progressEl.querySelector(".cb-progress__text") : null;
@@ -995,6 +1000,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const onClarification = handlers && typeof handlers.onClarification === "function" ? handlers.onClarification : null;
         const onPercent = handlers && typeof handlers.onPercent === "function" ? handlers.onPercent : null;
         const onDone = handlers && typeof handlers.onDone === "function" ? handlers.onDone : null;
+        const onTranslation = handlers && typeof handlers.onTranslation === "function" ? handlers.onTranslation : null;
         const acceptRefs = !!(handlers && handlers.acceptRefs);
 
         const res = await fetch(url, options);
@@ -1158,6 +1164,20 @@ document.addEventListener("DOMContentLoaded", () => {
                                 if (typeof onFirstToken === "function") onFirstToken();
                             }
                             if (typeof onText === "function") onText(content);
+                        }
+                        continue;
+                    }
+
+                    if (j && j.type === "translation") {
+                        const raw = String(j.content || "");
+                        const content = first ? raw.trimStart() : raw;
+                        if (content) {
+                            if (first) {
+                                first = false;
+                                if (typeof onFirstToken === "function") onFirstToken();
+                            }
+                            if (typeof onTranslation === "function") onTranslation(content, j.lang || "");
+                            else if (typeof onText === "function") onText(content);
                         }
                         continue;
                     }
@@ -1822,6 +1842,33 @@ document.addEventListener("DOMContentLoaded", () => {
                     continueNext = true;
                     if (threadId) continueThreadId = threadId;
                 },
+                onTranslation: translateTo ? (() => {
+                    let translationStarted = false;
+                    let transPreEl = null;
+                    return (t, lang) => {
+                        startStreaming(handle);
+                        if (!translationStarted) {
+                            translationStarted = true;
+                            const label = TRANSLATE.getLabel(lang || translateTo);
+                            const wrap = handle.preEl.parentElement;
+                            const divider = document.createElement("div");
+                            divider.className = "cb-translation-divider";
+                            divider.innerHTML = '<span class="cb-translation-divider__label">' + escapeHtml(label) + ' 번역</span>';
+                            wrap.appendChild(divider);
+                            transPreEl = document.createElement("div");
+                            transPreEl.className = "cb-md";
+                            transPreEl.setAttribute("data-rawtext", "");
+                            wrap.appendChild(transPreEl);
+                        }
+                        if (transPreEl) {
+                            const prev = transPreEl.getAttribute("data-rawtext") || "";
+                            const next = prev + String(t || "");
+                            transPreEl.setAttribute("data-rawtext", next);
+                            transPreEl.innerHTML = renderRichText(next);
+                        }
+                        scrollToBottom();
+                    };
+                })() : null,
             }
         )
             .then(() => {
@@ -2434,7 +2481,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function clearHighlights() {
         body.querySelectorAll(".cb-hit").forEach((el) => el.classList.remove("cb-hit"));
-        const pres = Array.from(body.querySelectorAll(".cb-bubble__text pre"));
+        const pres = Array.from(body.querySelectorAll(".cb-bubble__text [data-rawtext]"));
         for (const pre of pres) {
             const raw = pre.getAttribute("data-rawtext");
             if (raw == null) continue;
@@ -2460,7 +2507,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const safe = escapeRegExp(k);
         const re = new RegExp(safe, "gi");
 
-        const pres = Array.from(body.querySelectorAll(".cb-bubble__text pre"));
+        const pres = Array.from(body.querySelectorAll(".cb-bubble__text [data-rawtext]"));
 
         for (const pre of pres) {
             const raw = pre.getAttribute("data-rawtext");

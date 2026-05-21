@@ -34,6 +34,95 @@ pre {
     font-family: PretendardVariable !important;
 }
 
+/* ── 마크다운 렌더링 영역 ── */
+.cb-md {
+    word-break: break-word;
+    font-family: PretendardVariable !important;
+    line-height: 1.6;
+}
+
+.cb-md > *:first-child { margin-top: 0; }
+.cb-md > *:last-child  { margin-bottom: 0; }
+
+.cb-md p       { margin: 0 0 8px; }
+.cb-md ul,
+.cb-md ol      { margin: 4px 0 8px; padding-left: 20px; }
+.cb-md li      { margin-bottom: 2px; }
+.cb-md h1, .cb-md h2, .cb-md h3,
+.cb-md h4, .cb-md h5, .cb-md h6 {
+    margin: 12px 0 6px;
+    line-height: 1.3;
+}
+.cb-md h1 { font-size: 1.25em; }
+.cb-md h2 { font-size: 1.15em; }
+.cb-md h3 { font-size: 1.05em; }
+
+.cb-md hr {
+    border: none;
+    border-top: 1px solid #e5e7eb;
+    margin: 10px 0;
+}
+
+.cb-md pre {
+    background: #f3f4f6;
+    border-radius: 6px;
+    padding: 10px 12px;
+    overflow-x: auto;
+    font-family: 'Consolas', 'Monaco', monospace !important;
+    font-size: 13px;
+    margin: 6px 0;
+}
+
+.cb-md code {
+    background: #f3f4f6;
+    border-radius: 3px;
+    padding: 1px 4px;
+    font-family: 'Consolas', 'Monaco', monospace !important;
+    font-size: 0.92em;
+}
+
+.cb-md pre code {
+    background: none;
+    padding: 0;
+}
+
+.cb-md blockquote {
+    border-left: 3px solid #d1d5db;
+    margin: 6px 0;
+    padding: 4px 12px;
+    color: #6b7280;
+}
+
+/* ── 테이블 ── */
+.cb-md table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 8px 0;
+    font-size: 13px;
+}
+
+.cb-md th,
+.cb-md td {
+    border: 1px solid #d1d5db;
+    padding: 6px 10px;
+    text-align: left;
+    vertical-align: top;
+}
+
+.cb-md th {
+    background: #f0f4ff;
+    font-weight: 600;
+    color: #1e3a5f;
+}
+
+.cb-md tr:nth-child(even) {
+    background: #f9fafb;
+}
+
+.cb-md tr:hover {
+    background: #eef2ff;
+}
+
 textarea {
     font-family: PretendardVariable !important;
 }
@@ -1054,6 +1143,29 @@ textarea {
     font-size: 10px;
     color: rgba(255, 255, 255, 0.55);
     margin-bottom: 4px;
+}
+
+.cb-translation-divider {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin: 12px 0 8px;
+    color: #6b7280;
+    font-size: 12px;
+}
+
+.cb-translation-divider::before,
+.cb-translation-divider::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: #e5e7eb;
+}
+
+.cb-translation-divider__label {
+    white-space: nowrap;
+    font-weight: 600;
+    color: #1d4ed8;
 }
 
 #cbTranslateTag {
