@@ -11,6 +11,7 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import kr.co.ultari.chatbot.user.service.UserAuthService;
+import kr.co.ultari.chatbot.generate.service.AIRelayService;
 
 import java.io.File;
 import java.io.IOException;
@@ -34,8 +35,11 @@ public class GenerateController {
 
     private final UserAuthService userAuthService;
 
-    public GenerateController(UserAuthService userAuthService) {
+    private final AIRelayService relayService;
+
+    public GenerateController(UserAuthService userAuthService, AIRelayService relayService) {
         this.userAuthService = userAuthService;
+        this.relayService = relayService;
     }
 
     @GetMapping("")
@@ -110,6 +114,32 @@ public class GenerateController {
         if(code.equals("0000")) {
             json.put("openUrl", openUrl);
         }
+        return ResponseEntity.ok(json.toString());
+    }
+
+    @PostMapping("/file/upload")
+    @ResponseBody
+    public ResponseEntity<String> fileUpload(@RequestParam("file") MultipartFile file, @RequestParam("sessionId") String sessionId) {
+        String code = "0000";
+
+        if(!StringUtils.hasText(file.getOriginalFilename()) || file.isEmpty()) {
+            JSONObject error = new JSONObject();
+            error.put("responseCode", "1111");
+            error.put("message", "업로드할 파일이 없습니다.");
+            return ResponseEntity.ok(error.toString());
+        }
+
+        try {
+            // 메신저 첨부파일을 AI 게이트웨이에 사전 등록 (추론 없이 파일만 업로드)
+            relayService.uploadFile(sessionId, file);
+            log.info("AI 파일 업로드 완료: sessionId={}, fileName={}", sessionId, file.getOriginalFilename());
+        } catch (Exception e) {
+            code = "1111";
+            log.error("AI 파일 업로드 실패: sessionId={}, fileName={}", sessionId, file.getOriginalFilename(), e);
+        }
+
+        JSONObject json = new JSONObject();
+        json.put("responseCode", code);
         return ResponseEntity.ok(json.toString());
     }
 

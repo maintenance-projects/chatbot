@@ -575,6 +575,33 @@ public class AIRelayService {
         return builder;
     }
 
+    /**
+     * 메신저 첨부파일을 AI 게이트웨이에 사전 등록한다.
+     * 추론(요약/답변) 없이 파일만 업로드하며, 이후 대화에서 해당 파일을 참조할 수 있다.
+     *
+     * @return AI 게이트웨이 응답 본문(JSON 문자열), 실패 시 null
+     */
+    public String uploadFile(String sessionId, MultipartFile file) {
+        if (file == null || file.isEmpty()) {
+            return null;
+        }
+
+        String originalFileName = file.getOriginalFilename();
+
+        MultipartBodyBuilder builder = new MultipartBodyBuilder();
+        builder.part("attachFile_name", originalFileName);
+        builder.part("attachFile_bin", file.getResource())
+                .filename(originalFileName)
+                .contentType(MediaType.APPLICATION_OCTET_STREAM);
+
+        String response = aiClientService.callAI(AI_UPLOAD_URL, sessionId, builder);
+
+        // 파일 목록 캐시 무효화 (새 파일이 등록되었으므로)
+        cachedService.FilesCacheClear(sessionId);
+
+        return response;
+    }
+
     public MultipartBodyBuilder setMultiPartBuilder(RequestDTO requestDTO, MultipartFile file) {
         String originalFileName = file.getOriginalFilename();
         String fileName = originalFileName.substring(0,originalFileName.lastIndexOf("."));
