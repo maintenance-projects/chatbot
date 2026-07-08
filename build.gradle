@@ -38,7 +38,7 @@ dependencies {
     implementation 'org.apache.logging.log4j:log4j-api:2.17.2'
     implementation 'org.apache.logging.log4j:log4j-core:2.17.2'
     implementation 'org.springframework.boot:spring-boot-starter-cache'
-    implementation 'com.github.ben-manes.caffeine:caffeine:2.6.2'
+    implementation 'com.github.ben-manes.caffeine:caffeine:3.1.8'
     implementation 'org.json:json:20231013'
     runtimeOnly 'com.mysql:mysql-connector-j'
     runtimeOnly 'com.oracle.database.jdbc:ojdbc8:19.20.0.0'
