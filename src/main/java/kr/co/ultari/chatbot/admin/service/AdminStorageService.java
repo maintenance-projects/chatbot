@@ -6,6 +6,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.*;
 import org.springframework.http.client.MultipartBodyBuilder;
@@ -45,50 +46,60 @@ public class AdminStorageService {
     @Autowired
     RestTemplate restTemplate;
 
+    // 조회(count/list/search) 전용 짧은 타임아웃 템플릿
+    @Autowired
+    @Qualifier("AdminReadRestTemplate")
+    RestTemplate readRestTemplate;
+
     @Autowired
     MsgAdminRepository adminRepository;
 
     public JSONArray getCommonFileList(String adminId, int size, int page, String orderType, String order) {
         JSONArray arr = new JSONArray();
 
-        HttpHeaders headers = new HttpHeaders();
-        headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
+        try {
+            HttpHeaders headers = new HttpHeaders();
+            headers.setAccept(Collections.singletonList(MediaType.APPLICATION_JSON));
 
-        HttpEntity<Void> entity = new HttpEntity<>(headers);
+            HttpEntity<Void> entity = new HttpEntity<>(headers);
 
-        URI uri = UriComponentsBuilder
-                .fromHttpUrl(AI_COMMON_DOC_LIST_URL)
-                .queryParam("page", page)
-                .queryParam("size", size)
-                .queryParam("orderType", orderType)
-                .queryParam("order", order)
-                .build()
-                .toUri();
+            URI uri = UriComponentsBuilder
+                    .fromHttpUrl(AI_COMMON_DOC_LIST_URL)
+                    .queryParam("page", page)
+                    .queryParam("size", size)
+                    .queryParam("orderType", orderType)
+                    .queryParam("order", order)
+                    .build()
+                    .toUri();
 
-        ResponseEntity<String> response =
-                restTemplate.exchange(
-                        uri,
-                        HttpMethod.GET,
-                        entity,
-                        String.class
-                    );
+            ResponseEntity<String> response =
+                    readRestTemplate.exchange(
+                            uri,
+                            HttpMethod.GET,
+                            entity,
+                            String.class
+                        );
 
-        String body = response.getBody();
-        log.debug("raw body={}", body);
+            String body = response.getBody();
+            log.debug("raw body={}", body);
 
-        JSONObject json = new JSONObject(body);
+            JSONObject json = new JSONObject(body);
 
-        if(ObjectUtils.isEmpty(json)) return arr;
+            if(ObjectUtils.isEmpty(json)) return arr;
 
-        String code = json.getString("code");
-        String message = json.getString("message");
+            String code = json.getString("code");
+            String message = json.getString("message");
 
-        if("0000".equals(code)) {
-            log.debug("adminId={}, size={}, page={}, code={}, message={}", adminId, size, page, code, message);
-            log.debug(json.get("items").toString());
-            arr = json.getJSONArray("items");
-        } else {
-            log.warn("adminId={}, size={}, page={}, code={}, message={}", adminId, size, page, code, message);
+            if("0000".equals(code)) {
+                log.debug("adminId={}, size={}, page={}, code={}, message={}", adminId, size, page, code, message);
+                log.debug(json.get("items").toString());
+                arr = json.getJSONArray("items");
+            } else {
+                log.warn("adminId={}, size={}, page={}, code={}, message={}", adminId, size, page, code, message);
+            }
+        } catch (Exception e) {
+            // AI 게이트웨이 지연/오류 시 빈 목록 반환 (페이지 500 방지)
+            log.warn("[storage list] AI 호출 실패 adminId={}, page={}, err={}", adminId, page, e.toString());
         }
 
         return arr;
@@ -190,29 +201,33 @@ public class AdminStorageService {
     public JSONObject getCommonFileSearch(String adminId, String type, String context, int size, int page, String orderType, String order) {
         JSONObject rtn = new JSONObject();
 
-        ResponseEntity<String> response =
-                restTemplate.getForEntity(
-                        AI_COMMON_DOC_SRCH_URL+"?searchType="+type+"&searchTerm="+context+"&page="+page+"&size="+size+"&orderType="+orderType+"&order="+order,
-                        String.class
-                );
+        try {
+            ResponseEntity<String> response =
+                    readRestTemplate.getForEntity(
+                            AI_COMMON_DOC_SRCH_URL+"?searchType="+type+"&searchTerm="+context+"&page="+page+"&size="+size+"&orderType="+orderType+"&order="+order,
+                            String.class
+                    );
 
-        String raw = response.getBody();
-        log.debug("raw body={}", raw);
+            String raw = response.getBody();
+            log.debug("raw body={}", raw);
 
-        JSONObject json = new JSONObject(raw);
+            JSONObject json = new JSONObject(raw);
 
-        if(ObjectUtils.isEmpty(json)) return rtn;
+            if(ObjectUtils.isEmpty(json)) return rtn;
 
-        String code = json.getString("code");
-        String message = json.getString("message");
+            String code = json.getString("code");
+            String message = json.getString("message");
 
-        if("0000".equals(code)) {
-            log.debug("adminId={}, size={}, page={}, code={}, message={}", adminId, size, page, code, message);
-            log.debug(json.toString());
+            if("0000".equals(code)) {
+                log.debug("adminId={}, size={}, page={}, code={}, message={}", adminId, size, page, code, message);
+                log.debug(json.toString());
 
-            rtn = json;
-        } else {
-            log.warn("adminId={}, size={}, page={}, code={}, message={}", adminId, size, page, code, message);
+                rtn = json;
+            } else {
+                log.warn("adminId={}, size={}, page={}, code={}, message={}", adminId, size, page, code, message);
+            }
+        } catch (Exception e) {
+            log.warn("[storage search] AI 호출 실패 adminId={}, page={}, err={}", adminId, page, e.toString());
         }
 
         return rtn;
@@ -221,40 +236,45 @@ public class AdminStorageService {
     public JSONArray getCountList(String adminId) {
         JSONArray arr = new JSONArray();
 
-        ResponseEntity<String> response =
-                restTemplate.getForEntity(
-                        AI_COMMON_DOC_COUNT_URL,
-                        String.class
-                );
+        try {
+            ResponseEntity<String> response =
+                    readRestTemplate.getForEntity(
+                            AI_COMMON_DOC_COUNT_URL,
+                            String.class
+                    );
 
-        String raw = response.getBody();
-        log.debug("raw body={}", raw);
+            String raw = response.getBody();
+            log.debug("raw body={}", raw);
 
-        JSONObject json = new JSONObject(raw);
+            JSONObject json = new JSONObject(raw);
 
-        if(ObjectUtils.isEmpty(json)) return arr;
+            if(ObjectUtils.isEmpty(json)) return arr;
 
-        String code = json.getString("code");
-        String message = json.getString("message");
+            String code = json.getString("code");
+            String message = json.getString("message");
 
-        if("0000".equals(code)) {
-            log.debug("adminId={}, code={}, message={}", adminId, code, message);
-            log.debug(json.toString());
+            if("0000".equals(code)) {
+                log.debug("adminId={}, code={}, message={}", adminId, code, message);
+                log.debug(json.toString());
 
-            json.remove("code");
-            json.remove("message");
+                json.remove("code");
+                json.remove("message");
 
-            for (Iterator<String> it = json.keys(); it.hasNext(); ) {
-                String key = it.next();
+                for (Iterator<String> it = json.keys(); it.hasNext(); ) {
+                    String key = it.next();
 
-                JSONObject countJson = new JSONObject();
-                countJson.put("countName", key);
-                countJson.put("count",json.getInt(key));
+                    JSONObject countJson = new JSONObject();
+                    countJson.put("countName", key);
+                    countJson.put("count",json.getInt(key));
 
-                arr.put(countJson);
+                    arr.put(countJson);
+                }
+            } else {
+                log.warn("adminId={}, code={}, message={}", adminId, code, message);
             }
-        } else {
-            log.warn("adminId={}, code={}, message={}", adminId, code, message);
+        } catch (Exception e) {
+            // 카운트 실패해도 빈 배열 반환 → 프론트는 카드만 미표시, 화면은 정상
+            log.warn("[storage count] AI 호출 실패 adminId={}, err={}", adminId, e.toString());
         }
 
         return arr;

@@ -758,6 +758,25 @@
         return fetch(url, { method: "POST", body: formData });
     }
 
+    // 문서 카운트를 비동기로 로딩해 요약 카드(전체/오늘/사용/미사용)를 갱신한다.
+    // 실패해도 화면은 유지하고 카드만 미표시(0) 처리한다.
+    function fetchCount() {
+        var id = getAdminId();
+        var formData = new FormData();
+        formData.append("adminId", id);
+
+        return postForm("/admin/storage/count", formData)
+            .then(function (res) { return res.json(); })
+            .then(function (arr) {
+                window.countList = Array.isArray(arr) ? arr : [];
+                computeStatsFromVisible();
+            })
+            .catch(function (err) {
+                window.countList = [];
+                computeStatsFromVisible();
+            });
+    }
+
     function applyPagingFromTotal(total, page) {
         paging.totalItems = total;
         paging.totalPages = Math.max(1, Math.ceil(total / perPage));
@@ -1473,6 +1492,7 @@
         clearAllCaches();
 
         fetchListPage(1);
+        fetchCount();
     }
 
     if (document.readyState === "loading") {

@@ -2,12 +2,9 @@ package kr.co.ultari.chatbot.admin.controller;
 
 import kr.co.ultari.chatbot.admin.datamodel.dto.AdminLoginRequest;
 import kr.co.ultari.chatbot.admin.service.AdminAuthService;
-import kr.co.ultari.chatbot.admin.service.AdminStorageService;
 import kr.co.ultari.chatbot.admin.session.AdminSession;
 import kr.co.ultari.chatbot.admin.session.AdminSessionStore;
 import lombok.extern.slf4j.Slf4j;
-import org.json.JSONArray;
-import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
@@ -31,9 +28,6 @@ public class AdminLoginController {
 
     @Autowired
     AdminSessionStore sessionStore;
-
-    @Autowired
-    AdminStorageService storageService;
 
     private final AdminAuthService authService;
 
@@ -125,15 +119,14 @@ public class AdminLoginController {
         String adminId = session.getAdminId();
         log.debug("[storage index] adminId={}, sessionId={}", adminId, sessionId);
 
-        JSONArray arr = storageService.getCountList(adminId);
-
+        // 문서 카운트는 렌더 경로에서 제거하고 프론트에서 비동기(/admin/storage/count)로 로딩한다.
+        // (AI 게이트웨이 지연이 로그인 직후 화면 전환을 막던 병목 제거)
         model.addAttribute("adminId",session.getAdminId());
         model.addAttribute("adminName", session.getAdminName());
         model.addAttribute("storage", session.isAuthStorage());
         model.addAttribute("statistics", session.isAuthStatistics());
         model.addAttribute("master",session.isAuthMaster());
         model.addAttribute("sessionRemainingSeconds", sessionStore.getRemainingSeconds(sessionId));
-        model.addAttribute("countList",arr.toString());
 
         return "admin/storage";
     }
