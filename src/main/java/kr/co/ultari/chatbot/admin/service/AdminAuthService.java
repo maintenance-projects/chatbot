@@ -28,14 +28,14 @@ public class AdminAuthService {
         MsgAdmin admin = adminRepository.findById(adminId).orElse(null);
         if(admin==null) return rtn = "NoUser";
 
-        //비밀번호 검증
-        if (!admin.getPassword().equals(password)) {
+        //비밀번호 검증 (null-safe: 저장값이 NULL이어도 NPE 없이 거부)
+        if (password == null || !password.equals(admin.getPassword())) {
             return rtn = "NoPassword";
         }
 
-        // IP 검증 (0.0.0.0 이면 모두 허용)
+        // IP 검증 (0.0.0.0 이면 모두 허용, null-safe fail-closed: 저장 IP가 NULL이면 거부)
         if (!"0.0.0.0".equals(admin.getIp())) {
-            if (!admin.getIp().equals(clientIp)) {
+            if (clientIp == null || !clientIp.equals(admin.getIp())) {
                 return rtn = "NoIp";
             }
         }
@@ -49,7 +49,7 @@ public class AdminAuthService {
     public String changePassword(String adminId, String currentPassword, String newPassword) {
         MsgAdmin admin = adminRepository.findById(adminId).orElse(null);
         if (admin == null) return "NoUser";
-        if (!admin.getPassword().equals(currentPassword)) return "WrongPassword";
+        if (currentPassword == null || !currentPassword.equals(admin.getPassword())) return "WrongPassword";
         admin.setPassword(newPassword);
         admin.setUpdateDate(new Date());
         adminRepository.save(admin);

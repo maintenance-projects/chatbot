@@ -1,6 +1,6 @@
 package kr.co.ultari.chatbot.database.scheduler;
 
-import kr.co.ultari.chatbot.database.service.PartitionManageService;
+import kr.co.ultari.chatbot.database.partition.PartitionStrategy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
@@ -12,7 +12,7 @@ import org.springframework.stereotype.Component;
 @Slf4j
 public class PartitionScheduler {
 
-    private final PartitionManageService partitionService;
+    private final PartitionStrategy partitionService;
 
     @Value("${ultari.ai.log-table.partition.create-policy:1}")
     int month;
