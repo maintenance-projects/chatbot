@@ -4,7 +4,6 @@ import kr.co.ultari.chatbot.database.service.AIUsageService;
 import kr.co.ultari.chatbot.utils.StringUtilsCustom;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import lombok.var;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.client.MultipartBodyBuilder;

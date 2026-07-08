@@ -5,7 +5,6 @@ import kr.co.ultari.chatbot.generate.datamodel.dto.RequestDTO;
 import kr.co.ultari.chatbot.utils.StringUtilsCustom;
 import kr.co.ultari.chatbot.utils.WebUtilsCustom;
 import lombok.extern.slf4j.Slf4j;
-import lombok.var;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;

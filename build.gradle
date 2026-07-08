@@ -1,13 +1,13 @@
 plugins {
     id 'java'
-    id 'org.springframework.boot' version '2.2.6.RELEASE'
-    id 'io.spring.dependency-management' version '1.0.9.RELEASE'
+    id 'org.springframework.boot' version '3.2.5'
+    id 'io.spring.dependency-management' version '1.1.4'
 }
 
 group = 'kr.co.ultari'
 version = '0.0.1-SNAPSHOT'
 description = 'ultari ai chatbot'
-sourceCompatibility = '1.8'
+sourceCompatibility = '17'
 
 bootJar {
     enabled = true
@@ -29,7 +29,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-test'
     implementation 'org.springframework.boot:spring-boot-starter-webflux'
-    implementation 'org.apache.httpcomponents:httpclient'
+    implementation 'org.apache.httpcomponents.client5:httpclient5'
     implementation 'kr.dogfoot:hwplib:1.0.1'
     implementation 'kr.dogfoot:hwpxlib:1.0.8'
     implementation 'org.apache.pdfbox:pdfbox:2.0.27'
@@ -40,7 +40,7 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-cache'
     implementation 'com.github.ben-manes.caffeine:caffeine:2.6.2'
     implementation 'org.json:json:20231013'
-    runtimeOnly 'mysql:mysql-connector-java'
+    runtimeOnly 'com.mysql:mysql-connector-j'
     runtimeOnly 'com.oracle.database.jdbc:ojdbc8:19.20.0.0'
     compileOnly 'org.projectlombok:lombok'
     annotationProcessor 'org.projectlombok:lombok'

@@ -8,8 +8,9 @@
     <link rel="stylesheet" th:href="@{/css/admin/base.css}" href="/css/admin/base.css" />
     <link rel="stylesheet" th:href="@{/css/admin/storage.css}" href="/css/admin/storage.css" />
 
-    <script th:inline="javascript">
-        const countList = JSON.parse(/*[[${countList}]]*/ "[]");
+    <script>
+        // 문서 카운트는 페이지 로드 후 /admin/storage/count 로 비동기 로딩된다. (storage.js fetchCount)
+        window.countList = [];
     </script>
 </head>
 
