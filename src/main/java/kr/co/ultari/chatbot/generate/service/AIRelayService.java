@@ -17,6 +17,9 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import reactor.core.Disposable;
+import reactor.core.publisher.Flux;
+
+import java.util.function.Supplier;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -28,6 +31,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 @Service
 public class AIRelayService {
     private static final long SSE_TIMEOUT_MS = 300_000L;
+    private static final String GATEWAY_ERROR_MESSAGE = "AI 서버 연결에 실패하였습니다... 😥";
 
     @Value("${ultari.ai-gateway.chat-default-url:}")
     private String AI_CHAT_DEFAULT_URL;
@@ -57,9 +61,6 @@ public class AIRelayService {
     }
 
     public SseEmitter ChatRelayServiceStream(RequestDTO requestDTO, MultipartFile file) {
-        SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MS);
-        AtomicBoolean completed = new AtomicBoolean(false);
-
         aiUsageService.increase(
                 requestDTO.getSessionId(),
                 requestDTO.getSessionId(),
@@ -69,161 +70,31 @@ public class AIRelayService {
         // AI Gateway로 보낼 multipart 구성 (기존 ChatRelayService의 JSON과 동일 필드)
         MultipartBodyBuilder builder = setMultiPartBuilder(requestDTO, file);
 
-        // 클라이언트가 끊으면 subscription 정리
-        final Disposable[] disposableHolder = new Disposable[1];
-        emitter.onCompletion(() -> {
-            completed.set(true);
-            if (disposableHolder[0] != null) disposableHolder[0].dispose();
-        });
-        emitter.onTimeout(() -> {
-            completed.set(true);
-            if (disposableHolder[0] != null) disposableHolder[0].dispose();
-        });
-        emitter.onError(e -> {
-            completed.set(true);
-            if (disposableHolder[0] != null) disposableHolder[0].dispose();
-        });
-
-        try {
-            emitter.send(SseEmitter.event().name("start").data(""));
-        } catch (IOException ignored) {}
-
-        // 진짜 스트리밍: AI Gateway 스트림(Flux)을 subscribe 해서 emitter로 바로 흘림
-        try {
-            disposableHolder[0] = aiClientService
-                    .callAIStream(AI_UPLOAD_URL, requestDTO, builder)
-                    .subscribe(
-                            rawChunk -> {
-                                if (completed.get()) return;
-                                // rawChunk는 게이트웨이 구현에 따라
-                                // - 이미 "data: {...}\n\n" 같은 SSE 조각일 수도 있고
-                                // - 그냥 JSON 문자열 조각일 수도 있음
-                                // 아래는 OpenAI 스타일 SSE(data: {...})를 최대한 content(delta)로 뽑는 파서
-                                String delta = SseDeltaExtractor.extractDelta(rawChunk);
-                                log.debug("delta={}", delta);
-                                // 뽑히면 delta로 보내고, 아니면 rawChunk를 그대로 보냄(최소 동작 보장)
-                                String payload = (delta != null && !delta.isEmpty()) ? delta : rawChunk;
-
-                                try {
-                                    emitter.send(SseEmitter.event().name("delta").data(payload));
-                                } catch (IOException e) {
-                                    completed.set(true);
-                                    if (disposableHolder[0] != null) disposableHolder[0].dispose();
-                                }
-                            },
-                            err -> {
-                                if (completed.get()) return;
-                                try {
-                                    emitter.send(SseEmitter.event().name("error").data("AI 서버 연결에 실패하였습니다... 😥"));
-                                } catch (IOException ignored) {}
-                                emitter.complete();
-                            },
-                            () -> {
-                                cachedService.FilesCacheClear(requestDTO.getSessionId());
-                                if (completed.get()) return;
-                                try {
-                                    emitter.send(SseEmitter.event().name("done").data(""));
-                                } catch (IOException ignored) {}
-                                emitter.complete();
-                            }
-                    );
-        } catch (Exception e) {
-            try {
-                emitter.send(SseEmitter.event().name("error").data("AI 서버 연결에 실패하였습니다... 😥"));
-            } catch (IOException ignored) {}
-            emitter.completeWithError(e);
-        }
-
-        return emitter;
+        // 정상 종료 시 파일 목록 캐시 무효화(새 문서 업로드 반영)
+        return pipeStream(
+                () -> aiClientService.callAIStream(AI_UPLOAD_URL, requestDTO, builder),
+                () -> cachedService.FilesCacheClear(requestDTO.getSessionId())
+        );
     }
 
     public SseEmitter ChatRelayServiceStream(RequestDTO requestDTO) {
-        SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MS);
-        AtomicBoolean completed = new AtomicBoolean(false);
-
-        // 요청 횟수 증가(기존과 동일) :contentReference[oaicite:6]{index=6}
+        // 요청 횟수 증가
         aiUsageService.increase(
                 requestDTO.getSessionId(),
                 requestDTO.getSessionId(),
                 "CHAT"
         );
 
-        // AI Gateway로 보낼 multipart 구성 (기존 ChatRelayService의 JSON과 동일 필드)
+        // AI Gateway로 보낼 multipart 구성
         MultipartBodyBuilder builder = setBuilder(requestDTO);
 
-        // 클라이언트가 끊으면 subscription 정리
-        final Disposable[] disposableHolder = new Disposable[1];
-        emitter.onCompletion(() -> {
-            completed.set(true);
-            if (disposableHolder[0] != null) disposableHolder[0].dispose();
-        });
-        emitter.onTimeout(() -> {
-            completed.set(true);
-            if (disposableHolder[0] != null) disposableHolder[0].dispose();
-        });
-        emitter.onError(e -> {
-            completed.set(true);
-            if (disposableHolder[0] != null) disposableHolder[0].dispose();
-        });
-
-        try {
-            emitter.send(SseEmitter.event().name("start").data(""));
-        } catch (IOException ignored) {}
-
-        // 진짜 스트리밍: AI Gateway 스트림(Flux)을 subscribe 해서 emitter로 바로 흘림
-        try {
-            disposableHolder[0] = aiClientService
-                    .callAIStream(AI_CHAT_DEFAULT_URL, requestDTO, builder)
-                    .subscribe(
-                            rawChunk -> {
-                                if (completed.get()) return;
-
-                                // rawChunk는 게이트웨이 구현에 따라
-                                // - 이미 "data: {...}\n\n" 같은 SSE 조각일 수도 있고
-                                // - 그냥 JSON 문자열 조각일 수도 있음
-                                // 아래는 OpenAI 스타일 SSE(data: {...})를 최대한 content(delta)로 뽑는 파서
-                                String delta = SseDeltaExtractor.extractDelta(rawChunk);
-                                log.debug("delta={}", delta);
-
-                                // 뽑히면 delta로 보내고, 아니면 rawChunk를 그대로 보냄(최소 동작 보장)
-                                String payload = (delta != null && !delta.isEmpty()) ? delta : rawChunk;
-
-                                try {
-                                    emitter.send(SseEmitter.event().name("delta").data(payload));
-                                } catch (IOException e) {
-                                    completed.set(true);
-                                    if (disposableHolder[0] != null) disposableHolder[0].dispose();
-                                }
-                            },
-                            err -> {
-                                if (completed.get()) return;
-                                try {
-                                    emitter.send(SseEmitter.event().name("error").data("AI 서버 연결에 실패하였습니다... 😥"));
-                                } catch (IOException ignored) {}
-                                emitter.complete();
-                            },
-                            () -> {
-                                if (completed.get()) return;
-                                try {
-                                    emitter.send(SseEmitter.event().name("done").data(""));
-                                } catch (IOException ignored) {}
-                                emitter.complete();
-                            }
-                    );
-        } catch (Exception e) {
-            try {
-                emitter.send(SseEmitter.event().name("error").data("AI 서버 연결에 실패하였습니다... 😥"));
-            } catch (IOException ignored) {}
-            emitter.completeWithError(e);
-        }
-
-        return emitter;
+        return pipeStream(
+                () -> aiClientService.callAIStream(AI_CHAT_DEFAULT_URL, requestDTO, builder),
+                null
+        );
     }
 
     public SseEmitter DocumentRelayTemplateService(String sessionId, String message, boolean deep, MultipartFile file, String templateKey) {
-        SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MS);
-        AtomicBoolean completed = new AtomicBoolean(false);
-
         String templateJson = "{\n" +
                 "    \"doc_number\": \"신사복지 제2026-0042호\",\n" +
                 "    \"draft_date\": \"2026. 01. 20.\",\n" +
@@ -301,58 +172,70 @@ public class AIRelayService {
 
         String requestUrl = templateKey.equals("A003") ? AI_MEETING_TEMPLATE_URL : AI_TEMPLATE_URL;
 
+        return pipeStream(() -> aiClientService.callAIStream(requestUrl, builder), null);
+    }
+
+    /**
+     * AI Gateway 스트림(Flux)을 SSE emitter로 그대로 중계하는 공통 처리.
+     * start → delta* → (done | error) 이벤트 계약과 구독 정리(dispose) 로직을 캡슐화한다.
+     *
+     * @param streamSupplier 게이트웨이 SSE 스트림 공급자(예외를 error 이벤트로 변환하기 위해 구독 시점에 평가)
+     * @param onStreamDone   정상 완료 시 done 이벤트 전송 전에 실행할 후처리(없으면 null)
+     */
+    private SseEmitter pipeStream(Supplier<Flux<String>> streamSupplier, Runnable onStreamDone) {
+        SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MS);
+        AtomicBoolean completed = new AtomicBoolean(false);
+
+        // 클라이언트가 끊으면 subscription 정리
         final Disposable[] disposableHolder = new Disposable[1];
-        emitter.onCompletion(() -> {
+        Runnable dispose = () -> {
             completed.set(true);
             if (disposableHolder[0] != null) disposableHolder[0].dispose();
-        });
-        emitter.onTimeout(() -> {
-            completed.set(true);
-            if (disposableHolder[0] != null) disposableHolder[0].dispose();
-        });
-        emitter.onError(e -> {
-            completed.set(true);
-            if (disposableHolder[0] != null) disposableHolder[0].dispose();
-        });
+        };
+        emitter.onCompletion(dispose);
+        emitter.onTimeout(dispose);
+        emitter.onError(e -> dispose.run());
 
         try {
             emitter.send(SseEmitter.event().name("start").data(""));
         } catch (IOException ignored) {}
 
+        // 진짜 스트리밍: AI Gateway 스트림(Flux)을 subscribe 해서 emitter로 바로 흘림
         try {
-            disposableHolder[0] = aiClientService
-                    .callAIStream(requestUrl, builder)
-                    .subscribe(
-                            rawChunk -> {
-                                if (completed.get()) return;
-                                String delta = SseDeltaExtractor.extractDelta(rawChunk);
-                                log.debug("delta={}", delta);
-                                String payload = (delta != null && !delta.isEmpty()) ? delta : rawChunk;
-                                try {
-                                    emitter.send(SseEmitter.event().name("delta").data(payload));
-                                } catch (IOException e) {
-                                    completed.set(true);
-                                    if (disposableHolder[0] != null) disposableHolder[0].dispose();
-                                }
-                            },
-                            err -> {
-                                if (completed.get()) return;
-                                try {
-                                    emitter.send(SseEmitter.event().name("error").data("AI 서버 연결에 실패하였습니다... 😥"));
-                                } catch (IOException ignored) {}
-                                emitter.complete();
-                            },
-                            () -> {
-                                if (completed.get()) return;
-                                try {
-                                    emitter.send(SseEmitter.event().name("done").data(""));
-                                } catch (IOException ignored) {}
-                                emitter.complete();
-                            }
-                    );
+            disposableHolder[0] = streamSupplier.get().subscribe(
+                    rawChunk -> {
+                        if (completed.get()) return;
+                        // rawChunk는 게이트웨이 구현에 따라 "data: {...}" SSE 조각이거나 JSON 조각.
+                        // OpenAI 스타일 SSE(data: {...})에서 content(delta)를 최대한 뽑는다.
+                        String delta = SseDeltaExtractor.extractDelta(rawChunk);
+                        log.debug("delta={}", delta);
+                        // 뽑히면 delta로, 아니면 rawChunk 그대로 전송(최소 동작 보장)
+                        String payload = (delta != null && !delta.isEmpty()) ? delta : rawChunk;
+                        try {
+                            emitter.send(SseEmitter.event().name("delta").data(payload));
+                        } catch (IOException e) {
+                            dispose.run();
+                        }
+                    },
+                    err -> {
+                        if (completed.get()) return;
+                        try {
+                            emitter.send(SseEmitter.event().name("error").data(GATEWAY_ERROR_MESSAGE));
+                        } catch (IOException ignored) {}
+                        emitter.complete();
+                    },
+                    () -> {
+                        if (onStreamDone != null) onStreamDone.run();
+                        if (completed.get()) return;
+                        try {
+                            emitter.send(SseEmitter.event().name("done").data(""));
+                        } catch (IOException ignored) {}
+                        emitter.complete();
+                    }
+            );
         } catch (Exception e) {
             try {
-                emitter.send(SseEmitter.event().name("error").data("AI 서버 연결에 실패하였습니다... 😥"));
+                emitter.send(SseEmitter.event().name("error").data(GATEWAY_ERROR_MESSAGE));
             } catch (IOException ignored) {}
             emitter.completeWithError(e);
         }
