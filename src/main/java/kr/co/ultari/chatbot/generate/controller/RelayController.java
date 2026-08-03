@@ -9,7 +9,6 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.context.annotation.Profile;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.ui.Model;
@@ -27,7 +26,6 @@ import java.nio.file.StandardCopyOption;
 import java.util.List;
 import java.util.concurrent.Executors;
 
-@Profile("relay")
 @Slf4j
 @RestController
 @RequestMapping("/api/chat")
