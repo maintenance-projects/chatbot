@@ -1,7 +1,5 @@
 package kr.co.ultari.chatbot.utils;
 
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONObject;
 
@@ -135,11 +133,9 @@ public class WebUtilsCustom {
         return sb.toString();
     }
 
-    public static Map<String, Object> jsonToMap(String json) throws Exception
+    public static Map<String, Object> jsonToMap(String json)
     {
-        ObjectMapper objectMapper = new ObjectMapper();
-        TypeReference<Map<String, Object>> typeReference = new TypeReference<Map<String,Object>>() {};
-
-        return objectMapper.readValue(json, typeReference);
+        // org.json 사용(프로젝트 표준 JSON 라이브러리). Jackson 3(tools.jackson) 의존 제거.
+        return new JSONObject(json).toMap();
     }
 }

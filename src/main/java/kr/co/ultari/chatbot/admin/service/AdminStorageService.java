@@ -64,7 +64,7 @@ public class AdminStorageService {
             HttpEntity<Void> entity = new HttpEntity<>(headers);
 
             URI uri = UriComponentsBuilder
-                    .fromHttpUrl(AI_COMMON_DOC_LIST_URL)
+                    .fromUriString(AI_COMMON_DOC_LIST_URL)
                     .queryParam("page", page)
                     .queryParam("size", size)
                     .queryParam("orderType", orderType)
@@ -114,7 +114,7 @@ public class AdminStorageService {
         HttpEntity<Void> entity = new HttpEntity<>(headers);
 
         URI uri = UriComponentsBuilder
-                .fromHttpUrl(AI_COMMON_DOC_DEL_URL+"/"+key)
+                .fromUriString(AI_COMMON_DOC_DEL_URL+"/"+key)
                 .build()
                 .toUri();
 
