@@ -12,7 +12,7 @@ sourceCompatibility = '17'
 bootJar {
     enabled = true
     archiveBaseName = 'chatbot'
-    archiveVersion = '1.0.0.RELEASE'
+    archiveVersion = '3.0.0.RELEASE'
 }
 
 repositories {

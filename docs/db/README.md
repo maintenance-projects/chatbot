@@ -73,4 +73,10 @@ ORDER  BY partition_position;
 ### 참고: 파티션 대상이 아닌 테이블
 `MSG_USER`(메신저 연동 사용자 — 외부 시스템 테이블일 수 있음), `chatbot_admin`(관리자) 은
 파티션 대상이 아닙니다. 신규 환경이라면 이 테이블들도 별도 생성이 필요합니다(비파티션 일반 테이블).
-필요 시 해당 DDL도 요청 주세요.
+
+| DBMS | 스크립트 |
+|------|----------|
+| Oracle | [`oracle/base_tables.sql`](oracle/base_tables.sql) |
+
+> `MSG_USER` 는 외부 메신저 시스템이 이미 보유한 경우 생성하지 말 것(스크립트 주석 참조).
+> MySQL 용 base_tables 스크립트가 필요하면 요청 주세요.
