@@ -55,6 +55,7 @@
         sortIconSvg: $("#sortIconSvg"),
         sortLabel: $("#sortLabel"),
         btnAddDoc: $("#btnAddDoc"),
+        btnReloadProfanity: $("#btnReloadProfanity"),
         tableBody: $("#docTableBody"),
         tableInfo: $("#tableInfo"),
         pagination: $("#pagination"),
@@ -754,6 +755,20 @@
         dom.pagination.innerHTML = html;
     }
 
+    // 금칙어 목록을 서버 재시작 없이 즉시 갱신한다. (POST /admin/profanity/reload)
+    function reloadProfanity() {
+        var id = getAdminId();
+        if (dom.btnReloadProfanity) dom.btnReloadProfanity.disabled = true;
+        fetch("/admin/profanity/reload?adminId=" + encodeURIComponent(id), { method: "POST" })
+            .then(function (res) { return res.json().catch(function () { return {}; }); })
+            .then(function (data) {
+                if (data && data.code === "0000") toast("금칙어 목록을 재로드했습니다.", "success");
+                else toast("금칙어 재로드에 실패했습니다.", "error");
+            })
+            .catch(function () { toast("금칙어 재로드 중 오류가 발생했습니다.", "error"); })
+            .finally(function () { if (dom.btnReloadProfanity) dom.btnReloadProfanity.disabled = false; });
+    }
+
     // 문서 카운트를 비동기로 로딩해 요약 카드(전체/오늘/사용/미사용)를 갱신한다.
     // 실패해도 화면은 유지하고 카드만 미표시(0) 처리한다.
     function fetchCount() {
@@ -1367,6 +1382,7 @@
         });
 
         if (dom.btnAddDoc) dom.btnAddDoc.addEventListener("click", openDocModal);
+        if (dom.btnReloadProfanity) dom.btnReloadProfanity.addEventListener("click", reloadProfanity);
         if (dom.docModalClose) dom.docModalClose.addEventListener("click", closeDocModal);
         if (dom.docModalCancel) dom.docModalCancel.addEventListener("click", closeDocModal);
 
