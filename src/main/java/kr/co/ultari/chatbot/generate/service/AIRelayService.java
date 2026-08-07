@@ -2,29 +2,20 @@ package kr.co.ultari.chatbot.generate.service;
 
 import kr.co.ultari.chatbot.database.service.AIUsageService;
 import kr.co.ultari.chatbot.generate.datamodel.dto.RequestDTO;
-import kr.co.ultari.chatbot.utils.WebUtilsCustom;
 import lombok.extern.slf4j.Slf4j;
-import org.json.JSONArray;
-import org.json.JSONObject;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.stereotype.Service;
-import org.springframework.util.ObjectUtils;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import reactor.core.Disposable;
 import reactor.core.publisher.Flux;
 
-import java.util.function.Supplier;
-
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.List;
+import java.util.function.Supplier;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 @Slf4j
@@ -39,15 +30,6 @@ public class AIRelayService {
     @Value("${ultari.ai-gateway.upload-url:}")
     private String AI_UPLOAD_URL;
 
-    @Value("${ultari.ai-gateway.template-url:}")
-    private String AI_TEMPLATE_URL;
-
-    @Value("${ultari.ai-gateway.meeting-template-url:}")
-    private String AI_MEETING_TEMPLATE_URL;
-
-    @Value("${ultari.ai-gateway.files-url:}")
-    private String AI_FILES_URL;
-
     @Autowired
     AIUsageService aiUsageService;
 
@@ -58,23 +40,6 @@ public class AIRelayService {
 
     public AIRelayService(AIRelayClientService aiClientService) {
         this.aiClientService = aiClientService;
-    }
-
-    public SseEmitter ChatRelayServiceStream(RequestDTO requestDTO, MultipartFile file) {
-        aiUsageService.increase(
-                requestDTO.getSessionId(),
-                requestDTO.getSessionId(),
-                "DOCUMENT"
-        );
-
-        // AI Gateway로 보낼 multipart 구성 (기존 ChatRelayService의 JSON과 동일 필드)
-        MultipartBodyBuilder builder = setMultiPartBuilder(requestDTO, file);
-
-        // 정상 종료 시 파일 목록 캐시 무효화(새 문서 업로드 반영)
-        return pipeStream(
-                () -> aiClientService.callAIStream(AI_UPLOAD_URL, requestDTO, builder),
-                () -> cachedService.FilesCacheClear(requestDTO.getSessionId())
-        );
     }
 
     public SseEmitter ChatRelayServiceStream(RequestDTO requestDTO) {
@@ -92,87 +57,6 @@ public class AIRelayService {
                 () -> aiClientService.callAIStream(AI_CHAT_DEFAULT_URL, requestDTO, builder),
                 null
         );
-    }
-
-    public SseEmitter DocumentRelayTemplateService(String sessionId, String message, boolean deep, MultipartFile file, String templateKey) {
-        String templateJson = "{\n" +
-                "    \"doc_number\": \"신사복지 제2026-0042호\",\n" +
-                "    \"draft_date\": \"2026. 01. 20.\",\n" +
-                "    \"exec_date\": \"2026. 01. 21.\",\n" +
-                "    \"via\": \"\",\n" +
-                "    \"recipient\": \"내부결재\",\n" +
-                "    \"reference\": \"\",\n" +
-                "    \"title\": \"2026년 상반기 직원 교육 계획 보고\",\n" +
-                "    \"retention\": \"3년\",\n" +
-                "    \"sign_manager\": \"김철수\",\n" +
-                "    \"sign_drafter\": \"이영희\",\n" +
-                "    \"sign_coop\": \"\",\n" +
-                "    \"doc_number_2\": \"신사복지 제2026-0042호\",\n" +
-                "    \"exec_date_2\": \"2026. 01. 21.\",\n" +
-                "    \"via_2\": \"\",\n" +
-                "    \"recipient_2\": \"내부결재\",\n" +
-                "    \"reference_2\": \"\",\n" +
-                "    \"title_2\": \"2026년 상반기 직원 교육 계획 보고\",\n" +
-                "    \"items\": [\n" +
-                "      {\"text\": \"1. 교육 목적\", \"level\": 1},\n" +
-                "      {\"text\": \"직원 역량 강화 및 서비스 품질 향상을 위한 정기 교육 실시\", \"level\": 2},\n" +
-                "      {\"text\": \"2. 교육 일정\", \"level\": 1},\n" +
-                "      {\"text\": \"2026년 2월 15일 ~ 2월 17일 (3일간)\", \"level\": 2},\n" +
-                "      {\"text\": \"3. 교육 대상: 전 직원\", \"level\": 1}\n" +
-                "    ],\n" +
-                "    \"has_attachment\": false\n" +
-                "  }";
-
-        String templateJson2 = "{\n" +
-                "    \"recipient\": \"각 부서장\",\n" +
-                "    \"via\": \"경영지원팀\",\n" +
-                "    \"title\": \"회의실 사용 안내\",\n" +
-                "    \"attachment\": \"\",\n" +
-                "    \"content_lines\": [\n" +
-                "      \"안녕하십니까.\",\n" +
-                "      \"\",\n" +
-                "      \"2026년 1월 25일부터 3층 대회의실 리모델링 공사로 인해\",\n" +
-                "      \"약 2주간 해당 회의실 사용이 제한됨을 알려드립니다.\"\n" +
-                "    ]\n" +
-                "  }";
-
-        String templateJson3 = "{\n" +
-                "    \"meeting_title\": \"1분기 운영 현황 점검 및 향후 추진 계획 논의\",\n" +
-                "    \"datetime\": \"2026년 2월 12일 (목) 10:00 ~ 11:30\",\n" +
-                "    \"person_in_charge\": \"홍 길동\",\n" +
-                "    \"location\": \"본사 3층 회의실\",\n" +
-                "    \"attendee_count\": \"팀장, 각 파트 담당자 외 5명\",\n" +
-                "    \"agenda\": \"1분기 운영 현황 공유\",\n" +
-                "    \"attendees\": [\n" +
-                "      {\"affiliation\": \"운영기획팀\", \"name\": \"김 도현\"},\n" +
-                "      {\"affiliation\": \"경영지원팀\", \"name\": \"박 지훈\"},\n" +
-                "      {\"affiliation\": \"서비스운영팀\", \"name\": \"이 수민\"}\n" +
-                "    ],\n" +
-                "    \"meeting_content_lines\": [\"1월 대비 2월 업무 요청 건수가 증가함.\", \"특정 부서에 업무가 집중되는 현상이 발생하고 있어 업무 분산 방안이 필요하다는 의견이 제기됨.\", \"일부 업무는 처리 지연 사례가 있었으며, 원인은 인력 공백 및 우선순위 조정 미흡으로 분석됨.\"],\n" +
-                "    \"meeting_result_lines\": [\"업무 요청 접수 시 우선순위 기준을 명확히 정의하기로 함.\", \"각 파트별 주간 업무 현황을 공유하는 체계를 강화하기로 함.\"]\n" +
-                "  }";
-
-        //요청 횟수 증가
-        aiUsageService.increase(sessionId, sessionId, "TEMPLATE");
-
-        MultipartBodyBuilder builder = new MultipartBodyBuilder();
-        if (templateKey.equals("A001")) {
-            builder.part("template_name", "template.hwpx");
-            builder.part("context_data", templateJson);
-        } else if (templateKey.equals("A002")) {
-            builder.part("template_name", "template2.hwpx");
-            builder.part("context_data", templateJson2);
-        } else if (templateKey.equals("A003")) {
-            builder.part("raw_text", message);
-            if (!ObjectUtils.isEmpty(file)) builder.part("file", file.getResource());
-            builder.part("expires_in", 36000);
-            builder.part("one_time", false);
-        }
-        builder.part("one_time", false);
-
-        String requestUrl = templateKey.equals("A003") ? AI_MEETING_TEMPLATE_URL : AI_TEMPLATE_URL;
-
-        return pipeStream(() -> aiClientService.callAIStream(requestUrl, builder), null);
     }
 
     /**
@@ -288,48 +172,4 @@ public class AIRelayService {
         return response;
     }
 
-    public MultipartBodyBuilder setMultiPartBuilder(RequestDTO requestDTO, MultipartFile file) {
-        String originalFileName = file.getOriginalFilename();
-        String fileName = originalFileName.substring(0,originalFileName.lastIndexOf("."));
-        String ext = originalFileName.substring(originalFileName.lastIndexOf(".")+1);
-
-        MultipartBodyBuilder builder = new MultipartBodyBuilder();
-        builder.part("attachFile_name", originalFileName);
-        builder.part("attachFile_bin", file.getResource())
-                .filename(originalFileName)
-                .contentType(MediaType.APPLICATION_OCTET_STREAM);
-
-        return builder;
-    }
-
-    @Cacheable(value = "FILES", key = "#sessionId", unless = "#result == null")
-    public List<String> requestFileList(String sessionId) {
-        try {
-            String response = WebUtilsCustom.requestGet(AI_FILES_URL, sessionId);
-            // 1. 응답값 비었는지 체크
-            if (response.isEmpty()) {
-                return Collections.emptyList();
-            }
-
-            JSONObject json = new JSONObject(response);
-
-            // 2. 키 존재 여부 및 null 체크
-            if (!json.has("files") || json.isNull("files")) {
-                return Collections.emptyList();
-            }
-
-            // 3. JSONArray를 안전하게 List<String>으로 변환
-            JSONArray jsonArray = json.getJSONArray("files");
-            List<String> fileList = new ArrayList<>();
-
-            for (int i = 0; i < jsonArray.length(); i++) {
-                fileList.add(jsonArray.getString(i));
-            }
-
-            return fileList;
-        } catch (Exception e) {
-            log.error("파일 목록 요청 중 오류 발생: sessionId={}", sessionId, e);
-            return Collections.emptyList(); // 혹은 예외를 다시 던짐
-        }
-    }
 }
