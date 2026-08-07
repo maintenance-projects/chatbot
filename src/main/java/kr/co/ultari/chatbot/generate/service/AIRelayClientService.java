@@ -1,25 +1,22 @@
 package kr.co.ultari.chatbot.generate.service;
 
 import io.netty.channel.ChannelOption;
-import kr.co.ultari.chatbot.generate.datamodel.dto.RequestDTO;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.stereotype.Service;
 import org.springframework.web.reactive.function.BodyInserters;
 import org.springframework.web.reactive.function.client.WebClient;
-import reactor.core.publisher.Flux;
 import reactor.netty.http.client.HttpClient;
 
+/**
+ * 메신저 첨부파일 사전 등록(AIRelayService.uploadFile) 전용 잔존 WebClient 래퍼.
+ * SSE 릴레이는 신규 재구성에서 common/gateway·SseRelay로 이전됨.
+ */
 @Slf4j
 @Service
 public class AIRelayClientService {
-
-    @Value("${ultari.ai-gateway.doc-summary-url:}")
-    private String AI_DOC_SUMMARY_URL;
 
     private final WebClient webClient;
 
@@ -32,7 +29,6 @@ public class AIRelayClientService {
     }
 
     public String callAI(String requestUrl, String sessionId, MultipartBodyBuilder builder) {
-
         String response = webClient.post()
                 .uri(requestUrl + "/" + sessionId)
                 .contentType(MediaType.MULTIPART_FORM_DATA)
@@ -41,48 +37,9 @@ public class AIRelayClientService {
                 .bodyToMono(String.class)
                 .block(); // 여기서만 block 허용
 
-        if(log.isDebugEnabled())
+        if (log.isDebugEnabled()) {
             log.debug(response);
-
+        }
         return response;
-    }
-
-    /** AI Gateway가 text/event-stream(SSE)로 내려주는 응답을 Flux로 받는다 */
-    public Flux<String> callAIStream(String requestUrl, RequestDTO requestDTO, MultipartBodyBuilder builder) {
-        String sessionId = requestDTO.getSessionId();
-        boolean isContinue = requestDTO.isContinue();
-
-        if(isContinue) {
-            if(requestUrl.contains("open") || requestUrl.contains("private"))
-                requestUrl = requestUrl.substring(0,requestUrl.lastIndexOf("/")) + "/" + sessionId + "/continue";
-            else requestUrl = requestUrl + "/" +sessionId;
-        }
-        else {
-            if(requestDTO.getMessage().equals("summarize")) {
-                requestUrl = AI_DOC_SUMMARY_URL + "/" +sessionId;
-            } else requestUrl = requestUrl + "/" +sessionId;
-        }
-
-        log.debug("request url = {}",requestUrl);
-        return webClient.post()
-                .uri(requestUrl)
-                .contentType(MediaType.MULTIPART_FORM_DATA)
-                .accept(MediaType.TEXT_EVENT_STREAM) // 핵심
-                .header(HttpHeaders.CACHE_CONTROL, "no-cache")
-                .body(BodyInserters.fromMultipartData(builder.build()))
-                .retrieve()
-                .bodyToFlux(String.class);
-    }
-
-    public Flux<String> callAIStream(String requestUrl, MultipartBodyBuilder builder) {
-
-        return webClient.post()
-                .uri(requestUrl)
-                .contentType(MediaType.MULTIPART_FORM_DATA)
-                .accept(MediaType.TEXT_EVENT_STREAM) // 핵심
-                .header(HttpHeaders.CACHE_CONTROL, "no-cache")
-                .body(BodyInserters.fromMultipartData(builder.build()))
-                .retrieve()
-                .bodyToFlux(String.class);
     }
 }
