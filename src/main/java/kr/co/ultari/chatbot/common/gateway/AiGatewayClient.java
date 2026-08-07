@@ -4,6 +4,7 @@ import io.netty.channel.ChannelOption;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.http.client.reactive.ReactorClientHttpConnector;
 import org.springframework.stereotype.Component;
@@ -14,8 +15,9 @@ import reactor.netty.http.client.HttpClient;
 
 /**
  * AI 서버(게이트웨이) 호출을 단일 지점에서 담당한다.
- * <p>모든 URL은 {@code baseUrl + "/" + dept + path} 규칙으로 조립되며,
- * SSE 스트리밍/단건 JSON(GET·POST·DELETE·PATCH)을 지원한다.
+ * <p>모든 URL은 {@code baseUrl + "/" + dept + path} 규칙으로 조립된다.
+ * <p>JSON 호출은 게이트웨이의 상태코드·본문(0000/4000/... 봉투, 에러 detail 포함)을
+ * 그대로 반환하기 위해 {@code exchangeToMono}로 처리한다(비2xx도 예외 없이 통과).
  */
 @Slf4j
 @Component
@@ -30,6 +32,8 @@ public class AiGatewayClient {
                 .option(ChannelOption.CONNECT_TIMEOUT_MILLIS, props.getConnectTimeoutMs());
         this.webClient = builder
                 .clientConnector(new ReactorClientHttpConnector(httpClient))
+                // 문서 다운로드/대용량 JSON 응답 대비 in-memory 버퍼 상향(기본 256KB)
+                .codecs(c -> c.defaultCodecs().maxInMemorySize(64 * 1024 * 1024))
                 .build();
     }
 
@@ -52,60 +56,65 @@ public class AiGatewayClient {
                 .bodyToFlux(String.class);
     }
 
-    /** multipart POST 후 단건 JSON 문자열을 반환한다(블로킹). */
-    public String postMultipart(String dept, String path, MultipartBodyBuilder body) {
+    /** multipart POST — 게이트웨이 상태코드·본문을 그대로 전달. */
+    public ResponseEntity<String> postMultipart(String dept, String path, MultipartBodyBuilder body) {
         String uri = url(dept, path);
         log.debug("gateway POST {}", uri);
         return webClient.post()
                 .uri(uri)
                 .contentType(MediaType.MULTIPART_FORM_DATA)
                 .body(BodyInserters.fromMultipartData(body.build()))
-                .retrieve()
-                .bodyToMono(String.class)
+                .exchangeToMono(resp -> resp.toEntity(String.class))
                 .block();
     }
 
-    /** 본문 없는 POST 단건 JSON 문자열(블로킹). 예: 금칙어 재로드 */
-    public String post(String dept, String path) {
+    /** 본문 없는 POST(예: 금칙어 재로드). */
+    public ResponseEntity<String> post(String dept, String path) {
         String uri = url(dept, path);
         log.debug("gateway POST(no-body) {}", uri);
         return webClient.post()
                 .uri(uri)
-                .retrieve()
-                .bodyToMono(String.class)
+                .exchangeToMono(resp -> resp.toEntity(String.class))
                 .block();
     }
 
-    /** GET 단건 JSON 문자열(블로킹). */
-    public String get(String dept, String path) {
+    /** GET — 게이트웨이 상태코드·본문을 그대로 전달. */
+    public ResponseEntity<String> get(String dept, String path) {
         String uri = url(dept, path);
         log.debug("gateway GET {}", uri);
         return webClient.get()
                 .uri(uri)
-                .retrieve()
-                .bodyToMono(String.class)
+                .exchangeToMono(resp -> resp.toEntity(String.class))
                 .block();
     }
 
-    /** DELETE 단건 JSON 문자열(블로킹). */
-    public String delete(String dept, String path) {
+    /** DELETE — 게이트웨이 상태코드·본문을 그대로 전달. */
+    public ResponseEntity<String> delete(String dept, String path) {
         String uri = url(dept, path);
         log.debug("gateway DELETE {}", uri);
         return webClient.delete()
                 .uri(uri)
-                .retrieve()
-                .bodyToMono(String.class)
+                .exchangeToMono(resp -> resp.toEntity(String.class))
                 .block();
     }
 
-    /** PATCH 단건 JSON 문자열(블로킹). */
-    public String patch(String dept, String path) {
+    /** PATCH — 게이트웨이 상태코드·본문을 그대로 전달. */
+    public ResponseEntity<String> patch(String dept, String path) {
         String uri = url(dept, path);
         log.debug("gateway PATCH {}", uri);
         return webClient.patch()
                 .uri(uri)
-                .retrieve()
-                .bodyToMono(String.class)
+                .exchangeToMono(resp -> resp.toEntity(String.class))
+                .block();
+    }
+
+    /** 바이너리 파일 다운로드. 응답 헤더(Content-Type/Disposition) 보존을 위해 ResponseEntity를 반환한다. */
+    public ResponseEntity<byte[]> download(String dept, String path) {
+        String uri = url(dept, path);
+        log.debug("gateway GET(binary) {}", uri);
+        return webClient.get()
+                .uri(uri)
+                .exchangeToMono(resp -> resp.toEntity(byte[].class))
                 .block();
     }
 }

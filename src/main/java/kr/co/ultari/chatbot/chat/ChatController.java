@@ -2,6 +2,8 @@ package kr.co.ultari.chatbot.chat;
 
 import jakarta.servlet.http.HttpServletRequest;
 import kr.co.ultari.chatbot.common.dept.DeptContext;
+import kr.co.ultari.chatbot.common.web.GatewayApi;
+import kr.co.ultari.chatbot.common.web.GatewayForward;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -13,6 +15,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
  * 챗봇 API (명세서 2·3장 대칭). 앱 자체 경로는 부서(dept)를 노출하지 않으며,
  * 서버가 세션에서 부서코드를 주입해 AI 서버({@code /{dept}/...})로 릴레이한다.
  */
+@GatewayApi
 @RestController
 @RequestMapping("/chat")
 @RequiredArgsConstructor
@@ -70,13 +73,13 @@ public class ChatController {
     /** 2.4 업로드 파일 목록 조회 */
     @GetMapping("/files/{invokeId}")
     public ResponseEntity<String> files(@PathVariable String invokeId, HttpServletRequest request) {
-        return json(chatService.files(dept(request), invokeId));
+        return GatewayForward.json(chatService.files(dept(request), invokeId));
     }
 
     /** 2.5 대화 기록 조회 */
     @GetMapping("/history/{invokeId}")
     public ResponseEntity<String> history(@PathVariable String invokeId, HttpServletRequest request) {
-        return json(chatService.history(dept(request), invokeId));
+        return GatewayForward.json(chatService.history(dept(request), invokeId));
     }
 
     // --- helpers ---
@@ -87,9 +90,5 @@ public class ChatController {
     private String userId(HttpServletRequest request) {
         Object uid = request.getSession().getAttribute(DeptContext.SESSION_USER_ID);
         return uid == null ? null : uid.toString();
-    }
-
-    private ResponseEntity<String> json(String body) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(body);
     }
 }

@@ -8,6 +8,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.MultipartBodyBuilder;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -82,14 +83,15 @@ public class ChatService {
         return sseRelay.relay(() -> gateway.stream(dept, "/message/document-summary/" + invokeId, b));
     }
 
-    /** 2.4 업로드 파일 목록 조회 (JSON). 기존과 동일하게 FILES 캐시 사용. */
-    @Cacheable(cacheNames = "FILES", key = "#invokeId", unless = "#result == null")
-    public String files(String dept, String invokeId) {
+    /** 2.4 업로드 파일 목록 조회 (JSON). 성공 응답만 FILES 캐시. */
+    @Cacheable(cacheNames = "FILES", key = "#invokeId",
+            unless = "#result == null || !#result.statusCode.is2xxSuccessful()")
+    public ResponseEntity<String> files(String dept, String invokeId) {
         return gateway.get(dept, "/files/" + invokeId);
     }
 
     /** 2.5 대화 기록 조회 (JSON) */
-    public String history(String dept, String invokeId) {
+    public ResponseEntity<String> history(String dept, String invokeId) {
         return gateway.get(dept, "/history/" + invokeId);
     }
 }

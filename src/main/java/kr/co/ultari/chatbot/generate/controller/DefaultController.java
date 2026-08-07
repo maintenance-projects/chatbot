@@ -2,16 +2,13 @@ package kr.co.ultari.chatbot.generate.controller;
 
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.core.io.ByteArrayResource;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.client.RestTemplate;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -24,40 +21,13 @@ public class DefaultController {
     @Value("${ultari.ai.temp.path:tmp}")
     String tempPath;
 
-    @Value("${ultari.ai-gateway.download-url:http://10.0.0.31:8000/documents/download}")
-    String AI_DOWNLOAD_URL;
-
     @RequestMapping("favicon.ico")
     @ResponseBody
     void favicon() {
         // 아무 처리 안 함
     }
 
-    @RequestMapping("/documents/download/{key}")
-    public ResponseEntity<Resource> download(@PathVariable String key) {
-
-        log.info(key);
-        String targetUrl = AI_DOWNLOAD_URL + "/" + key;
-
-        RestTemplate restTemplate = new RestTemplate();
-
-        ResponseEntity<byte[]> response =
-                restTemplate.getForEntity(targetUrl, byte[].class);
-
-        HttpHeaders headers = new HttpHeaders();
-        headers.setContentType(
-                response.getHeaders().getContentType()
-        );
-        headers.setContentDisposition(
-                response.getHeaders().getContentDisposition()
-        );
-
-        return new ResponseEntity<>(
-                new ByteArrayResource(response.getBody()),
-                headers,
-                HttpStatus.OK
-        );
-    }
+    // 문서 다운로드(/documents/download/{token})는 dept-aware DocGenController로 이관됨.
 
     @GetMapping("/document/view/{sessionId}/{fileName}")
     public ResponseEntity<Resource> viewDocument(@PathVariable("fileName") String fileName, @PathVariable("sessionId") String sessionId) {

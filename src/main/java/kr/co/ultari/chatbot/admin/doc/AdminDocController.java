@@ -1,8 +1,9 @@
 package kr.co.ultari.chatbot.admin.doc;
 
 import kr.co.ultari.chatbot.common.dept.DeptResolver;
+import kr.co.ultari.chatbot.common.web.GatewayApi;
+import kr.co.ultari.chatbot.common.web.GatewayForward;
 import lombok.RequiredArgsConstructor;
-import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -11,6 +12,7 @@ import org.springframework.web.multipart.MultipartFile;
  * 관리자 문서관리 API (명세서 4장 대칭). 부서코드(dept)는 adminId로부터 설정 매핑으로 해결한다.
  * 앱 자체 경로는 {@code /admin/documents/*}, {@code /admin/profanity/reload}.
  */
+@GatewayApi
 @RestController
 @RequestMapping("/admin")
 @RequiredArgsConstructor
@@ -25,13 +27,13 @@ public class AdminDocController {
                                       @RequestParam String adminId,
                                       @RequestParam String adminName,
                                       @RequestParam("file") MultipartFile file) {
-        return json(service.add(dept(adminId), key, adminId, adminName, file));
+        return GatewayForward.json(service.add(dept(adminId), key, adminId, adminName, file));
     }
 
     /** 4.2 문서 삭제 */
     @DeleteMapping("/documents/{key}")
     public ResponseEntity<String> delete(@PathVariable String key, @RequestParam String adminId) {
-        return json(service.delete(dept(adminId), key));
+        return GatewayForward.json(service.delete(dept(adminId), key));
     }
 
     /** 4.3 문서 목록 조회 */
@@ -41,7 +43,7 @@ public class AdminDocController {
                                        @RequestParam(defaultValue = "10") int size,
                                        @RequestParam(defaultValue = "registDate") String orderType,
                                        @RequestParam(defaultValue = "desc") String order) {
-        return json(service.list(dept(adminId), page, size, orderType, order));
+        return GatewayForward.json(service.list(dept(adminId), page, size, orderType, order));
     }
 
     /** 4.4 문서 검색 */
@@ -53,32 +55,28 @@ public class AdminDocController {
                                          @RequestParam(defaultValue = "10") int size,
                                          @RequestParam(defaultValue = "registDate") String orderType,
                                          @RequestParam(defaultValue = "desc") String order) {
-        return json(service.search(dept(adminId), searchType, searchTerm, page, size, orderType, order));
+        return GatewayForward.json(service.search(dept(adminId), searchType, searchTerm, page, size, orderType, order));
     }
 
     /** 4.5 문서 사용여부 토글 */
     @PatchMapping("/documents/{key}/toggle")
     public ResponseEntity<String> toggle(@PathVariable String key, @RequestParam String adminId) {
-        return json(service.toggle(dept(adminId), key));
+        return GatewayForward.json(service.toggle(dept(adminId), key));
     }
 
     /** 4.6 문서 통계 조회 */
     @GetMapping("/documents/count")
     public ResponseEntity<String> count(@RequestParam String adminId) {
-        return json(service.count(dept(adminId)));
+        return GatewayForward.json(service.count(dept(adminId)));
     }
 
     /** 4.7 금칙어 목록 재로드 */
     @PostMapping("/profanity/reload")
     public ResponseEntity<String> reloadProfanity(@RequestParam String adminId) {
-        return json(service.reloadProfanity(dept(adminId)));
+        return GatewayForward.json(service.reloadProfanity(dept(adminId)));
     }
 
     private String dept(String adminId) {
         return deptResolver.resolve(adminId);
-    }
-
-    private ResponseEntity<String> json(String body) {
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(body);
     }
 }
