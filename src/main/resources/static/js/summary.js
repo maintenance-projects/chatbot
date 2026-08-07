@@ -577,7 +577,7 @@
 
         setLoading(true, "요약 생성 중");
 
-        const url = "/api/chat/csv/stream";
+        const url = "/convert/dialogue-summary/stream";
         const params = new URLSearchParams();
         params.set("sessionId", state.ctx.sessionId);
         if (state.ctx.fileName) params.set("fileName", state.ctx.fileName);
