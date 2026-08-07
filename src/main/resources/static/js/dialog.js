@@ -1513,10 +1513,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (uploadedFilesCache) return uploadedFilesCache;
         if (uploadedFilesPromise) return uploadedFilesPromise;
 
-        uploadedFilesPromise = fetch("/api/chat/files", {
-            method: "POST",
-            headers: { "Content-Type": "application/x-www-form-urlencoded; charset=UTF-8" },
-            body: new URLSearchParams({ sessionId: String(sessionId || "") }).toString(),
+        uploadedFilesPromise = fetch("/chat/files/" + encodeURIComponent(String(sessionId || "")), {
+            method: "GET",
             credentials: "same-origin",
         })
             .then(async (res) => {
@@ -1684,21 +1682,15 @@ document.addEventListener("DOMContentLoaded", () => {
         const prefix = `**요약**\n\n`;
         let prefixInjected = false;
 
-        const payload = {
-            sessionId,
-            message: "summarize",
-            deepResearch: false,
-            templateKey: null,
-            isContinue: false,
-            targetFileName: name,
-        };
+        const fd = new FormData();
+        fd.append("target_filename", name);
 
         streamEventText(
-            "/api/chat/stream",
+            "/chat/message/document-summary/" + encodeURIComponent(String(sessionId || "")),
             {
                 method: "POST",
-                headers: { "Content-Type": "application/json; charset=UTF-8", Accept: "text/event-stream" },
-                body: JSON.stringify(payload),
+                headers: { Accept: "text/event-stream" },
+                body: fd,
                 credentials: "same-origin",
             },
             {
@@ -1809,23 +1801,19 @@ document.addEventListener("DOMContentLoaded", () => {
         const cont = consumeContinueFlag();
 
         const targetName = String(targetNameOverride || "").trim();
-        const payload = {
-            sessionId,
-            message: m,
-            deepResearch: false,
-            templateKey: null,
-            isContinue: cont.isContinue,
-            targetFileName: targetName,
-        };
-        if (translateTo) payload.translate_to = translateTo;
-        if (cont.threadId) payload.threadId = cont.threadId;
+        // 신규 통합 챗봇: target_filename 유무로 서버가 private/open 자동 라우팅.
+        // 이어쓰기(continue)는 동일 invokeId(sessionId) 재전송으로 처리되어 threadId 불필요.
+        const fd = new FormData();
+        fd.append("message", m);
+        if (targetName) fd.append("target_filename", targetName);
+        if (translateTo) fd.append("translate_to", translateTo);
 
         streamEventText(
-            "/api/chat/stream",
+            "/chat/message/" + encodeURIComponent(String(sessionId || "")),
             {
                 method: "POST",
-                headers: { "Content-Type": "application/json; charset=UTF-8", Accept: "text/event-stream" },
-                body: JSON.stringify(payload),
+                headers: { Accept: "text/event-stream" },
+                body: fd,
                 credentials: "same-origin",
             },
             {
