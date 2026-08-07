@@ -754,21 +754,17 @@
         dom.pagination.innerHTML = html;
     }
 
-    function postForm(url, formData) {
-        return fetch(url, { method: "POST", body: formData });
-    }
-
     // 문서 카운트를 비동기로 로딩해 요약 카드(전체/오늘/사용/미사용)를 갱신한다.
     // 실패해도 화면은 유지하고 카드만 미표시(0) 처리한다.
     function fetchCount() {
         var id = getAdminId();
-        var formData = new FormData();
-        formData.append("adminId", id);
 
-        return postForm("/admin/storage/count", formData)
+        return fetch("/admin/documents/count?adminId=" + encodeURIComponent(id))
             .then(function (res) { return res.json(); })
-            .then(function (arr) {
-                window.countList = Array.isArray(arr) ? arr : [];
+            .then(function (json) {
+                // 신규 게이트웨이는 봉투일 수 있음: 배열이면 그대로, 아니면 data 배열 사용
+                var arr = Array.isArray(json) ? json : (json && Array.isArray(json.data) ? json.data : []);
+                window.countList = arr;
                 computeStatsFromVisible();
             })
             .catch(function (err) {
@@ -851,14 +847,13 @@
         showLoading(true);
 
         var id = getAdminId();
-        var formData = new FormData();
-        formData.append("adminId", id);
-        formData.append("size", perPage);
-        formData.append("page", page);
-        formData.append("orderType", getOrderType());
-        formData.append("order", sortOrder);
+        var qs = "adminId=" + encodeURIComponent(id)
+            + "&page=" + encodeURIComponent(page)
+            + "&size=" + encodeURIComponent(perPage)
+            + "&orderType=" + encodeURIComponent(getOrderType())
+            + "&order=" + encodeURIComponent(sortOrder);
 
-        return postForm("/admin/storage/list", formData)
+        return fetch("/admin/documents?" + qs)
             .then(function (res) {
                 var hTotal = extractTotalFromHeaders(res.headers);
                 paging.headersTotal = hTotal;
@@ -911,16 +906,15 @@
         showLoading(true);
 
         var id = getAdminId();
-        var formData = new FormData();
-        formData.append("adminId", id);
-        formData.append("type", searchField);
-        formData.append("context", query);
-        formData.append("size", perPage);
-        formData.append("page", page);
-        formData.append("orderType", getOrderType());
-        formData.append("order", sortOrder);
+        var qs = "adminId=" + encodeURIComponent(id)
+            + "&searchType=" + encodeURIComponent(searchField)
+            + "&searchTerm=" + encodeURIComponent(query)
+            + "&page=" + encodeURIComponent(page)
+            + "&size=" + encodeURIComponent(perPage)
+            + "&orderType=" + encodeURIComponent(getOrderType())
+            + "&order=" + encodeURIComponent(sortOrder);
 
-        return postForm("/admin/storage/search", formData)
+        return fetch("/admin/documents/search?" + qs)
             .then(function (res) {
                 var hTotal = extractTotalFromHeaders(res.headers);
                 paging.headersTotal = hTotal;
@@ -1124,18 +1118,15 @@
     function toggleUsage(key, newIsUse) {
         showLoading(true);
         var id = getAdminId();
-        var formData = new FormData();
-        formData.append("adminId", id);
-        formData.append("key", key);
-        formData.append("isUse", newIsUse);
 
-        fetch("/admin/storage/usage", { method: "POST", body: formData })
+        // 신규 토글은 isUse를 반전(값 미전달). PATCH /admin/documents/{key}/toggle
+        fetch("/admin/documents/" + encodeURIComponent(key) + "/toggle?adminId=" + encodeURIComponent(id), { method: "PATCH" })
             .then(function (res) {
-                return res.text();
+                return res.json().catch(function () { return {}; });
             })
             .then(function (data) {
                 closeStatusPopup();
-                if (String(data || "").trim() === "ok") {
+                if (data && data.code === "0000") {
                     toast("상태가 변경되었습니다.", "success");
                     clearAllCaches();
                     resetPaging();
@@ -1158,17 +1149,14 @@
         openConfirm("문서를 삭제하시겠습니까?", '"' + fileName + '" 문서를 삭제하면 복구할 수 없습니다.', function () {
             showLoading(true);
             var id = getAdminId();
-            var formData = new FormData();
-            formData.append("adminId", id);
-            formData.append("key", key);
 
-            fetch("/admin/storage/delete", { method: "POST", body: formData })
+            fetch("/admin/documents/" + encodeURIComponent(key) + "?adminId=" + encodeURIComponent(id), { method: "DELETE" })
                 .then(function (res) {
-                    return res.text();
+                    return res.json().catch(function () { return {}; });
                 })
                 .then(function (data) {
                     closeConfirm();
-                    if (String(data || "").trim() === "ok") {
+                    if (data && data.code === "0000") {
                         toast("문서가 삭제되었습니다.", "success");
                         resetPaging();
                         clearAllCaches();
@@ -1211,10 +1199,11 @@
                 formData.append("adminId", id);
                 formData.append("file", file);
 
-                return fetch("/admin/storage/add", { method: "POST", body: formData })
-                    .then(function (res) { return res.text(); })
+                // key/adminName은 서버가 채움 (adminId+file만 전송)
+                return fetch("/admin/documents", { method: "POST", body: formData })
+                    .then(function (res) { return res.json().catch(function () { return {}; }); })
                     .then(function (data) {
-                        if (String(data || "").trim() === "ok") successCount++;
+                        if (data && data.code === "0000") successCount++;
                         else failCount++;
                     })
                     .catch(function () {

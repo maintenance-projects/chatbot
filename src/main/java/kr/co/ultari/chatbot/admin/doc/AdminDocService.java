@@ -1,6 +1,8 @@
 package kr.co.ultari.chatbot.admin.doc;
 
 import kr.co.ultari.chatbot.common.gateway.AiGatewayClient;
+import kr.co.ultari.chatbot.database.entity.MsgAdmin;
+import kr.co.ultari.chatbot.database.repository.MsgAdminRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -10,6 +12,7 @@ import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.util.UriUtils;
 
 import java.nio.charset.StandardCharsets;
+import java.util.UUID;
 
 /**
  * 관리자 문서관리 도메인: AI 서버 관리자 API(명세서 4장, {@code /{dept}/admin/...})로의 릴레이.
@@ -21,9 +24,17 @@ import java.nio.charset.StandardCharsets;
 public class AdminDocService {
 
     private final AiGatewayClient gateway;
+    private final MsgAdminRepository adminRepository;
 
-    /** 4.1 문서 등록 */
-    public ResponseEntity<String> add(String dept, String key, String adminId, String adminName, MultipartFile file) {
+    /**
+     * 4.1 문서 등록. 명세서가 요구하는 key(고유)·adminName은 서버에서 채운다
+     * (프론트는 adminId+file만 전송 — 기존 UX 유지). key는 서버 생성 UUID.
+     */
+    public ResponseEntity<String> add(String dept, String adminId, MultipartFile file) {
+        String adminName = adminRepository.findById(adminId)
+                .map(MsgAdmin::getAdminName)
+                .orElse(adminId);
+        String key = UUID.randomUUID().toString();
         MultipartBodyBuilder b = new MultipartBodyBuilder();
         b.part("key", key);
         b.part("adminId", adminId);

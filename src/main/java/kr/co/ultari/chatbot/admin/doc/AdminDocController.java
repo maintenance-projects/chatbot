@@ -21,13 +21,11 @@ public class AdminDocController {
     private final DeptResolver deptResolver;
     private final AdminDocService service;
 
-    /** 4.1 문서 등록 */
+    /** 4.1 문서 등록 (key/adminName은 서버가 채움 — 프론트는 adminId+file만) */
     @PostMapping("/documents")
-    public ResponseEntity<String> add(@RequestParam String key,
-                                      @RequestParam String adminId,
-                                      @RequestParam String adminName,
+    public ResponseEntity<String> add(@RequestParam String adminId,
                                       @RequestParam("file") MultipartFile file) {
-        return GatewayForward.json(service.add(dept(adminId), key, adminId, adminName, file));
+        return GatewayForward.json(service.add(dept(adminId), adminId, file));
     }
 
     /** 4.2 문서 삭제 */
