@@ -977,231 +977,66 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    function parseSseFrame(frame) {
-        const lines = String(frame || "").split("\n");
-        let eventName = "";
-        const dataParts = [];
-        for (const line of lines) {
-            if (line.startsWith("event:")) {
-                eventName = line.slice(6).trim();
-            } else if (line.startsWith("data:")) {
-                dataParts.push(line.slice(5));
-            }
-        }
-        const data = dataParts.join("\n").replace(/^\s*/, "");
-        return { eventName, data };
-    }
-
+    // 공통 SseClient(sse-client.js)로 위임하는 어댑터.
+    // 구 streamEventText의 핸들러 계약(onText/onFirstToken/onRefs/onProgress/onPercent/
+    // onClarification/onDone/onTranslation/acceptRefs)을 그대로 유지해 호출부 변경 없이 중복 제거.
     async function streamEventText(url, options, handlers) {
-        const onText = handlers && typeof handlers.onText === "function" ? handlers.onText : null;
-        const onFirstToken = handlers && typeof handlers.onFirstToken === "function" ? handlers.onFirstToken : null;
-        const onRefs = handlers && typeof handlers.onRefs === "function" ? handlers.onRefs : null;
-        const onProgress = handlers && typeof handlers.onProgress === "function" ? handlers.onProgress : null;
-        const onClarification = handlers && typeof handlers.onClarification === "function" ? handlers.onClarification : null;
-        const onPercent = handlers && typeof handlers.onPercent === "function" ? handlers.onPercent : null;
-        const onDone = handlers && typeof handlers.onDone === "function" ? handlers.onDone : null;
-        const onTranslation = handlers && typeof handlers.onTranslation === "function" ? handlers.onTranslation : null;
-        const acceptRefs = !!(handlers && handlers.acceptRefs);
+        handlers = handlers || {};
+        let firstDone = false;
+        let doneFired = false;
 
-        const res = await fetch(url, options);
-
-        if (!res.ok) {
-            let t = "";
-            try {
-                t = await res.text();
-            } catch (e) { }
-            const err = new Error(t || "요청 처리 중 오류가 발생했습니다.");
-            err.status = res.status;
-            throw err;
+        function firstToken() {
+            if (firstDone) return;
+            firstDone = true;
+            if (typeof handlers.onFirstToken === "function") handlers.onFirstToken();
+        }
+        function fireDone(payload) {
+            if (doneFired) return;
+            doneFired = true;
+            if (typeof handlers.onDone === "function") handlers.onDone(payload);
         }
 
-        if (!res.body) {
-            let t = "";
-            try {
-                t = await res.text();
-            } catch (e) { }
-            if (t) {
-                if (typeof onFirstToken === "function") onFirstToken();
-                if (typeof onText === "function") onText(t);
-                return;
+        await window.SseClient.stream(url, options, {
+            onProgress: function (message, percent) {
+                if (typeof percent !== "undefined" && percent !== null) {
+                    if (typeof handlers.onPercent === "function") { handlers.onPercent(percent, message || ""); return; }
+                }
+                if (typeof handlers.onProgress === "function") handlers.onProgress(message || "");
+            },
+            onReferences: function (docs) {
+                if (handlers.acceptRefs && typeof handlers.onRefs === "function") handlers.onRefs(docs);
+            },
+            onAnswer: function (text) {
+                let t = String(text || "");
+                if (!firstDone) t = t.replace(/^\s+/, "");   // 구 동작: 첫 토큰 앞 공백 제거
+                if (!t) return;
+                firstToken();
+                if (typeof handlers.onText === "function") handlers.onText(t);
+            },
+            onTranslation: function (text, lang) {
+                let t = String(text || "");
+                if (!firstDone) t = t.replace(/^\s+/, "");
+                if (!t) return;
+                firstToken();
+                if (typeof handlers.onTranslation === "function") handlers.onTranslation(t, lang || "");
+                else if (typeof handlers.onText === "function") handlers.onText(t);
+            },
+            onClarification: function (message) {
+                const m = String(message || "");
+                if (typeof handlers.onClarification === "function") handlers.onClarification(m, null);
+                firstToken();
+                if (typeof handlers.onText === "function") handlers.onText(m);
+            },
+            onDone: function (obj) {
+                let msg = "";
+                if (obj == null) msg = "";
+                else if (typeof obj === "string") msg = obj;
+                else if (obj.type === "done") msg = String(obj.message || "");
+                else msg = JSON.stringify(obj);   // stage/done data 객체 → JSON 문자열(양식 다운로드 정보)
+                fireDone(msg);
             }
-            throw new Error("응답을 받을 수 없습니다.");
-        }
-
-        const reader = res.body.getReader();
-        const decoder = new TextDecoder("utf-8");
-        let buf = "";
-        let first = true;
-
-        while (true) {
-            const { value, done } = await reader.read();
-            if (done) break;
-
-            const chunk = decoder.decode(value, { stream: true });
-            if (!chunk) continue;
-
-            buf += chunk;
-            while (true) {
-                const sep = buf.indexOf("\n\n");
-                if (sep < 0) break;
-
-                const frame = buf.slice(0, sep);
-                buf = buf.slice(sep + 2);
-
-                const { eventName, data } = parseSseFrame(frame);
-
-                if (data === "[DONE]") {
-                    if (typeof onDone === "function") onDone("");
-                    return;
-                }
-
-                if (eventName === "done" && !data) {
-                    if (typeof onDone === "function") onDone("");
-                    return;
-                }
-
-                if (eventName === "start" && !data) {
-                    if (typeof onProgress === "function") onProgress("질문의 의도를 파악하고 있습니다.");
-                    continue;
-                }
-
-                if (!data) continue;
-
-                if (data.startsWith("{") || data.startsWith("[")) {
-                    let j = null;
-                    try {
-                        j = JSON.parse(data);
-                    } catch (e) {
-                        if (first) {
-                            first = false;
-                            if (typeof onFirstToken === "function") onFirstToken();
-                        }
-                        if (typeof onText === "function") onText(data);
-                        continue;
-                    }
-
-                    const hasPercent = j && typeof j.percent !== "undefined";
-
-                    // stage + percent 형식 (template SSE: {"stage":"extract","percent":5,"message":"..."})
-                    if (j && j.stage && hasPercent && !j.type) {
-                        if (j.stage === "done") {
-                            if (typeof onPercent === "function") onPercent(j.percent, j.message || "완료");
-                            if (typeof onDone === "function") onDone(j.data ? JSON.stringify(j.data) : (j.message || ""));
-                        } else {
-                            if (typeof onPercent === "function") onPercent(j.percent, j.message || "");
-                        }
-                        continue;
-                    }
-
-                    if (j && (j.type === "percent") && hasPercent) {
-                        if (typeof onPercent === "function") onPercent(j.percent, j.message || "");
-                        continue;
-                    }
-
-                    if (j && j.type === "progress") {
-                        if (hasPercent && typeof onPercent === "function") {
-                            onPercent(j.percent, j.message || j.step || "");
-                            continue;
-                        }
-
-                        if (typeof onProgress === "function") onProgress(j.step || j.message || "");
-                        continue;
-                    }
-
-                    if (acceptRefs && j && j.type === "references" && Array.isArray(j.docs)) {
-                        if (typeof onRefs === "function") onRefs(j.docs);
-                        continue;
-                    }
-
-                    if (j && j.type === "done") {
-                        const msg = String((j && j.message) || "").trim();
-                        if (hasPercent && typeof onPercent === "function") {
-                            onPercent(j.percent, msg || "완료");
-                        } else if (typeof onProgress === "function" && (msg || msg === "")) {
-                            onProgress(msg || "완료");
-                        }
-                        if (typeof onDone === "function") onDone(msg);
-                        continue;
-                    }
-
-                    if (j && j.type === "answer_start") {
-                        continue;
-                    }
-
-                    if (j && j.type === "answer_token") {
-                        const content = String(j.content || "");
-                        if (content) {
-                            if (first) {
-                                first = false;
-                                if (typeof onFirstToken === "function") onFirstToken();
-                            }
-                            if (typeof onText === "function") onText(content);
-                        } else {
-                            if (first) {
-                                first = false;
-                                if (typeof onFirstToken === "function") onFirstToken();
-                            }
-                        }
-                        continue;
-                    }
-
-                    if (j && j.type === "clarification_needed") {
-                        if (typeof onClarification === "function") onClarification(j.message || "", j.thread_id || null);
-                        if (first) {
-                            first = false;
-                            if (typeof onFirstToken === "function") onFirstToken();
-                        }
-                        if (typeof onText === "function") onText(String(j.message || ""));
-                        continue;
-                    }
-
-                    if (j && j.type === "answer") {
-                        const raw = String(j.content || "");
-                        const content = first ? raw.trimStart() : raw;
-                        if (content) {
-                            if (first) {
-                                first = false;
-                                if (typeof onFirstToken === "function") onFirstToken();
-                            }
-                            if (typeof onText === "function") onText(content);
-                        }
-                        continue;
-                    }
-
-                    if (j && j.type === "translation") {
-                        const raw = String(j.content || "");
-                        const content = first ? raw.trimStart() : raw;
-                        if (content) {
-                            if (first) {
-                                first = false;
-                                if (typeof onFirstToken === "function") onFirstToken();
-                            }
-                            if (typeof onTranslation === "function") onTranslation(content, j.lang || "");
-                            else if (typeof onText === "function") onText(content);
-                        }
-                        continue;
-                    }
-
-                    const content = j && j.choices && j.choices[0] && j.choices[0].delta ? j.choices[0].delta.content : null;
-
-                    if (typeof content === "string" && content.length) {
-                        if (first) {
-                            first = false;
-                            if (typeof onFirstToken === "function") onFirstToken();
-                        }
-                        if (typeof onText === "function") onText(content);
-                    }
-                } else {
-                    if (first) {
-                        first = false;
-                        if (typeof onFirstToken === "function") onFirstToken();
-                    }
-                    if (typeof onText === "function") onText(data);
-                }
-            }
-        }
-
-        if (typeof onDone === "function") onDone("");
+            // onError: 구 동작 보존을 위해 미매핑(SSE error 이벤트는 렌더하지 않음)
+        });
     }
 
     function closePop() {
