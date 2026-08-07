@@ -65,6 +65,17 @@ public class AiGatewayClient {
                 .block();
     }
 
+    /** 본문 없는 POST 단건 JSON 문자열(블로킹). 예: 금칙어 재로드 */
+    public String post(String dept, String path) {
+        String uri = url(dept, path);
+        log.debug("gateway POST(no-body) {}", uri);
+        return webClient.post()
+                .uri(uri)
+                .retrieve()
+                .bodyToMono(String.class)
+                .block();
+    }
+
     /** GET 단건 JSON 문자열(블로킹). */
     public String get(String dept, String path) {
         String uri = url(dept, path);
