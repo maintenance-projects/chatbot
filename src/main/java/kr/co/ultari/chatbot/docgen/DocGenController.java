@@ -34,6 +34,15 @@ public class DocGenController {
                 service.generateHwpx(deptContext.resolve(request), templateName, contextData, expiresIn, oneTime));
     }
 
+    /** 양식 편의: templateKey만 받아 서버가 generate-hwpx/meeting-minutes로 매핑 (SSE 통일) */
+    @PostMapping(value = "/documents/template", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter template(@RequestParam("templateKey") String templateKey,
+                               @RequestParam(value = "message", required = false) String message,
+                               @RequestParam(value = "file", required = false) MultipartFile file,
+                               HttpServletRequest request) {
+        return service.template(deptContext.resolve(request), userId(request), templateKey, message, file);
+    }
+
     /** 5.2 회의록 HWPX 생성 (SSE) */
     @PostMapping(value = "/documents/meeting-minutes/generate-from-text",
             produces = MediaType.TEXT_EVENT_STREAM_VALUE)
@@ -57,5 +66,10 @@ public class DocGenController {
             headers.setContentDisposition(res.getHeaders().getContentDisposition());
         }
         return new ResponseEntity<>(res.getBody(), headers, res.getStatusCode());
+    }
+
+    private String userId(HttpServletRequest request) {
+        Object uid = request.getSession().getAttribute(DeptContext.SESSION_USER_ID);
+        return uid == null ? null : uid.toString();
     }
 }

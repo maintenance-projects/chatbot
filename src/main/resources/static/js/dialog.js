@@ -1892,14 +1892,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const cont = consumeContinueFlag();
 
+        // 신규 upload는 인덱싱만 수행(답변 없음). 파일 바이너리만 전송한다.
         const formData = new FormData();
-        formData.append("file", file);
-        formData.append("sessionId", sessionId);
-        formData.append("deepResearch", "false");
-        formData.append("templateKey", templateKey || "");
-        formData.append("message", msg);
-        formData.append("isContinue", cont.isContinue ? "true" : "false");
-        if (cont.threadId) formData.append("threadId", cont.threadId);
+        formData.append("attachFile_bin", file);
+        formData.append("attachFile_name", file.name || "");
 
         setSending(true);
         let botHandle = null;
@@ -1914,7 +1910,7 @@ document.addEventListener("DOMContentLoaded", () => {
         };
 
         streamEventText(
-            "/api/chat/upload/stream",
+            "/chat/upload/" + encodeURIComponent(String(sessionId || "")),
             { method: "POST", headers: { Accept: "text/event-stream" }, body: formData, credentials: "same-origin" },
             {
                 acceptRefs: true,
@@ -1999,9 +1995,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const cont = consumeContinueFlag();
 
         const fd = new FormData();
-        fd.append("sessionId", sessionId);
         fd.append("message", msg);
-        fd.append("deepResearch", "false");
         fd.append("templateKey", String(templateKey || ""));
         if (attachedFile) fd.append("file", attachedFile, attachedFile.name);
 
@@ -2009,7 +2003,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
         try {
             await streamEventText(
-                "/api/chat/template",
+                "/documents/template",
                 { method: "POST", headers: { Accept: "text/event-stream" }, body: fd, credentials: "same-origin" },
                 {
                     acceptRefs: true,
