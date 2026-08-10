@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+  인사(HR) DB msg_part 조회 SQL (조직도 트리).
+  ※ 실제 스키마에 맞게 컬럼/테이블명을 조정하세요.
+     트리: PART_ID(자식) ↔ PART_HIGH(부모). 루트는 PART_HIGH가 없거나 자기 자신/최상위값.
+-->
+<mapper namespace="kr.co.ultari.chatbot.hr.mapper.HrPartMapper">
+
+    <resultMap id="hrPart" type="kr.co.ultari.chatbot.hr.dto.HrPart">
+        <id     property="partId"    column="PART_ID"/>
+        <result property="partHigh"  column="PART_HIGH"/>
+        <result property="partName"  column="PART_NAME"/>
+        <result property="partOrder" column="PART_ORDER"/>
+    </resultMap>
+
+    <select id="selectAll" resultMap="hrPart">
+        SELECT PART_ID, PART_HIGH, PART_NAME, PART_ORDER
+        FROM msg_part
+        ORDER BY PART_ORDER
+    </select>
+</mapper>

@@ -42,4 +42,11 @@
         </where>
         ORDER BY USER_ID
     </select>
+
+    <!-- 사용자의 소속 부서(PART_ID) 목록 (겸직 시 여러 행) -->
+    <select id="selectPartIdsByUser" resultType="string">
+        SELECT DISTINCT USER_HIGH
+        FROM msg_user
+        WHERE USER_ID = #{userId}
+    </select>
 </mapper>

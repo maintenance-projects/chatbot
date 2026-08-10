@@ -19,4 +19,7 @@ public interface HrUserMapper {
 
     /** 관리자 검색용 (field: userId/userName/userHigh) */
     List<HrUser> search(@Param("field") String field, @Param("keyword") String keyword);
+
+    /** 사용자의 소속 부서(PART_ID) 목록 — 겸직 시 여러 개. 권한 상속 계산용 */
+    List<String> selectPartIdsByUser(@Param("userId") String userId);
 }

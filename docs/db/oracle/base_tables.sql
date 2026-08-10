@@ -29,13 +29,16 @@ CREATE TABLE MSG_USER (
 --    부서 지정값은 앱 소유 AI_USER_DEPT(아래)에 저장한다.
 
 -- -----------------------------------------------------------------------------
---  AI_USER_DEPT  (앱 소유) — 사용자 → AI 부서(dept-a/dept-b) 매핑
+--  AI_DEPT_GRANT  (앱 소유) — AI 부서(dept) 접근 권한 부여
+--   조직(PART) 또는 사용자(USER) 대상에 dept 부여(ALLOW)/제외(DENY). 중복 허용.
 --   관리자 화면(사용자 부서)에서 지정. 인사DB는 수정하지 않는다.
 -- -----------------------------------------------------------------------------
-CREATE TABLE AI_USER_DEPT (
-    USER_ID  VARCHAR2(50) NOT NULL,   -- 사용자 ID (인사DB msg_user.USER_ID)
-    AI_DEPT  VARCHAR2(50),            -- 게이트웨이 라우팅 부서코드
-    CONSTRAINT pk_ai_user_dept PRIMARY KEY (USER_ID)
+CREATE TABLE AI_DEPT_GRANT (
+    TARGET_TYPE VARCHAR2(10) NOT NULL, -- PART(조직) | USER(사용자)
+    TARGET_ID   VARCHAR2(100) NOT NULL,-- PART_ID 또는 USER_ID
+    AI_DEPT     VARCHAR2(50) NOT NULL, -- 부서코드
+    GRANT_MODE  VARCHAR2(10),          -- ALLOW | DENY
+    CONSTRAINT pk_ai_dept_grant PRIMARY KEY (TARGET_TYPE, TARGET_ID, AI_DEPT)
 );
 
 -- -----------------------------------------------------------------------------
