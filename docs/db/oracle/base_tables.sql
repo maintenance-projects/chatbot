@@ -23,8 +23,19 @@ CREATE TABLE MSG_USER (
     PASSWORD    VARCHAR2(50),            -- 비밀번호
     USER_ORDER  VARCHAR2(50),            -- 정렬 순서
     USER_TYPE   VARCHAR2(50),            -- 사용자 구분
-    AI_DEPT     VARCHAR2(50),            -- 부서(게이트웨이 라우팅) — 관리자 화면에서 지정
     CONSTRAINT pk_msg_user PRIMARY KEY (USER_ID)
+);
+--  ※ 실제 운영에선 MSG_USER는 외부 인사(HR) DB의 조회 전용 테이블이다(MyBatis).
+--    부서 지정값은 앱 소유 AI_USER_DEPT(아래)에 저장한다.
+
+-- -----------------------------------------------------------------------------
+--  AI_USER_DEPT  (앱 소유) — 사용자 → AI 부서(dept-a/dept-b) 매핑
+--   관리자 화면(사용자 부서)에서 지정. 인사DB는 수정하지 않는다.
+-- -----------------------------------------------------------------------------
+CREATE TABLE AI_USER_DEPT (
+    USER_ID  VARCHAR2(50) NOT NULL,   -- 사용자 ID (인사DB msg_user.USER_ID)
+    AI_DEPT  VARCHAR2(50),            -- 게이트웨이 라우팅 부서코드
+    CONSTRAINT pk_ai_user_dept PRIMARY KEY (USER_ID)
 );
 
 -- -----------------------------------------------------------------------------

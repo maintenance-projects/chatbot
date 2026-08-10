@@ -1,63 +1,71 @@
 package kr.co.ultari.chatbot.admin.service;
 
-import kr.co.ultari.chatbot.database.entity.MsgUser;
-import kr.co.ultari.chatbot.database.repository.MsgUserRepository;
+import kr.co.ultari.chatbot.database.entity.AiUserDept;
+import kr.co.ultari.chatbot.database.repository.AiUserDeptRepository;
+import kr.co.ultari.chatbot.hr.dto.HrUser;
+import kr.co.ultari.chatbot.hr.mapper.HrUserMapper;
 import lombok.RequiredArgsConstructor;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
 /**
- * 사용자(MSG_USER) 부서 관리 서비스. 관리자 화면에서 사용자별 DEPT를 조회·지정한다.
+ * 사용자 부서 관리 서비스.
+ * <p>사용자 목록은 인사(HR) DB msg_user에서 조회(MyBatis, 읽기 전용)하고,
+ * AI 부서 지정은 앱 소유 AI_USER_DEPT 테이블에 저장한다(인사DB는 쓰지 않음).
  */
 @Service
 @RequiredArgsConstructor
 public class AdminUserService {
 
-    private final MsgUserRepository userRepository;
+    private final HrUserMapper hrUserMapper;
+    private final AiUserDeptRepository deptRepository;
 
     public JSONArray getUserList() {
-        JSONArray arr = new JSONArray();
-        for (MsgUser u : userRepository.findAll()) {
-            arr.put(toJson(u));
-        }
-        return arr;
+        return merge(hrUserMapper.selectAll());
     }
 
     public JSONArray search(String field, String keyword) {
-        String kw = (keyword == null ? "" : keyword).toLowerCase();
-        JSONArray arr = new JSONArray();
-        for (MsgUser u : userRepository.findAll()) {
-            String target;
-            switch (field == null ? "" : field) {
-                case "userName": target = u.getUserName(); break;
-                case "userHigh": target = u.getUserHigh(); break;
-                case "dept":     target = u.getDept(); break;
-                default:         target = u.getUserId();
-            }
-            if (target != null && target.toLowerCase().contains(kw)) {
-                arr.put(toJson(u));
-            }
-        }
-        return arr;
+        return merge(hrUserMapper.search(field, keyword));
     }
 
+    /** 사용자 → AI 부서 지정(upsert). dept가 비면 매핑 삭제. */
     @Transactional
     public String updateDept(String userId, String dept) {
-        MsgUser u = userRepository.findById(userId).orElse(null);
-        if (u == null) return "NoUser";
-        u.setDept(dept);
-        userRepository.save(u);
+        if (dept == null || dept.isBlank()) {
+            deptRepository.deleteById(userId);
+            return "ok";
+        }
+        AiUserDept m = deptRepository.findById(userId).orElseGet(() -> {
+            AiUserDept n = new AiUserDept();
+            n.setUserId(userId);
+            return n;
+        });
+        m.setAiDept(dept);
+        deptRepository.save(m);
         return "ok";
     }
 
-    private JSONObject toJson(MsgUser u) {
-        JSONObject o = new JSONObject();
-        o.put("userId", u.getUserId());
-        o.put("userName", u.getUserName() == null ? "" : u.getUserName());
-        o.put("userHigh", u.getUserHigh() == null ? "" : u.getUserHigh());
-        o.put("dept", u.getDept() == null ? "" : u.getDept());
-        return o;
+    /** HR 사용자 목록에 앱 매핑(AI_USER_DEPT)의 부서값을 병합한다. */
+    private JSONArray merge(List<HrUser> users) {
+        Map<String, String> deptMap = new HashMap<>();
+        for (AiUserDept d : deptRepository.findAll()) {
+            deptMap.put(d.getUserId(), d.getAiDept());
+        }
+        JSONArray arr = new JSONArray();
+        for (HrUser u : users) {
+            JSONObject o = new JSONObject();
+            o.put("userId", u.getUserId());
+            o.put("userName", u.getUserName() == null ? "" : u.getUserName());
+            o.put("userHigh", u.getUserHigh() == null ? "" : u.getUserHigh());
+            o.put("dept", deptMap.getOrDefault(u.getUserId(), ""));
+            arr.put(o);
+        }
+        return arr;
     }
 }

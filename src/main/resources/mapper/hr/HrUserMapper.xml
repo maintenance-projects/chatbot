@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "https://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<!--
+  인사(HR) DB msg_user 조회 SQL.
+  ※ 실제 HR 스키마에 맞게 컬럼명/테이블명을 여기서 조정하세요.
+     (예: 부서 컬럼이 USER_HIGH가 아니면 아래 USER_HIGH 매핑을 실제 컬럼으로 교체)
+-->
+<mapper namespace="kr.co.ultari.chatbot.hr.mapper.HrUserMapper">
+
+    <resultMap id="hrUser" type="kr.co.ultari.chatbot.hr.dto.HrUser">
+        <id     property="userId"   column="USER_ID"/>
+        <result property="userName" column="USER_NAME"/>
+        <result property="userHigh" column="USER_HIGH"/>
+        <result property="password" column="PASSWORD"/>
+    </resultMap>
+
+    <!-- 로그인/상세: password 포함 -->
+    <select id="selectById" resultMap="hrUser">
+        SELECT USER_ID, USER_NAME, USER_HIGH, PASSWORD
+        FROM msg_user
+        WHERE USER_ID = #{userId}
+    </select>
+
+    <!-- 목록: password 제외 -->
+    <select id="selectAll" resultMap="hrUser">
+        SELECT USER_ID, USER_NAME, USER_HIGH
+        FROM msg_user
+        ORDER BY USER_ID
+    </select>
+
+    <!-- 검색 -->
+    <select id="search" resultMap="hrUser">
+        SELECT USER_ID, USER_NAME, USER_HIGH
+        FROM msg_user
+        <where>
+            <choose>
+                <when test="field == 'userName'">USER_NAME LIKE CONCAT('%', #{keyword}, '%')</when>
+                <when test="field == 'userHigh'">USER_HIGH LIKE CONCAT('%', #{keyword}, '%')</when>
+                <otherwise>USER_ID LIKE CONCAT('%', #{keyword}, '%')</otherwise>
+            </choose>
+        </where>
+        ORDER BY USER_ID
+    </select>
+</mapper>
