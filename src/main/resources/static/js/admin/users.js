@@ -8,6 +8,9 @@
 (function () {
     "use strict";
 
+    // 공통 초기화(비밀번호 변경 모달 + 세션 타이머 바인딩). 세션 없으면 /admin로 리다이렉트.
+    if (typeof window.checkSession === "function" && window.checkSession() === false) return;
+
     var deptCodes = Array.isArray(window.deptCodes) ? window.deptCodes : [];
     var currentDept = deptCodes.length ? String(deptCodes[0]) : "";
 
