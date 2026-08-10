@@ -2,15 +2,21 @@ package kr.co.ultari.chatbot.common.dept;
 
 import kr.co.ultari.chatbot.database.entity.AiDeptGrant;
 import kr.co.ultari.chatbot.database.repository.AiDeptGrantRepository;
+import kr.co.ultari.chatbot.hr.dto.HrPart;
+import kr.co.ultari.chatbot.hr.mapper.HrPartMapper;
 import kr.co.ultari.chatbot.hr.mapper.HrUserMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 import org.springframework.util.StringUtils;
 
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -25,6 +31,7 @@ public class DeptResolver {
     private final DeptProperties props;
     private final AiDeptGrantRepository grantRepository;
     private final HrUserMapper hrUserMapper;
+    private final HrPartMapper hrPartMapper;
 
     /** 사용자가 접근 가능한 부서 집합. */
     public Set<String> allowedDepts(String userId) {
@@ -33,9 +40,10 @@ public class DeptResolver {
         }
         Set<String> depts = new LinkedHashSet<>();
 
-        // 1) 조직(PART) 상속 ALLOW — 사용자의 소속 부서들
-        List<String> parts = hrUserMapper.selectPartIdsByUser(userId);
-        if (parts != null && !parts.isEmpty()) {
+        // 1) 조직(PART) 상속 ALLOW — 사용자의 소속 부서 + 상위(조상) 부서까지 확장
+        List<String> directParts = hrUserMapper.selectPartIdsByUser(userId);
+        Set<String> parts = expandAncestors(directParts);
+        if (!parts.isEmpty()) {
             for (AiDeptGrant g : grantRepository.findByTargetTypeAndTargetIdInAndMode(
                     AiDeptGrant.TYPE_PART, parts, AiDeptGrant.MODE_ALLOW)) {
                 depts.add(g.getAiDept());
@@ -75,4 +83,25 @@ public class DeptResolver {
     public String resolve(String userId) {
         return resolve(userId, null);
     }
+
+    /** 부서 집합을 상위(조상) 부서까지 확장한다(하위 상속: 상위 조직 부여가 하위에 적용되도록). */
+    private Set<String> expandAncestors(Collection<String> parts) {
+        Set<String> result = new HashSet<>();
+        if (parts == null || parts.isEmpty()) return result;
+
+        Map<String, String> parent = new HashMap<>();
+        for (HrPart p : hrPartMapper.selectAll()) {
+            parent.put(p.getPartId(), p.getPartHigh());
+        }
+        for (String start : new ArrayList<>(parts)) {
+            String cur = start;
+            int guard = 0;
+            // cur가 새로 추가되는 동안 상위로 이동(순환/공유 조상 시 중단)
+            while (StringUtils.hasText(cur) && result.add(cur) && guard++ < 100) {
+                cur = parent.get(cur);
+            }
+        }
+        return result;
+    }
 }
+

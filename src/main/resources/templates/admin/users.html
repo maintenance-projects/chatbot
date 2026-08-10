@@ -11,6 +11,30 @@
         window.deptCodes = /*[[${deptCodes}]]*/ [];
         window.adminName = /*[[${adminName}]]*/ "";
     </script>
+    <style>
+        .dept-tabs { display: flex; gap: 6px; border-bottom: 2px solid #e5e7eb; margin-bottom: 14px; }
+        .dept-tab { padding: 9px 20px; border: none; background: none; cursor: pointer; font-size: 14px;
+            font-weight: 600; color: #6b7280; border-bottom: 2px solid transparent; margin-bottom: -2px; }
+        .dept-tab.active { color: #2563eb; border-bottom-color: #2563eb; }
+        .tree-toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 10px; }
+        .tree-toolbar .search-input { max-width: 260px; }
+        .tree { font-size: 14px; }
+        .tree ul { list-style: none; margin: 0; padding-left: 22px; }
+        .tree > ul { padding-left: 0; }
+        .tnode { display: flex; align-items: center; gap: 7px; padding: 3px 4px; border-radius: 6px; }
+        .tnode:hover { background: #f3f4f6; }
+        .tnode.hidden { display: none; }
+        .tw-toggle { width: 16px; text-align: center; cursor: pointer; color: #9ca3af; user-select: none; }
+        .tw-toggle.leaf { visibility: hidden; }
+        .tnode input[type=checkbox] { width: 16px; height: 16px; cursor: pointer; }
+        .tnode .tlabel { cursor: default; }
+        .tnode.part .tlabel { font-weight: 600; }
+        .tnode.user .tlabel { color: #374151; }
+        .tnode .tsub { color: #9ca3af; font-size: 12px; }
+        .tnode .tbadge { font-size: 11px; padding: 1px 6px; border-radius: 9px; background: #ede9fe; color: #6d28d9; }
+        .tnode .tbadge.deny { background: #fee2e2; color: #b91c1c; }
+        .collapsed > ul { display: none; }
+    </style>
 </head>
 
 <body>
@@ -24,54 +48,14 @@
                     <span class="sidebar-logo-text">관리자 페이지</span>
                 </a>
             </div>
-
             <nav class="sidebar-nav">
                 <div class="nav-section-title">메뉴</div>
-                <a th:if="${storage}" href="/admin/storage" class="nav-item" data-page="storage">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                        stroke-linejoin="round">
-                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
-                        <polyline points="14 2 14 8 20 8" />
-                    </svg>
-                    문서 관리
-                </a>
-                <a th:if="${statistics}" href="/admin/statistics" class="nav-item" data-page="statistics">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                        stroke-linejoin="round">
-                        <line x1="18" y1="20" x2="18" y2="10"></line>
-                        <line x1="12" y1="20" x2="12" y2="4"></line>
-                        <line x1="6" y1="20" x2="6" y2="14"></line>
-                    </svg>
-                    통계
-                </a>
-                <a th:if="${master}" href="/admin/master" class="nav-item" data-page="master">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                        stroke-linejoin="round">
-                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
-                        <circle cx="9" cy="7" r="4" />
-                    </svg>
-                    계정 관리
-                </a>
-                <a th:if="${master}" href="/admin/users" class="nav-item active" data-page="users">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                        stroke-linejoin="round">
-                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-                        <circle cx="9" cy="7" r="4" />
-                        <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
-                        <path d="M16 3.13a4 4 0 0 1 0 7.75" />
-                    </svg>
-                    사용자 부서
-                </a>
-                <a href="/admin/guide" class="nav-item" data-page="guide">
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                        stroke-linejoin="round">
-                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />
-                        <path d="M20 22V2" />
-                    </svg>
-                    가이드
-                </a>
+                <a th:if="${storage}" href="/admin/storage" class="nav-item" data-page="storage">문서 관리</a>
+                <a th:if="${statistics}" href="/admin/statistics" class="nav-item" data-page="statistics">통계</a>
+                <a th:if="${master}" href="/admin/master" class="nav-item" data-page="master">계정 관리</a>
+                <a th:if="${master}" href="/admin/users" class="nav-item active" data-page="users">사용자 부서</a>
+                <a href="/admin/guide" class="nav-item" data-page="guide">가이드</a>
             </nav>
-
             <div class="sidebar-footer">
                 <div class="sidebar-user">
                     <div class="sidebar-user-avatar" id="userAvatar">A</div>
@@ -88,17 +72,9 @@
         <div class="main-content">
             <header class="topbar">
                 <div class="topbar-left">
-                    <button class="btn-sidebar-toggle" id="btnSidebarToggle">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                            stroke-linecap="round" stroke-linejoin="round">
-                            <line x1="3" y1="12" x2="21" y2="12" />
-                            <line x1="3" y1="6" x2="21" y2="6" />
-                            <line x1="3" y1="18" x2="21" y2="18" />
-                        </svg>
-                    </button>
+                    <button class="btn-sidebar-toggle" id="btnSidebarToggle">≡</button>
                     <div class="breadcrumb">
-                        <a href="#">홈</a>
-                        <span class="breadcrumb-sep">›</span>
+                        <a href="#">홈</a><span class="breadcrumb-sep">›</span>
                         <span class="breadcrumb-current">사용자 부서</span>
                     </div>
                 </div>
@@ -115,58 +91,26 @@
 
             <main class="page-body">
                 <section class="table-card" style="position:relative;">
-                    <div class="loading-overlay" id="loadingOverlay">
-                        <div class="spinner"></div>
+                    <div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div></div>
+
+                    <!-- dept 탭 -->
+                    <div class="dept-tabs" id="deptTabs"></div>
+
+                    <div class="tree-toolbar">
+                        <input type="text" class="search-input" id="treeSearch" placeholder="이름/아이디 검색…">
+                        <button class="btn btn-outline btn-sm" id="btnExpandAll" type="button">모두 펼치기</button>
+                        <button class="btn btn-outline btn-sm" id="btnCollapseAll" type="button">모두 접기</button>
+                        <span style="flex:1"></span>
+                        <span class="tsub" id="treeHint">조직·사용자에 체크하면 해당 부서 접근 권한이 부여됩니다. (조직 부여는 하위 상속)</span>
                     </div>
 
-                    <div class="toolbar">
-                        <div class="toolbar-left">
-                            <div class="search-group">
-                                <select class="search-select" id="searchField">
-                                    <option value="userId">사용자 ID</option>
-                                    <option value="userName">이름</option>
-                                    <option value="userHigh">조직</option>
-                                    <option value="dept">부서</option>
-                                </select>
-                                <input type="text" class="search-input" id="searchInput" placeholder="검색어를 입력하세요…">
-                                <button class="btn-search" id="btnSearch" title="검색">
-                                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
-                                        stroke-linecap="round" stroke-linejoin="round">
-                                        <circle cx="11" cy="11" r="8" />
-                                        <line x1="21" y1="21" x2="16.65" y2="16.65" />
-                                    </svg>
-                                </button>
-                            </div>
-                        </div>
-                        <div class="toolbar-right">
-                            <button class="btn btn-outline" id="btnRefresh" type="button">새로고침</button>
-                        </div>
-                    </div>
-
-                    <div class="table-wrap">
-                        <table>
-                            <thead>
-                                <tr>
-                                    <th style="width:60px;" class="center">No</th>
-                                    <th class="center">사용자 ID</th>
-                                    <th class="center">이름</th>
-                                    <th class="center">조직</th>
-                                    <th style="width:180px;" class="center">부서(dept)</th>
-                                </tr>
-                            </thead>
-                            <tbody id="userTableBody"></tbody>
-                        </table>
-                    </div>
-
-                    <div class="table-footer">
-                        <div class="table-info" id="tableInfo"></div>
-                    </div>
+                    <div class="tree" id="treeRoot"></div>
                 </section>
             </main>
         </div>
     </div>
 
-    <!-- 비밀번호 변경 모달 (common.js 사용) -->
+    <!-- 비밀번호 변경 모달 (common.js) -->
     <div class="modal-overlay" id="pwModal">
         <div class="modal" style="max-width:420px;">
             <div class="modal-header">
@@ -174,18 +118,12 @@
                 <button class="modal-close" id="pwModalClose" type="button">×</button>
             </div>
             <div class="modal-body">
-                <div class="form-group">
-                    <label class="form-label">현재 비밀번호</label>
-                    <input type="password" class="form-input" id="currentPassword" placeholder="현재 비밀번호">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">새 비밀번호</label>
-                    <input type="password" class="form-input" id="newPassword" placeholder="새 비밀번호">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">새 비밀번호 확인</label>
-                    <input type="password" class="form-input" id="confirmPassword" placeholder="새 비밀번호 확인">
-                </div>
+                <div class="form-group"><label class="form-label">현재 비밀번호</label>
+                    <input type="password" class="form-input" id="currentPassword"></div>
+                <div class="form-group"><label class="form-label">새 비밀번호</label>
+                    <input type="password" class="form-input" id="newPassword"></div>
+                <div class="form-group"><label class="form-label">새 비밀번호 확인</label>
+                    <input type="password" class="form-input" id="confirmPassword"></div>
                 <div class="form-error" id="pwError" style="display:none;color:#dc2626;font-size:12px;"></div>
             </div>
             <div class="modal-footer">

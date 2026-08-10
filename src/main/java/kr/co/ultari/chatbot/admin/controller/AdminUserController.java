@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 /**
- * 사용자 부서 관리 API (관리자). 목록/검색/부서지정.
+ * 사용자 부서 관리 API (관리자). 조직도 트리 조회 + dept별 접근 권한 부여.
  */
 @Slf4j
 @Controller
@@ -20,28 +20,24 @@ public class AdminUserController {
 
     private final AdminUserService userService;
 
-    @PostMapping("/list")
+    /** 조직도 트리 + 특정 dept 부여 상태 */
+    @PostMapping("/tree")
     @ResponseBody
-    public String list(@RequestParam("adminId") String adminId) {
-        log.debug("[users list] adminId={}", adminId);
-        return userService.getUserList().toString();
+    public String tree(@RequestParam("adminId") String adminId,
+                       @RequestParam("dept") String dept) {
+        log.debug("[users tree] adminId={}, dept={}", adminId, dept);
+        return userService.tree(dept).toString();
     }
 
-    @PostMapping("/search")
+    /** 권한 부여 적용 (action: ALLOW | DENY | REMOVE) */
+    @PostMapping("/grant")
     @ResponseBody
-    public String search(@RequestParam("adminId") String adminId,
-                         @RequestParam("field") String field,
-                         @RequestParam("keyword") String keyword) {
-        log.debug("[users search] adminId={}, field={}, keyword={}", adminId, field, keyword);
-        return userService.search(field, keyword).toString();
-    }
-
-    @PostMapping("/updateDept")
-    @ResponseBody
-    public String updateDept(@RequestParam("adminId") String adminId,
-                             @RequestParam("userId") String userId,
-                             @RequestParam("dept") String dept) {
-        log.debug("[users updateDept] adminId={}, userId={}, dept={}", adminId, userId, dept);
-        return userService.updateDept(userId, dept);
+    public String grant(@RequestParam("adminId") String adminId,
+                        @RequestParam("dept") String dept,
+                        @RequestParam("targetType") String targetType,
+                        @RequestParam("targetId") String targetId,
+                        @RequestParam("action") String action) {
+        log.debug("[users grant] adminId={}, dept={}, {}:{} {}", adminId, dept, targetType, targetId, action);
+        return userService.applyGrant(dept, targetType, targetId, action);
     }
 }
