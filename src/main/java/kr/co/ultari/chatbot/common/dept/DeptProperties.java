@@ -5,18 +5,17 @@ import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 부서(dept) 라우팅 설정.
- * <p>로그인 아이디 → 부서코드 매핑을 설정으로 관리한다(테이블 변경 없이 멀티부서 대응).
- * 향후 JWT 인증 전환 시 부서코드가 토큰에서 추출되면 이 매핑은 제거된다.
+ * <p>사용자의 부서는 MSG_USER.DEPT 컬럼(관리자 화면에서 지정)으로 결정한다.
+ * 미지정 사용자에게는 {@code defaultDept}를 적용한다.
  *
  * <pre>
  * ultari.dept.default-dept=dept-a
- * ultari.dept.mapping.alice=dept-a
- * ultari.dept.mapping.bob=dept-b
+ * ultari.dept.codes=dept-a,dept-b   # 관리자 화면 드롭다운 목록
  * </pre>
  */
 @Component
@@ -25,9 +24,9 @@ import java.util.Map;
 @ConfigurationProperties(prefix = "ultari.dept")
 public class DeptProperties {
 
-    /** 로그인 아이디 → 부서코드 매핑 */
-    private Map<String, String> mapping = new HashMap<>();
-
-    /** 매핑에 없는 사용자에게 적용할 기본 부서코드 */
+    /** 부서 미지정 사용자에게 적용할 기본 부서코드 */
     private String defaultDept = "dept-a";
+
+    /** 관리자 화면 부서 드롭다운에 표시할 부서코드 목록 */
+    private List<String> codes = new ArrayList<>();
 }
