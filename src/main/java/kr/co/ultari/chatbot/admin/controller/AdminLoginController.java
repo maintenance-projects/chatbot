@@ -4,6 +4,7 @@ import kr.co.ultari.chatbot.admin.datamodel.dto.AdminLoginRequest;
 import kr.co.ultari.chatbot.admin.service.AdminAuthService;
 import kr.co.ultari.chatbot.admin.session.AdminSession;
 import kr.co.ultari.chatbot.admin.session.AdminSessionStore;
+import kr.co.ultari.chatbot.common.dept.DeptProperties;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
@@ -28,6 +29,9 @@ public class AdminLoginController {
 
     @Autowired
     AdminSessionStore sessionStore;
+
+    @Autowired
+    DeptProperties deptProperties;
 
     private final AdminAuthService authService;
 
@@ -192,6 +196,27 @@ public class AdminLoginController {
         model.addAttribute("sessionRemainingSeconds", sessionStore.getRemainingSeconds(sessionId));
 
         return "admin/guide";
+    }
+
+    @RequestMapping("/users")
+    public String usersIndex(HttpServletRequest request, Model model) {
+        String sessionId = (String) request.getSession().getAttribute("sessionId");
+        if(!StringUtils.hasText(sessionId)) return buildSessionExpiredRedirect();
+
+        AdminSession session = sessionStore.get(sessionId);
+        if(session==null) return buildSessionExpiredRedirect();
+
+        log.debug("[users index] adminId={}, sessionId={}", session.getAdminId(), sessionId);
+
+        model.addAttribute("adminId", session.getAdminId());
+        model.addAttribute("adminName", session.getAdminName());
+        model.addAttribute("storage", session.isAuthStorage());
+        model.addAttribute("statistics", session.isAuthStatistics());
+        model.addAttribute("master", session.isAuthMaster());
+        model.addAttribute("sessionRemainingSeconds", sessionStore.getRemainingSeconds(sessionId));
+        model.addAttribute("deptCodes", deptProperties.getCodes());
+
+        return "admin/users";
     }
 
     private String getClientIp(HttpServletRequest request) {
