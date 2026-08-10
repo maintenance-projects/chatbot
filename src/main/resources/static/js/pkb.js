@@ -32,6 +32,31 @@ document.addEventListener("DOMContentLoaded", function () {
 
     var busy = false;
 
+    // AI 파티션(dept) 스위처: 허용 dept 2개 이상일 때만 노출. 선택은 세션에 저장되어 PKB 요청에 적용.
+    (function initDeptSwitch() {
+        var sel = document.getElementById("pDeptSwitch");
+        if (!sel) return;
+        fetch("/me/depts", { credentials: "same-origin" })
+            .then(function (r) { return r.json(); })
+            .then(function (d) {
+                var depts = (d && d.depts) || [];
+                if (depts.length <= 1) return;
+                sel.innerHTML = "";
+                depts.forEach(function (c) {
+                    var o = document.createElement("option");
+                    o.value = c; o.textContent = c;
+                    if (c === d.current) o.selected = true;
+                    sel.appendChild(o);
+                });
+                sel.hidden = false;
+                sel.addEventListener("change", function () {
+                    var fd = new FormData(); fd.append("dept", sel.value);
+                    fetch("/me/depts", { method: "POST", body: fd, credentials: "same-origin" });
+                });
+            })
+            .catch(function () {});
+    })();
+
     function esc(s) {
         return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
             return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];

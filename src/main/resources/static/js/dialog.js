@@ -143,6 +143,31 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const sessionId = window.sessionId || "";
 
+    // AI 파티션(dept) 스위처: 허용 dept가 2개 이상일 때만 노출. 선택은 세션에 저장되어 이후 요청에 적용.
+    (function initDeptSwitch() {
+        const sel = document.getElementById("cbDeptSwitch");
+        if (!sel) return;
+        fetch("/me/depts", { credentials: "same-origin" })
+            .then((r) => r.json())
+            .then((d) => {
+                const depts = (d && d.depts) || [];
+                if (depts.length <= 1) return;
+                sel.innerHTML = "";
+                depts.forEach((c) => {
+                    const o = document.createElement("option");
+                    o.value = c; o.textContent = c; o.style.color = "#333";
+                    if (c === d.current) o.selected = true;
+                    sel.appendChild(o);
+                });
+                sel.hidden = false;
+                sel.addEventListener("change", () => {
+                    const fd = new FormData(); fd.append("dept", sel.value);
+                    fetch("/me/depts", { method: "POST", body: fd, credentials: "same-origin" });
+                });
+            })
+            .catch(() => {});
+    })();
+
     let isResearchMode = false;
     let researchTag = null;
 
