@@ -20,6 +20,13 @@ bootJar {
     archiveVersion = '4.0.0.RELEASE'
 }
 
+// application run(bootRun)을 항상 JDK 21 런처로 고정 (머신 기본 JDK와 무관)
+tasks.named('bootRun') {
+    javaLauncher = javaToolchains.launcherFor {
+        languageVersion = JavaLanguageVersion.of(21)
+    }
+}
+
 repositories {
 	mavenCentral()
 }
