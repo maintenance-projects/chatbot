@@ -23,7 +23,7 @@ CREATE TABLE MSG_USER (
     PASSWORD    VARCHAR2(50),            -- 비밀번호
     USER_ORDER  VARCHAR2(50),            -- 정렬 순서
     USER_TYPE   VARCHAR2(50),            -- 사용자 구분
-    DEPT        VARCHAR2(50),            -- 부서(게이트웨이 라우팅) — 관리자 화면에서 지정
+    AI_DEPT     VARCHAR2(50),            -- 부서(게이트웨이 라우팅) — 관리자 화면에서 지정
     CONSTRAINT pk_msg_user PRIMARY KEY (USER_ID)
 );
 

@@ -46,7 +46,7 @@ public class MsgUser {
     @Column(name = "USER_TYPE", length = 50)
     private String userType;
 
-    /** 부서(dept) 코드 — 게이트웨이 라우팅(/{dept}/...) 결정. 관리자 화면에서 지정. */
-    @Column(name = "DEPT", length = 50)
+    /** 부서(dept) 코드 — 게이트웨이 라우팅(/{dept}/...) 결정. 관리자 화면에서 지정. DB 컬럼: AI_DEPT */
+    @Column(name = "AI_DEPT", length = 50)
     private String dept;
 }
