@@ -355,7 +355,7 @@ var isScreenGuideOpen = false;
     }
 
     function loadSummary() {
-        postData("/admin/statistics/summary").then(function (data) {
+        postData("/at-i/statistics/summary").then(function (data) {
             animateNumber($("#statTotal"), data.totalCount || 0);
             animateNumber($("#statUsers"), data.userCount || 0);
 
@@ -442,7 +442,7 @@ var isScreenGuideOpen = false;
     var dailyRawData = [];
 
     function loadDailyChart() {
-        postData("/admin/statistics/daily").then(function (rows) {
+        postData("/at-i/statistics/daily").then(function (rows) {
             dailyRawData = rows;
             renderDailyChart();
         }).catch(function () { showToast("일별 통계를 불러오지 못했습니다.", "error"); });
@@ -552,7 +552,7 @@ var isScreenGuideOpen = false;
     }
 
     function loadHourlyChart() {
-        postData("/admin/statistics/hourly").then(function (rows) {
+        postData("/at-i/statistics/hourly").then(function (rows) {
             hourlyRawData = rows;
 
             var dates = [];
@@ -622,7 +622,7 @@ var isScreenGuideOpen = false;
     }
 
     function loadRanking() {
-        postData("/admin/statistics/ranking").then(function (rows) {
+        postData("/at-i/statistics/ranking").then(function (rows) {
             var userMap = {};
             rows.forEach(function (r) {
                 if (!userMap[r.userId]) {
@@ -719,7 +719,7 @@ var isScreenGuideOpen = false;
             btnExport.addEventListener("click", function () {
                 var form = document.createElement("form");
                 form.method = "POST";
-                form.action = "/admin/statistics/export";
+                form.action = "/at-i/statistics/export";
 
                 var fields = { adminId: adminId, startDate: elStartDate.value, endDate: elEndDate.value };
                 if (searchUserId) fields.userId = searchUserId;
@@ -743,10 +743,10 @@ var isScreenGuideOpen = false;
             btnLogout.addEventListener("click", function () {
                 var fd = new FormData();
                 fd.append("adminId", adminId);
-                fetch("/admin/logout", { method: "POST", body: fd })
+                fetch("/at-i/logout", { method: "POST", body: fd })
                     .then(function () {
                         sessionStorage.removeItem("adminId");
-                        window.location.href = "/admin";
+                        window.location.href = "/at-i";
                     });
             });
         }

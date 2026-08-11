@@ -95,7 +95,7 @@
                 showSuccessAnimation();
 
                 const html = await loadStorageHtmlAjax(adminId);
-                history.replaceState(null, "", "/admin/storage");
+                history.replaceState(null, "", "/at-i/storage");
                 replaceDocument(html);
             } else {
                 showError(getErrorMessage(result.code, result.status));
@@ -130,7 +130,7 @@
             }
 
             $.ajax({
-                url: "/admin/login",
+                url: "/at-i/login",
                 type: "POST",
                 contentType: "application/json; charset=UTF-8",
                 dataType: "text",
@@ -159,7 +159,7 @@
             }
 
             $.ajax({
-                url: "/admin/storage",
+                url: "/at-i/storage",
                 method: "POST",
                 data: { adminId: adminId },
                 dataType: "html",

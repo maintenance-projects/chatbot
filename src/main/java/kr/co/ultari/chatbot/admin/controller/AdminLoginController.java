@@ -24,7 +24,7 @@ import java.util.UUID;
 
 @Slf4j
 @Controller
-@RequestMapping("/admin")
+@RequestMapping("/at-i")
 public class AdminLoginController {
 
     @Autowired
@@ -240,7 +240,7 @@ public class AdminLoginController {
         } catch (java.io.UnsupportedEncodingException e) {
             throw new IllegalStateException("UTF-8 encoding not supported", e);
         }
-        return "redirect:/admin/error?code=401&message=" + message;
+        return "redirect:/at-i/error?code=401&message=" + message;
     }
 
 

@@ -124,7 +124,7 @@
     var currentDept = deptCodes.length ? deptCodes[0] : "";
 
     function deptLabelOf(c) { var l = deptLabels[c]; return (l && String(l).trim()) ? String(l) : String(c); }
-    // 모든 /admin/documents* 호출에 붙일 dept 쿼리 조각
+    // 모든 /at-i/documents* 호출에 붙일 dept 쿼리 조각
     function deptQS() { return currentDept ? "&dept=" + encodeURIComponent(currentDept) : ""; }
 
     function renderDeptTabs() {
@@ -796,11 +796,11 @@
         dom.pagination.innerHTML = html;
     }
 
-    // 금칙어 목록을 서버 재시작 없이 즉시 갱신한다. (POST /admin/profanity/reload)
+    // 금칙어 목록을 서버 재시작 없이 즉시 갱신한다. (POST /at-i/profanity/reload)
     function reloadProfanity() {
         var id = getAdminId();
         if (dom.btnReloadProfanity) dom.btnReloadProfanity.disabled = true;
-        fetch("/admin/profanity/reload?adminId=" + encodeURIComponent(id) + deptQS(), { method: "POST" })
+        fetch("/at-i/profanity/reload?adminId=" + encodeURIComponent(id) + deptQS(), { method: "POST" })
             .then(function (res) { return res.json().catch(function () { return {}; }); })
             .then(function (data) {
                 if (data && data.code === "0000") toast("금칙어 목록을 재로드했습니다.", "success");
@@ -815,7 +815,7 @@
     function fetchCount() {
         var id = getAdminId();
 
-        return fetch("/admin/documents/count?adminId=" + encodeURIComponent(id) + deptQS())
+        return fetch("/at-i/documents/count?adminId=" + encodeURIComponent(id) + deptQS())
             .then(function (res) { return res.json(); })
             .then(function (json) {
                 // 신규 게이트웨이는 봉투일 수 있음: 배열이면 그대로, 아니면 data 배열 사용
@@ -910,7 +910,7 @@
             + "&order=" + encodeURIComponent(sortOrder)
             + deptQS();
 
-        return fetch("/admin/documents?" + qs)
+        return fetch("/at-i/documents?" + qs)
             .then(function (res) {
                 var hTotal = extractTotalFromHeaders(res.headers);
                 paging.headersTotal = hTotal;
@@ -972,7 +972,7 @@
             + "&order=" + encodeURIComponent(sortOrder)
             + deptQS();
 
-        return fetch("/admin/documents/search?" + qs)
+        return fetch("/at-i/documents/search?" + qs)
             .then(function (res) {
                 var hTotal = extractTotalFromHeaders(res.headers);
                 paging.headersTotal = hTotal;
@@ -1177,8 +1177,8 @@
         showLoading(true);
         var id = getAdminId();
 
-        // 신규 토글은 isUse를 반전(값 미전달). PATCH /admin/documents/{key}/toggle
-        fetch("/admin/documents/" + encodeURIComponent(key) + "/toggle?adminId=" + encodeURIComponent(id) + deptQS(), { method: "PATCH" })
+        // 신규 토글은 isUse를 반전(값 미전달). PATCH /at-i/documents/{key}/toggle
+        fetch("/at-i/documents/" + encodeURIComponent(key) + "/toggle?adminId=" + encodeURIComponent(id) + deptQS(), { method: "PATCH" })
             .then(function (res) {
                 return res.json().catch(function () { return {}; });
             })
@@ -1208,7 +1208,7 @@
             showLoading(true);
             var id = getAdminId();
 
-            fetch("/admin/documents/" + encodeURIComponent(key) + "?adminId=" + encodeURIComponent(id) + deptQS(), { method: "DELETE" })
+            fetch("/at-i/documents/" + encodeURIComponent(key) + "?adminId=" + encodeURIComponent(id) + deptQS(), { method: "DELETE" })
                 .then(function (res) {
                     return res.json().catch(function () { return {}; });
                 })
@@ -1258,8 +1258,8 @@
                 formData.append("dept", currentDept);
                 formData.append("file", file);
 
-                // key/adminName은 서버가 채움 (adminId+file만 전송)
-                return fetch("/admin/documents", { method: "POST", body: formData })
+                // key/at-iName은 서버가 채움 (adminId+file만 전송)
+                return fetch("/at-i/documents", { method: "POST", body: formData })
                     .then(function (res) { return res.json().catch(function () { return {}; }); })
                     .then(function (data) {
                         if (data && data.code === "0000") successCount++;
@@ -1313,7 +1313,7 @@
             dom.btnLogout.addEventListener("click", function () {
                 sessionStorage.removeItem("userId");
                 sessionStorage.removeItem("adminId");
-                window.location.href = "/admin";
+                window.location.href = "/at-i";
             });
         }
 
@@ -1524,7 +1524,7 @@
         } else {
             var sid = getAdminId();
             if (!sid) {
-                window.location.href = "/admin";
+                window.location.href = "/at-i";
                 return;
             }
         }

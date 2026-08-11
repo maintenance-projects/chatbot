@@ -11,10 +11,10 @@
         btnLogout.addEventListener("click", function () {
             var fd = new FormData();
             fd.append("adminId", adminId || "");
-            fetch("/admin/logout", { method: "POST", body: fd })
+            fetch("/at-i/logout", { method: "POST", body: fd })
                 .finally(function () {
                     sessionStorage.removeItem("adminId");
-                    window.location.href = "/admin";
+                    window.location.href = "/at-i";
                 });
         });
     }

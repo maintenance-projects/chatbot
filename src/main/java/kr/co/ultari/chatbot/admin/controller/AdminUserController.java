@@ -15,7 +15,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
  */
 @Slf4j
 @Controller
-@RequestMapping("/admin/users")
+@RequestMapping("/at-i/users")
 @RequiredArgsConstructor
 public class AdminUserController {
 

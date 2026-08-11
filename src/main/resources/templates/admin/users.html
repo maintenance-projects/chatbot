@@ -106,7 +106,7 @@
 
             <nav class="sidebar-nav">
                 <div class="nav-section-title">메뉴</div>
-                <a th:if="${storage}" href="/admin/storage" class="nav-item" data-page="storage">
+                <a th:if="${storage}" href="/at-i/storage" class="nav-item" data-page="storage">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                         stroke-linejoin="round">
                         <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -116,7 +116,7 @@
                     </svg>
                     문서 관리
                 </a>
-                <a th:if="${master}" href="/admin/users" class="nav-item active" data-page="users">
+                <a th:if="${master}" href="/at-i/users" class="nav-item active" data-page="users">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                         stroke-linejoin="round">
                         <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
@@ -126,7 +126,7 @@
                     </svg>
                     AI 파티션 권한
                 </a>
-                <a th:if="${statistics}" href="/admin/statistics" class="nav-item" data-page="statistics">
+                <a th:if="${statistics}" href="/at-i/statistics" class="nav-item" data-page="statistics">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                         stroke-linejoin="round">
                         <line x1="18" y1="20" x2="18" y2="10"></line>
@@ -135,7 +135,7 @@
                     </svg>
                     통계
                 </a>
-                <a th:if="${master}" href="/admin/master" class="nav-item" data-page="master">
+                <a th:if="${master}" href="/at-i/master" class="nav-item" data-page="master">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                         stroke-linejoin="round">
                         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -145,7 +145,7 @@
                     </svg>
                     관리자 관리
                 </a>
-                <a href="/admin/guide" class="nav-item" data-page="guide">
+                <a href="/at-i/guide" class="nav-item" data-page="guide">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                         stroke-linejoin="round">
                         <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />

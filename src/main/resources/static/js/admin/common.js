@@ -7,7 +7,7 @@
         const adminId = getSessionUserId();
 
         if (!adminId) {
-            window.location.href = "/admin";
+            window.location.href = "/at-i";
             return false;
         }
 
@@ -101,7 +101,7 @@
             fd.append("currentPassword", cur);
             fd.append("newPassword", np);
 
-            fetch("/admin/changePassword", { method: "POST", body: fd })
+            fetch("/at-i/changePassword", { method: "POST", body: fd })
                 .then(function (res) { return res.text(); })
                 .then(function (result) {
                     var r = (result || "").trim();
@@ -194,7 +194,7 @@
                 update();
                 clearInterval(intervalId);
                 var message = "세션이 만료되었습니다. 다시 로그인해 주세요.";
-                window.location.href = "/admin/error?code=401&message=" + encodeURIComponent(message);
+                window.location.href = "/at-i/error?code=401&message=" + encodeURIComponent(message);
                 return;
             }
             update();
@@ -203,7 +203,7 @@
         bindAutoRefreshOnRequests();
 
         function refreshSession() {
-            fetch("/admin/session/refresh", { method: "POST" })
+            fetch("/at-i/session/refresh", { method: "POST" })
                 .then(function (res) {
                     if (res.status === 401) {
                         return Promise.reject(new Error("NoSession"));
@@ -221,18 +221,18 @@
                 })
                 .catch(function () {
                     var message = "세션이 만료되었습니다. 다시 로그인해 주세요.";
-                    window.location.href = "/admin/error?code=401&message=" + encodeURIComponent(message);
+                    window.location.href = "/at-i/error?code=401&message=" + encodeURIComponent(message);
                 });
         }
 
         function bindAutoRefreshOnRequests() {
             var refreshTargets = [
-                "/admin/storage",
-                "/admin/statistics",
-                "/admin/master",
-                "/admin/users",
-                "/admin/guide",
-                "/admin/changePassword"
+                "/at-i/storage",
+                "/at-i/statistics",
+                "/at-i/master",
+                "/at-i/users",
+                "/at-i/guide",
+                "/at-i/changePassword"
             ];
 
             function shouldRefresh(url) {

@@ -21,7 +21,7 @@ import java.time.format.DateTimeFormatter;
 
 @Slf4j
 @Controller
-@RequestMapping("/admin/statistics")
+@RequestMapping("/at-i/statistics")
 public class AdminStatisticsController {
 
     @Autowired

@@ -3,12 +3,12 @@
  * - 상단 탭: dept-a/dept-b (ultari.dept.codes)
  * - 트리: 인사DB msg_part(조직) + msg_user(사용자). 조직/사용자 체크로 해당 dept 권한 부여
  * - 조직 부여는 하위 상속, 사용자 체크 해제 시 상속분은 예외(DENY) 처리
- * API: POST /admin/users/tree, /admin/users/grant
+ * API: POST /at-i/users/tree, /at-i/users/grant
  */
 (function () {
     "use strict";
 
-    // 공통 초기화(비밀번호 변경 모달 + 세션 타이머 바인딩). 세션 없으면 /admin로 리다이렉트.
+    // 공통 초기화(비밀번호 변경 모달 + 세션 타이머 바인딩). 세션 없으면 /at-i로 리다이렉트.
     if (typeof window.checkSession === "function" && window.checkSession() === false) return;
 
     var deptCodes = Array.isArray(window.deptCodes) ? window.deptCodes : [];
@@ -85,7 +85,7 @@
         if (!currentDept) return;
         var label = (dom.labelInput.value || "").trim();
         showLoading(true);
-        postForm("/admin/users/dept-label", { adminId: adminId(), dept: currentDept, label: label })
+        postForm("/at-i/users/dept-label", { adminId: adminId(), dept: currentDept, label: label })
             .then(function (r) { return r.text(); })
             .then(function (t) {
                 if (String(t || "").trim() === "ok") {
@@ -102,7 +102,7 @@
     function loadTree() {
         if (!currentDept) return;
         showLoading(true);
-        postForm("/admin/users/tree", { adminId: adminId(), dept: currentDept })
+        postForm("/at-i/users/tree", { adminId: adminId(), dept: currentDept })
             .then(function (r) { return r.json(); })
             .then(function (data) { buildIndex(data); renderTree(); })
             .catch(function () { notify("트리를 불러오지 못했습니다.", "error"); dom.tree.innerHTML = ""; })
@@ -226,7 +226,7 @@
     // ── 권한 적용 ─────────────────────────────────────────────
     function applyGrant(type, id, action) {
         showLoading(true);
-        postForm("/admin/users/grant", { adminId: adminId(), dept: currentDept, targetType: type, targetId: id, action: action })
+        postForm("/at-i/users/grant", { adminId: adminId(), dept: currentDept, targetType: type, targetId: id, action: action })
             .then(function (r) { return r.text(); })
             .then(function (t) {
                 if (String(t || "").trim() === "ok") { notify("저장됨", "success"); loadTree(); }
@@ -250,10 +250,10 @@
 
     function logout() {
         var fd = new FormData(); fd.append("adminId", adminId());
-        fetch("/admin/logout", { method: "POST", body: fd, credentials: "same-origin" })
+        fetch("/at-i/logout", { method: "POST", body: fd, credentials: "same-origin" })
             .finally(function () {
                 sessionStorage.removeItem("userId"); sessionStorage.removeItem("adminId");
-                window.location.href = "/admin";
+                window.location.href = "/at-i";
             });
     }
 

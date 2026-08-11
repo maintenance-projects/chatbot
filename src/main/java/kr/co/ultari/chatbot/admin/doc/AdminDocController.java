@@ -16,7 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
  */
 @GatewayApi
 @RestController
-@RequestMapping("/admin")
+@RequestMapping("/at-i")
 @RequiredArgsConstructor
 public class AdminDocController {
 

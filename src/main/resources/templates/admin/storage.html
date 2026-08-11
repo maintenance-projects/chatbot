@@ -9,7 +9,7 @@
     <link rel="stylesheet" th:href="@{/css/admin/storage.css}" href="/css/admin/storage.css" />
 
     <script>
-        // 문서 카운트는 페이지 로드 후 /admin/storage/count 로 비동기 로딩된다. (storage.js fetchCount)
+        // 문서 카운트는 페이지 로드 후 /at-i/storage/count 로 비동기 로딩된다. (storage.js fetchCount)
         window.countList = [];
     </script>
     <script th:inline="javascript">
@@ -54,7 +54,7 @@
                     </svg>
                     문서 관리
                 </a>
-                <a th:if="${master}" href="/admin/users" class="nav-item" data-page="users">
+                <a th:if="${master}" href="/at-i/users" class="nav-item" data-page="users">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                         stroke-linejoin="round">
                         <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
@@ -64,7 +64,7 @@
                     </svg>
                     AI 파티션 권한
                 </a>
-                <a th:if="${statistics}" href="/admin/statistics" class="nav-item" data-page="statistics">
+                <a th:if="${statistics}" href="/at-i/statistics" class="nav-item" data-page="statistics">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                         stroke-linejoin="round">
                         <line x1="18" y1="20" x2="18" y2="10"></line>
@@ -73,7 +73,7 @@
                     </svg>
                     통계
                 </a>
-                <a th:if="${master}" href="/admin/master" class="nav-item" data-page="master">
+                <a th:if="${master}" href="/at-i/master" class="nav-item" data-page="master">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                         stroke-linejoin="round">
                         <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
@@ -83,7 +83,7 @@
                     </svg>
                     관리자 관리
                 </a>
-                <a href="/admin/guide" class="nav-item" data-page="guide">
+                <a href="/at-i/guide" class="nav-item" data-page="guide">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                         stroke-linejoin="round">
                         <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" />

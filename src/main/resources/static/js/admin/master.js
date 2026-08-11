@@ -317,7 +317,7 @@
     /* ───── 데이터 로드 ───── */
     function loadAdminList() {
         showLoading(true);
-        postData("/admin/master/list", {})
+        postData("/at-i/master/list", {})
             .then(function (text) {
                 adminList = JSON.parse(text);
                 renderTable();
@@ -335,7 +335,7 @@
             return;
         }
         showLoading(true);
-        postData("/admin/master/search", {
+        postData("/at-i/master/search", {
             field: dom.searchField.value,
             keyword: keyword
         })
@@ -422,7 +422,7 @@
             dom.adminModalSave.disabled = true;
             dom.adminModalSave.textContent = "추가 중...";
 
-            postData("/admin/master/add", {
+            postData("/at-i/master/add", {
                 targetId: targetId,
                 targetName: targetName,
                 password: password,
@@ -452,7 +452,7 @@
             dom.adminModalSave.disabled = true;
             dom.adminModalSave.textContent = "수정 중...";
 
-            postData("/admin/master/update", {
+            postData("/at-i/master/update", {
                 targetId: targetId,
                 targetName: targetName,
                 ip: ip,
@@ -483,7 +483,7 @@
             "계정을 삭제하시겠습니까?",
             "'" + targetId + "' 계정이 삭제되며 복구할 수 없습니다.",
             function () {
-                postData("/admin/master/delete", { targetId: targetId })
+                postData("/at-i/master/delete", { targetId: targetId })
                     .then(function (result) {
                         closeConfirm();
                         var r = (result || "").trim();
@@ -556,10 +556,10 @@
             btnLogout.addEventListener("click", function () {
                 var fd = new FormData();
                 fd.append("adminId", adminId);
-                fetch("/admin/logout", { method: "POST", body: fd })
+                fetch("/at-i/logout", { method: "POST", body: fd })
                     .then(function () {
                         sessionStorage.removeItem("adminId");
-                        window.location.href = "/admin";
+                        window.location.href = "/at-i";
                     });
             });
         }

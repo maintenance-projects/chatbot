@@ -76,7 +76,7 @@
     function bindEvents() {
         if (btnGoLogin) {
             btnGoLogin.addEventListener('click', function () {
-                window.location.href = '/admin';
+                window.location.href = '/at-i';
             });
         }
 
@@ -85,14 +85,14 @@
                 if (window.history.length > 1) {
                     window.history.back();
                 } else {
-                    window.location.href = '/admin';
+                    window.location.href = '/at-i';
                 }
             });
         }
 
         document.addEventListener('keydown', function (e) {
             if (e.key === 'Escape') {
-                window.location.href = '/admin';
+                window.location.href = '/at-i';
             }
         });
     }
