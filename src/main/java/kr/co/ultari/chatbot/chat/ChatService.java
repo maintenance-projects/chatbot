@@ -46,12 +46,16 @@ public class ChatService {
         );
     }
 
-    /** 3.1 통합 챗봇 — target_filename 유무로 private/open 자동 라우팅 (SSE) */
+    /** 3.1 통합 챗봇 — target_filename 유무로 private/open 라우팅 (SSE) */
     public SseEmitter message(String dept, String userId, String invokeId, String message, String targetFilename, String translateTo) {
+        // 개인 업로드 문서 질문(target_filename 있음)은 파티션 무관 private로 라우팅해야 한다.
+        // (업로드가 dept-less /upload에 저장되므로 dept-scoped /message로 물으면 파일을 못 찾음)
+        if (StringUtils.hasText(targetFilename)) {
+            return messagePrivate(dept, userId, invokeId, message, targetFilename, translateTo);
+        }
         aiUsageService.increase(userId, invokeId, "CHAT");
         MultipartBodyBuilder b = new MultipartBodyBuilder();
         b.part("message", message);
-        if (StringUtils.hasText(targetFilename)) b.part("target_filename", targetFilename);
         if (StringUtils.hasText(translateTo)) b.part("translate_to", translateTo);
         return sseRelay.relay(() -> gateway.stream(dept, "/message/" + invokeId, b));
     }
