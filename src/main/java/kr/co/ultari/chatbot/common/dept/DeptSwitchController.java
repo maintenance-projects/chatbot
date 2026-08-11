@@ -23,9 +23,12 @@ public class DeptSwitchController {
 
     private final DeptContext deptContext;
 
-    /** 허용 dept 목록 + 현재 선택(자동 결정 포함) */
+    /** 허용 dept 목록 + 현재 선택(자동 결정 포함). user=화면이 아는 사용자 id로 세션 신원 확립. */
     @GetMapping("/me/depts")
-    public ResponseEntity<String> list(HttpServletRequest request) {
+    public ResponseEntity<String> list(
+            @RequestParam(value = "user", required = false) String user,
+            HttpServletRequest request) {
+        deptContext.bindUser(request, user);
         Set<String> allowed = deptContext.allowed(request);
         JSONObject o = new JSONObject();
         o.put("depts", new JSONArray(allowed));
@@ -35,7 +38,10 @@ public class DeptSwitchController {
 
     /** dept 선택(허용된 경우만 세션 반영) */
     @PostMapping("/me/depts")
-    public ResponseEntity<String> select(@RequestParam("dept") String dept, HttpServletRequest request) {
+    public ResponseEntity<String> select(@RequestParam("dept") String dept,
+            @RequestParam(value = "user", required = false) String user,
+            HttpServletRequest request) {
+        deptContext.bindUser(request, user);
         boolean ok = deptContext.select(request, dept);
         JSONObject o = new JSONObject();
         o.put("ok", ok);

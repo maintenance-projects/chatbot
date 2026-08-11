@@ -36,7 +36,7 @@ document.addEventListener("DOMContentLoaded", function () {
     (function initDeptSwitch() {
         var sel = document.getElementById("pDeptSwitch");
         if (!sel) return;
-        fetch("/me/depts", { credentials: "same-origin" })
+        fetch("/me/depts?user=" + encodeURIComponent(ownerId), { credentials: "same-origin" })
             .then(function (r) { return r.json(); })
             .then(function (d) {
                 var depts = (d && d.depts) || [];
@@ -50,7 +50,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 });
                 sel.hidden = false;
                 sel.addEventListener("change", function () {
-                    var fd = new FormData(); fd.append("dept", sel.value);
+                    var fd = new FormData(); fd.append("dept", sel.value); fd.append("user", ownerId);
                     fetch("/me/depts", { method: "POST", body: fd, credentials: "same-origin" });
                 });
             })

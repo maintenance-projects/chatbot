@@ -69,6 +69,10 @@ public class GenerateController {
         templateList.put(createTemplate("A003", "template3.hwpx", "회의록","000003"));
 
         log.debug(templateList.toString());
+        // 화면 URL key로 세션 신원을 확립 → 로그인 세션 소실(재기동 등)에도 dept 스위처/라우팅 복구
+        if (sessionId != null && !sessionId.isBlank()) {
+            request.getSession(true).setAttribute("chatbotUserId", sessionId);
+        }
         model.addAttribute("sessionId",sessionId);
         model.addAttribute("templateList", templateList.toString());
         return "dialog";

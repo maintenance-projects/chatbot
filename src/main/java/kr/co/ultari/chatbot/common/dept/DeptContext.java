@@ -37,6 +37,17 @@ public class DeptContext {
         return resolver.allowedDepts(sessionUserId(request));
     }
 
+    /**
+     * 페이지가 아는 사용자 id(챗봇 URL key·PKB ownerId)로 세션 신원을 확립한다.
+     * 로그인 세션이 만료·소실(재기동 등)돼도 화면 로드만으로 dept 스위처/라우팅이 복구되게 한다.
+     * 이 앱은 이미 URL 신원을 신뢰하므로 새 권한 상승은 없다.
+     */
+    public void bindUser(HttpServletRequest request, String userId) {
+        if (userId != null && !userId.isBlank()) {
+            request.getSession(true).setAttribute(SESSION_USER_ID, userId);
+        }
+    }
+
     /** dept 선택. 세션 사용자에게 허용된 dept면 세션에 저장하고 true. */
     public boolean select(HttpServletRequest request, String dept) {
         if (resolver.isAllowed(sessionUserId(request), dept)) {

@@ -147,7 +147,8 @@ document.addEventListener("DOMContentLoaded", () => {
     (function initDeptSwitch() {
         const sel = document.getElementById("cbDeptSwitch");
         if (!sel) return;
-        fetch("/me/depts", { credentials: "same-origin" })
+        const uid = encodeURIComponent(window.sessionId || "");
+        fetch("/me/depts?user=" + uid, { credentials: "same-origin" })
             .then((r) => r.json())
             .then((d) => {
                 const depts = (d && d.depts) || [];
@@ -161,7 +162,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 });
                 sel.hidden = false;
                 sel.addEventListener("change", () => {
-                    const fd = new FormData(); fd.append("dept", sel.value);
+                    const fd = new FormData(); fd.append("dept", sel.value); fd.append("user", window.sessionId || "");
                     fetch("/me/depts", { method: "POST", body: fd, credentials: "same-origin" });
                 });
             })
