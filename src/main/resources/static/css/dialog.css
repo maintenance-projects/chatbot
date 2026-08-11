@@ -685,6 +685,43 @@ textarea {
     position: relative;
 }
 
+/* 맨 아래로 스크롤 버튼 (입력창 위에 떠 있음) */
+.cb-scrolldown {
+    position: absolute;
+    right: 16px;
+    top: -52px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    border: 1px solid var(--cb-line);
+    background: #fff;
+    color: #334155;
+    display: grid;
+    place-items: center;
+    cursor: pointer;
+    box-shadow: 0 6px 18px rgba(15, 23, 42, 0.18);
+    opacity: 0;
+    transform: translateY(8px);
+    pointer-events: none;
+    transition: opacity 0.18s ease, transform 0.18s ease, background 0.15s ease;
+    z-index: 20;
+}
+
+.cb-scrolldown.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.cb-scrolldown:hover {
+    background: #f1f5f9;
+}
+
+.cb-scrolldown svg {
+    width: 20px;
+    height: 20px;
+}
+
 .cb-inputwrap {
     min-height: 88px;
     display: grid;

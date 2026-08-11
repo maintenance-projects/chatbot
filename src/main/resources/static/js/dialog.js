@@ -251,6 +251,23 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function scrollToBottom() {
         body.scrollTop = body.scrollHeight;
+        updateScrollDownBtn();
+    }
+
+    // 맨 아래로 버튼: 바닥에서 threshold 이상 올라가면 표시, 클릭 시 부드럽게 하강
+    const scrollDownBtn = document.getElementById("cbScrollDown");
+    const SCROLL_DOWN_THRESHOLD = 120;
+    function updateScrollDownBtn() {
+        if (!scrollDownBtn || !body) return;
+        const dist = body.scrollHeight - body.scrollTop - body.clientHeight;
+        scrollDownBtn.classList.toggle("is-visible", dist > SCROLL_DOWN_THRESHOLD);
+    }
+    if (body) body.addEventListener("scroll", updateScrollDownBtn, { passive: true });
+    if (scrollDownBtn) {
+        scrollDownBtn.addEventListener("click", () => {
+            body.scrollTo({ top: body.scrollHeight, behavior: "smooth" });
+            scrollDownBtn.classList.remove("is-visible");
+        });
     }
 
     function autoResizeInput() {
