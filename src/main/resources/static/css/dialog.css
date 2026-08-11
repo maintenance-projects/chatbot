@@ -722,6 +722,19 @@ textarea {
     height: 20px;
 }
 
+/* 옵션 A: 위로 올라가 있는 동안 새 답변이 오면 점 뱃지 */
+.cb-scrolldown.has-new::after {
+    content: "";
+    position: absolute;
+    top: -1px;
+    right: -1px;
+    width: 11px;
+    height: 11px;
+    border-radius: 50%;
+    background: #ef4444;
+    border: 2px solid #fff;
+}
+
 .cb-inputwrap {
     min-height: 88px;
     display: grid;

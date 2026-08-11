@@ -249,24 +249,47 @@ document.addEventListener("DOMContentLoaded", () => {
         return `${ampm} ${hh}:${pad2(m)}`;
     }
 
-    function scrollToBottom() {
-        body.scrollTop = body.scrollHeight;
-        updateScrollDownBtn();
+    // 맨 아래로 버튼 + 자동 추종(stick) 상태
+    const scrollDownBtn = document.getElementById("cbScrollDown");
+    const SCROLL_DOWN_THRESHOLD = 120;   // 바닥에서 이만큼 위로 올라가면 버튼 표시
+    const SCROLL_STICK_THRESHOLD = 40;   // 이내면 '바닥에 붙음'으로 간주
+    let stickToBottom = true;            // 옵션 B: true면 새 내용에 자동으로 바닥 추종
+    let suppressScrollUpdate = false;    // 프로그램 스크롤 애니메이션 중 토글 억제(깜빡임 방지)
+
+    function updateScrollDownBtn() {
+        if (!scrollDownBtn || !body || suppressScrollUpdate) return;
+        const dist = body.scrollHeight - body.scrollTop - body.clientHeight;
+        const atBottom = dist <= SCROLL_STICK_THRESHOLD;
+        stickToBottom = atBottom;
+        scrollDownBtn.classList.toggle("is-visible", dist > SCROLL_DOWN_THRESHOLD);
+        if (atBottom) scrollDownBtn.classList.remove("has-new"); // 옵션 A: 바닥 도달 시 새 답변 뱃지 제거
     }
 
-    // 맨 아래로 버튼: 바닥에서 threshold 이상 올라가면 표시, 클릭 시 부드럽게 하강
-    const scrollDownBtn = document.getElementById("cbScrollDown");
-    const SCROLL_DOWN_THRESHOLD = 120;
-    function updateScrollDownBtn() {
-        if (!scrollDownBtn || !body) return;
-        const dist = body.scrollHeight - body.scrollTop - body.clientHeight;
-        scrollDownBtn.classList.toggle("is-visible", dist > SCROLL_DOWN_THRESHOLD);
+    function scrollToBottom() {
+        if (!stickToBottom) return;      // 옵션 B: 사용자가 위로 올라가 있으면 자동 추종하지 않음
+        body.scrollTop = body.scrollHeight;
+        if (scrollDownBtn) {
+            scrollDownBtn.classList.remove("is-visible");
+            scrollDownBtn.classList.remove("has-new");
+        }
     }
+
+    // 사용자가 명시적으로 바닥으로 이동(전송/버튼) — 추종 재개
+    function resumeStickToBottom() {
+        stickToBottom = true;
+        if (scrollDownBtn) {
+            scrollDownBtn.classList.remove("has-new");
+            scrollDownBtn.classList.remove("is-visible");
+        }
+    }
+
     if (body) body.addEventListener("scroll", updateScrollDownBtn, { passive: true });
     if (scrollDownBtn) {
         scrollDownBtn.addEventListener("click", () => {
+            resumeStickToBottom();
+            suppressScrollUpdate = true;
             body.scrollTo({ top: body.scrollHeight, behavior: "smooth" });
-            scrollDownBtn.classList.remove("is-visible");
+            setTimeout(() => { suppressScrollUpdate = false; updateScrollDownBtn(); }, 450);
         });
     }
 
@@ -504,6 +527,7 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function addUserMessage(text, translateTo) {
+        resumeStickToBottom(); // 내가 보낸 메시지와 응답은 항상 바닥 추종
         endUserCardStack();
         const now = formatTime(new Date());
         const raw = String(text ?? "");
@@ -991,6 +1015,8 @@ document.addEventListener("DOMContentLoaded", () => {
         handle.preEl.setAttribute("data-rawtext", next);
         handle.preEl.innerHTML = renderRichText(next);
         if (isSearchOpen() && searchInput && searchInput.value.trim()) rebuildHighlights(searchInput.value);
+        if (stickToBottom) scrollToBottom();
+        else if (scrollDownBtn) scrollDownBtn.classList.add("has-new"); // 옵션 A: 위로 올라가 있으면 새 답변 알림
     }
 
     function applyStreamRefs(handle, docs) {
