@@ -65,6 +65,13 @@ public class GenerateController {
 
     @RequestMapping("/{key}")
     public String login(Model model, @PathVariable("key") String sessionId, HttpServletRequest request) {
+        // 인사(HR) DB에 존재하는 사용자만 챗봇 화면 진입 허용. 없으면 로그인 페이지로 차단.
+        if (!userAuthService.exists(sessionId)) {
+            log.debug("[chatbot access denied] unknown userId={}", sessionId);
+            String msg = java.net.URLEncoder.encode("등록되지 않은 사용자입니다.", java.nio.charset.StandardCharsets.UTF_8);
+            return "redirect:/chatbot?error=" + msg;
+        }
+
         JSONArray templateList = new JSONArray();
         JSONObject templateObject = new JSONObject();
 

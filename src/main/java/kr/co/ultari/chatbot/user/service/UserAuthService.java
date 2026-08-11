@@ -20,4 +20,9 @@ public class UserAuthService {
         if (user.getPassword() == null || !user.getPassword().equals(password)) return "NoPassword";
         return "ok";
     }
+
+    /** 인사(HR) DB에 해당 사용자 계정이 존재하는지. 챗봇 화면 직접 접근 검증용. */
+    public boolean exists(String userId) {
+        return userId != null && !userId.isBlank() && hrUserMapper.selectById(userId) != null;
+    }
 }
