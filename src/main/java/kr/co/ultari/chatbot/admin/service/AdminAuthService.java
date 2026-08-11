@@ -40,7 +40,7 @@ public class AdminAuthService {
             }
         }
 
-        AdminSession session = new AdminSession(admin.getAdminId(), admin.getAdminName(), admin.getAuthStorage(), admin.getAuthStatistics(), admin.getAuthMaster());
+        AdminSession session = new AdminSession(admin.getAdminId(), admin.getAdminName(), admin.getAuthStorage(), admin.getAuthStatistics(), admin.getAuthMaster(), admin.getAuthPartition());
         sessionStore.save(uuid, session);
 
         return rtn;

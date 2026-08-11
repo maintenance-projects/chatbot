@@ -31,6 +31,7 @@
         chkStorage: null,
         chkStatistics: null,
         chkMaster: null,
+        chkPartition: null,
         formError: null,
         confirmModal: null,
         confirmTitle: null,
@@ -273,7 +274,7 @@
     function renderTable() {
         if (adminList.length === 0) {
             dom.tableBody.innerHTML =
-                '<tr><td colspan="9" class="center" style="padding:40px;color:var(--text-light);">등록된 계정이 없습니다.</td></tr>';
+                '<tr><td colspan="10" class="center" style="padding:40px;color:var(--text-light);">등록된 계정이 없습니다.</td></tr>';
             dom.tableInfo.textContent = "";
             dom.statTotal.textContent = "0";
             return;
@@ -290,6 +291,7 @@
                 + "<td>" + authBadge(a.authStorage) + "</td>"
                 + "<td>" + authBadge(a.authStatistics) + "</td>"
                 + "<td>" + authBadge(a.authMaster) + "</td>"
+                + "<td>" + authBadge(a.authPartition) + "</td>"
                 + "<td>" + escapeHtml(a.regDate || "") + "</td>"
                 + '<td><div class="action-btns">'
                 + '<button class="btn-icon" title="수정" data-action="edit" data-id="' + escapeHtml(a.adminId) + '">'
@@ -362,6 +364,7 @@
         dom.chkStorage.checked = false;
         dom.chkStatistics.checked = false;
         dom.chkMaster.checked = false;
+        dom.chkPartition.checked = false;
         hideFormError();
         dom.adminModalSave.textContent = "추가";
         dom.adminModal.classList.add("show");
@@ -382,6 +385,7 @@
         dom.chkStorage.checked = admin.authStorage === "1";
         dom.chkStatistics.checked = admin.authStatistics === "1";
         dom.chkMaster.checked = admin.authMaster === "1";
+        dom.chkPartition.checked = admin.authPartition === "1";
         hideFormError();
         dom.adminModalSave.textContent = "수정";
         dom.adminModal.classList.add("show");
@@ -429,7 +433,8 @@
                 ip: ip,
                 authStorage: dom.chkStorage.checked ? "1" : "0",
                 authStatistics: dom.chkStatistics.checked ? "1" : "0",
-                authMaster: dom.chkMaster.checked ? "1" : "0"
+                authMaster: dom.chkMaster.checked ? "1" : "0",
+                authPartition: dom.chkPartition.checked ? "1" : "0"
             })
                 .then(function (result) {
                     var r = (result || "").trim();
@@ -458,7 +463,8 @@
                 ip: ip,
                 authStorage: dom.chkStorage.checked ? "1" : "0",
                 authStatistics: dom.chkStatistics.checked ? "1" : "0",
-                authMaster: dom.chkMaster.checked ? "1" : "0"
+                authMaster: dom.chkMaster.checked ? "1" : "0",
+                authPartition: dom.chkPartition.checked ? "1" : "0"
             })
                 .then(function (result) {
                     var r = (result || "").trim();
@@ -609,6 +615,7 @@
         dom.chkStorage = $("#chkStorage");
         dom.chkStatistics = $("#chkStatistics");
         dom.chkMaster = $("#chkMaster");
+        dom.chkPartition = $("#chkPartition");
         dom.formError = $("#formError");
         dom.confirmModal = $("#confirmModal");
         dom.confirmTitle = $("#confirmTitle");

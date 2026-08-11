@@ -29,6 +29,9 @@ public class MsgAdmin {
     @Column(name = "AUTH_MASTER", columnDefinition = "CHAR", length = 1)
     private String authMaster;
 
+    @Column(name = "AUTH_PARTITION", columnDefinition = "CHAR", length = 1)
+    private String authPartition;
+
     @Column(name = "IP", length = 50)
     private String ip;
 

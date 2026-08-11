@@ -38,7 +38,7 @@ public class AdminMasterService {
     }
 
     public String addAdmin(String adminId, String adminName, String password,
-                           String ip, String authStorage, String authStatistics, String authMaster) {
+                           String ip, String authStorage, String authStatistics, String authMaster, String authPartition) {
         if (adminRepository.findById(adminId).isPresent()) {
             return "DuplicateId";
         }
@@ -50,6 +50,7 @@ public class AdminMasterService {
         admin.setAuthStorage(authStorage);
         admin.setAuthStatistics(authStatistics);
         admin.setAuthMaster(authMaster);
+        admin.setAuthPartition(authPartition);
         admin.setRegDate(new Date());
         admin.setUpdateDate(new Date());
         adminRepository.save(admin);
@@ -57,7 +58,7 @@ public class AdminMasterService {
     }
 
     public String updateAdmin(String adminId, String adminName, String ip,
-                              String authStorage, String authStatistics, String authMaster) {
+                              String authStorage, String authStatistics, String authMaster, String authPartition) {
         MsgAdmin admin = adminRepository.findById(adminId).orElse(null);
         if (admin == null) return "fail";
         admin.setAdminName(adminName);
@@ -65,6 +66,7 @@ public class AdminMasterService {
         admin.setAuthStorage(authStorage);
         admin.setAuthStatistics(authStatistics);
         admin.setAuthMaster(authMaster);
+        admin.setAuthPartition(authPartition);
         admin.setUpdateDate(new Date());
         adminRepository.save(admin);
         return "ok";
@@ -86,6 +88,7 @@ public class AdminMasterService {
             obj.put("authStorage", a.getAuthStorage() != null ? a.getAuthStorage() : "0");
             obj.put("authStatistics", a.getAuthStatistics() != null ? a.getAuthStatistics() : "0");
             obj.put("authMaster", a.getAuthMaster() != null ? a.getAuthMaster() : "0");
+            obj.put("authPartition", a.getAuthPartition() != null ? a.getAuthPartition() : "0");
             obj.put("regDate", a.getRegDate() != null ? SDF.format(a.getRegDate()) : "");
             obj.put("updateDate", a.getUpdateDate() != null ? SDF.format(a.getUpdateDate()) : "");
             arr.put(obj);

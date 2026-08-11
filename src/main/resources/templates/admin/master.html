@@ -34,7 +34,7 @@
                     </svg>
                     문서 관리
                 </a>
-                <a th:if="${master}" href="/at-i/users" class="nav-item" data-page="users">
+                <a th:if="${partition}" href="/at-i/users" class="nav-item" data-page="users">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                         stroke-linejoin="round">
                         <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
@@ -197,6 +197,7 @@
                                     <th style="width:80px;" class="center">문서</th>
                                     <th style="width:80px;" class="center">통계</th>
                                     <th style="width:80px;" class="center">마스터</th>
+                                    <th style="width:80px;" class="center">파티션</th>
                                     <th style="width:140px;" class="center">등록일</th>
                                     <th style="width:100px;" class="center">관리</th>
                                 </tr>
@@ -258,6 +259,10 @@
                             <label class="auth-checkbox">
                                 <input type="checkbox" id="chkMaster">
                                 <span>관리자 관리</span>
+                            </label>
+                            <label class="auth-checkbox">
+                                <input type="checkbox" id="chkPartition">
+                                <span>AI 파티션 권한</span>
                             </label>
                         </div>
                     </div>

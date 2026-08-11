@@ -60,9 +60,10 @@ CREATE TABLE chatbot_admin (
     ADMIN_ID        VARCHAR2(50) NOT NULL,   -- 관리자 ID (PK)
     ADMIN_NAME      VARCHAR2(50),            -- 관리자명
     PASSWORD        VARCHAR2(50),            -- 비밀번호
-    AUTH_STORAGE    CHAR(1),                 -- 저장소 권한 Y/N
-    AUTH_STATISTICS CHAR(1),                 -- 통계 권한 Y/N
-    AUTH_MASTER     CHAR(1),                 -- 마스터 권한 Y/N
+    AUTH_STORAGE    CHAR(1),                 -- 문서관리 권한 1/0
+    AUTH_STATISTICS CHAR(1),                 -- 통계 권한 1/0
+    AUTH_MASTER     CHAR(1),                 -- 관리자관리 권한 1/0
+    AUTH_PARTITION  CHAR(1),                 -- AI 파티션 권한 1/0
     IP              VARCHAR2(50),            -- 접속 허용 IP
     REG_DATE        TIMESTAMP,               -- 등록일시
     UPDATE_DATE     TIMESTAMP,               -- 수정일시

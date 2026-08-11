@@ -133,6 +133,7 @@ public class AdminLoginController {
         model.addAttribute("storage", session.isAuthStorage());
         model.addAttribute("statistics", session.isAuthStatistics());
         model.addAttribute("master",session.isAuthMaster());
+        model.addAttribute("partition", session.isAuthPartition());
         model.addAttribute("sessionRemainingSeconds", sessionStore.getRemainingSeconds(sessionId));
         model.addAttribute("deptCodes", deptProperties.getCodes());
         model.addAttribute("deptLabels", deptLabelService.labels());
@@ -156,6 +157,7 @@ public class AdminLoginController {
         model.addAttribute("storage", session.isAuthStorage());
         model.addAttribute("statistics", session.isAuthStatistics());
         model.addAttribute("master",session.isAuthMaster());
+        model.addAttribute("partition", session.isAuthPartition());
         model.addAttribute("sessionRemainingSeconds", sessionStore.getRemainingSeconds(sessionId));
 
         return "admin/statistics";
@@ -177,6 +179,7 @@ public class AdminLoginController {
         model.addAttribute("storage", session.isAuthStorage());
         model.addAttribute("statistics", session.isAuthStatistics());
         model.addAttribute("master",session.isAuthMaster());
+        model.addAttribute("partition", session.isAuthPartition());
         model.addAttribute("sessionRemainingSeconds", sessionStore.getRemainingSeconds(sessionId));
 
         return "admin/master";
@@ -198,6 +201,7 @@ public class AdminLoginController {
         model.addAttribute("storage", session.isAuthStorage());
         model.addAttribute("statistics", session.isAuthStatistics());
         model.addAttribute("master",session.isAuthMaster());
+        model.addAttribute("partition", session.isAuthPartition());
         model.addAttribute("sessionRemainingSeconds", sessionStore.getRemainingSeconds(sessionId));
 
         return "admin/guide";
@@ -218,6 +222,7 @@ public class AdminLoginController {
         model.addAttribute("storage", session.isAuthStorage());
         model.addAttribute("statistics", session.isAuthStatistics());
         model.addAttribute("master", session.isAuthMaster());
+        model.addAttribute("partition", session.isAuthPartition());
         model.addAttribute("sessionRemainingSeconds", sessionStore.getRemainingSeconds(sessionId));
         model.addAttribute("deptCodes", deptProperties.getCodes());
         model.addAttribute("deptLabels", deptLabelService.labels());
