@@ -255,13 +255,13 @@
                                     <th style="width:100px;" class="center">문서</th>
                                     <th style="width:100px;" class="center">양식</th>
                                     <th style="width:100px;" class="center">채팅요약</th>
-                                    <th style="width:100px;" class="center">통화요약</th>
+                                    <th style="width:100px;" class="center" th:if="${audioEnabled}">통화요약</th>
                                     <th style="width:100px;" class="center">합계</th>
                                 </tr>
                             </thead>
                             <tbody id="rankingTableBody">
                                 <tr>
-                                    <td colspan="8" class="center" style="padding:40px;color:var(--text-light);">
+                                    <td th:attr="colspan=${audioEnabled} ? 8 : 7" colspan="8" class="center" style="padding:40px;color:var(--text-light);">
                                         데이터를 불러오는 중...
                                     </td>
                                 </tr>
@@ -321,6 +321,9 @@
 
     <script th:src="@{/js/lib/chart.umd.min.js}" src="/js/lib/chart.umd.min.js"></script>
     <script th:src="@{/js/admin/common.js}" src="/js/admin/common.js"></script>
+    <script th:inline="javascript">
+        window.statsAudioEnabled = /*[[${audioEnabled}]]*/ true;
+    </script>
     <script th:src="@{/js/admin/statistics.js}" src="/js/admin/statistics.js"></script>
 </body>
 

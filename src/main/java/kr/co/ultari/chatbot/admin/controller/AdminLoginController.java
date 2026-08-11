@@ -36,6 +36,10 @@ public class AdminLoginController {
     @Autowired
     kr.co.ultari.chatbot.common.dept.DeptLabelService deptLabelService;
 
+    /** 통계 화면의 '통화요약' 표시 여부(미사용 납품처 대비). 기본 노출. */
+    @org.springframework.beans.factory.annotation.Value("${ultari.statistics.audio-enabled:true}")
+    boolean statsAudioEnabled;
+
     private final AdminAuthService authService;
 
     public AdminLoginController(AdminAuthService authService) {
@@ -159,6 +163,7 @@ public class AdminLoginController {
         model.addAttribute("master",session.isAuthMaster());
         model.addAttribute("partition", session.isAuthPartition());
         model.addAttribute("sessionRemainingSeconds", sessionStore.getRemainingSeconds(sessionId));
+        model.addAttribute("audioEnabled", statsAudioEnabled);
 
         return "admin/statistics";
     }

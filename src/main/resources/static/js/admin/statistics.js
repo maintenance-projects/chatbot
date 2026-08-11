@@ -26,6 +26,11 @@
         AUDIO:    { border: "#d35400", bg: "rgba(211,84,0,0.1)",  bar: "rgba(211,84,0,0.7)",  dot: "#d35400" }
     };
 
+    // 통화요약(AUDIO) 표시 옵션 — 서버 설정(ultari.statistics.audio-enabled)이 false면 통계에서 제외
+    if (window.statsAudioEnabled === false) {
+        TYPES = TYPES.filter(function (t) { return t !== "AUDIO"; });
+    }
+
     var $ = function (sel) { return document.querySelector(sel); };
     var $$ = function (sel) { return document.querySelectorAll(sel); };
 
@@ -646,7 +651,7 @@ var isScreenGuideOpen = false;
 
             if (sorted.length === 0) {
                 elRankingBody.innerHTML =
-                    '<tr><td colspan="8" class="center" style="padding:40px;color:var(--text-light);">데이터가 없습니다.</td></tr>';
+                    '<tr><td colspan="' + (TYPES.length + 3) + '" class="center" style="padding:40px;color:var(--text-light);">데이터가 없습니다.</td></tr>';
                 return;
             }
 
