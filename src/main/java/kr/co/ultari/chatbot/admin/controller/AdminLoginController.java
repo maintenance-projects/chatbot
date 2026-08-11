@@ -33,6 +33,9 @@ public class AdminLoginController {
     @Autowired
     DeptProperties deptProperties;
 
+    @Autowired
+    kr.co.ultari.chatbot.common.dept.DeptLabelService deptLabelService;
+
     private final AdminAuthService authService;
 
     public AdminLoginController(AdminAuthService authService) {
@@ -215,6 +218,7 @@ public class AdminLoginController {
         model.addAttribute("master", session.isAuthMaster());
         model.addAttribute("sessionRemainingSeconds", sessionStore.getRemainingSeconds(sessionId));
         model.addAttribute("deptCodes", deptProperties.getCodes());
+        model.addAttribute("deptLabels", deptLabelService.labels());
 
         return "admin/users";
     }

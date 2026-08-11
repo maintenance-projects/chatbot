@@ -12,7 +12,14 @@
     if (typeof window.checkSession === "function" && window.checkSession() === false) return;
 
     var deptCodes = Array.isArray(window.deptCodes) ? window.deptCodes : [];
+    var deptLabels = (window.deptLabels && typeof window.deptLabels === "object") ? window.deptLabels : {};
     var currentDept = deptCodes.length ? String(deptCodes[0]) : "";
+
+    // 조직/사용자 아이콘(SVG)
+    var ICON_PART = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 21h18"/><path d="M5 21V7l7-4 7 4v14"/><path d="M9 21v-5h6v5"/><path d="M9 10h.01M15 10h.01M9 13h.01M15 13h.01"/></svg>';
+    var ICON_USER = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>';
+
+    function labelOf(code) { var l = deptLabels[code]; return (l && String(l).trim()) ? String(l) : String(code); }
 
     var dom = {
         tabs: document.getElementById("deptTabs"),
@@ -22,6 +29,9 @@
         btnExpand: document.getElementById("btnExpandAll"),
         btnCollapse: document.getElementById("btnCollapseAll"),
         btnLogout: document.getElementById("btnLogout"),
+        labelInput: document.getElementById("deptLabelInput"),
+        labelCode: document.getElementById("deptLabelCode"),
+        btnSaveLabel: document.getElementById("btnSaveDeptLabel"),
     };
 
     // 트리/권한 상태
@@ -51,14 +61,41 @@
             var b = document.createElement("button");
             b.type = "button";
             b.className = "dept-tab" + (String(code) === currentDept ? " active" : "");
-            b.textContent = code;
+            b.textContent = labelOf(code);
             b.addEventListener("click", function () {
                 currentDept = String(code);
                 renderTabs();
+                syncLabelEditor();
                 loadTree();
             });
             dom.tabs.appendChild(b);
         });
+        syncLabelEditor();
+    }
+
+    // ── dept 표시 명칭 편집 ────────────────────────────────────
+    function syncLabelEditor() {
+        if (!dom.labelInput) return;
+        var l = deptLabels[currentDept];
+        // 폴백(코드==명칭)이면 미설정으로 간주해 빈칸
+        dom.labelInput.value = (l && String(l) !== String(currentDept)) ? String(l) : "";
+        if (dom.labelCode) dom.labelCode.textContent = currentDept;
+    }
+    function saveLabel() {
+        if (!currentDept) return;
+        var label = (dom.labelInput.value || "").trim();
+        showLoading(true);
+        postForm("/admin/users/dept-label", { adminId: adminId(), dept: currentDept, label: label })
+            .then(function (r) { return r.text(); })
+            .then(function (t) {
+                if (String(t || "").trim() === "ok") {
+                    deptLabels[currentDept] = label || currentDept;
+                    renderTabs();
+                    notify("명칭이 저장되었습니다.", "success");
+                } else { notify("명칭 저장 실패", "error"); }
+            })
+            .catch(function () { notify("명칭 저장 중 오류", "error"); })
+            .finally(function () { showLoading(false); });
     }
 
     // ── 데이터 로드 ───────────────────────────────────────────
@@ -133,12 +170,14 @@
         var hasChildren = (childrenOf[partId] && childrenOf[partId].length) || (usersByPart[partId] && usersByPart[partId].length);
         var directGranted = grantedParts.has(partId);
         var inheritedAnc = !directGranted && partHasGrantedAncestor(partId);
+        if (directGranted || inheritedAnc) node.classList.add("granted");
 
         node.innerHTML =
             '<span class="tw-toggle' + (hasChildren ? "" : " leaf") + '">▾</span>' +
+            '<span class="ticon">' + ICON_PART + '</span>' +
             '<input type="checkbox" class="cb-part"' + (directGranted ? " checked" : "") + '>' +
             '<span class="tlabel">' + esc(p.partName || partId) + '</span>' +
-            '<span class="tsub">(' + esc(partId) + ')</span>' +
+            '<span class="tsub">' + esc(partId) + '</span>' +
             (inheritedAnc ? '<span class="tbadge">상속</span>' : "");
         li.appendChild(node);
 
@@ -163,13 +202,16 @@
         var eff = userEffective(u.userId);
         var deny = usersDeny.has(u.userId);
         var inh = userInherited(u.userId);
+        if (deny) node.classList.add("denied");
+        else if (eff) node.classList.add("granted");
         var badge = deny ? '<span class="tbadge deny">제외</span>'
             : (inh && !usersAllow.has(u.userId) ? '<span class="tbadge">상속</span>' : "");
         node.innerHTML =
             '<span class="tw-toggle leaf"></span>' +
+            '<span class="ticon">' + ICON_USER + '</span>' +
             '<input type="checkbox" class="cb-user"' + (eff ? " checked" : "") + '>' +
             '<span class="tlabel">' + esc(u.userName || u.userId) + '</span>' +
-            '<span class="tsub">(' + esc(u.userId) + ')</span>' + badge;
+            '<span class="tsub">' + esc(u.userId) + '</span>' + badge;
         li.appendChild(node);
 
         node.querySelector(".cb-user").addEventListener("change", function () {
@@ -220,6 +262,10 @@
     if (dom.btnExpand) dom.btnExpand.addEventListener("click", expandAll);
     if (dom.btnCollapse) dom.btnCollapse.addEventListener("click", collapseAll);
     if (dom.btnLogout) dom.btnLogout.addEventListener("click", logout);
+    if (dom.btnSaveLabel) dom.btnSaveLabel.addEventListener("click", saveLabel);
+    if (dom.labelInput) dom.labelInput.addEventListener("keydown", function (e) {
+        if (e.key === "Enter") { e.preventDefault(); saveLabel(); }
+    });
 
     renderTabs();
     loadTree();

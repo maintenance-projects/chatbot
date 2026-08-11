@@ -40,11 +40,12 @@ document.addEventListener("DOMContentLoaded", function () {
             .then(function (r) { return r.json(); })
             .then(function (d) {
                 var depts = (d && d.depts) || [];
+                var labels = (d && d.labels) || {};
                 if (depts.length <= 1) return;
                 sel.innerHTML = "";
                 depts.forEach(function (c) {
                     var o = document.createElement("option");
-                    o.value = c; o.textContent = c;
+                    o.value = c; o.textContent = labels[c] || c;
                     if (c === d.current) o.selected = true;
                     sel.appendChild(o);
                 });

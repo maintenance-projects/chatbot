@@ -146,22 +146,40 @@ document.addEventListener("DOMContentLoaded", () => {
     // AI 파티션(dept) 스위처: 허용 dept가 2개 이상일 때만 노출. 선택은 세션에 저장되어 이후 요청에 적용.
     (function initDeptSwitch() {
         const sel = document.getElementById("cbDeptSwitch");
-        if (!sel) return;
+        const brandTitle = document.getElementById("cbBrandTitle");
+        const brandSub = document.getElementById("cbBrandSub");
+        const brandLogo = document.getElementById("cbBrandLogo");
+        let labels = {};
+
+        // 선택된 dept의 명칭을 브랜드 영역(좌측 상단)에 반영
+        function applyBrand(code) {
+            if (!code) return;
+            const name = (labels && labels[code]) || code;
+            if (brandTitle) brandTitle.textContent = name;
+            if (brandSub) brandSub.textContent = "AI 파티션 · " + code;
+            if (brandLogo) brandLogo.textContent = String(name).trim().charAt(0).toUpperCase() || "A";
+        }
+
         const uid = encodeURIComponent(window.sessionId || "");
         fetch("/me/depts?user=" + uid, { credentials: "same-origin" })
             .then((r) => r.json())
             .then((d) => {
+                labels = (d && d.labels) || {};
                 const depts = (d && d.depts) || [];
-                if (depts.length <= 1) return;
+                // 단일/자동 dept도 명칭은 항상 반영
+                applyBrand(d && d.current);
+
+                if (!sel || depts.length <= 1) return;
                 sel.innerHTML = "";
                 depts.forEach((c) => {
                     const o = document.createElement("option");
-                    o.value = c; o.textContent = c; o.style.color = "#333";
+                    o.value = c; o.textContent = labels[c] || c; o.style.color = "#333";
                     if (c === d.current) o.selected = true;
                     sel.appendChild(o);
                 });
                 sel.hidden = false;
                 sel.addEventListener("change", () => {
+                    applyBrand(sel.value);
                     const fd = new FormData(); fd.append("dept", sel.value); fd.append("user", window.sessionId || "");
                     fetch("/me/depts", { method: "POST", body: fd, credentials: "same-origin" });
                 });

@@ -209,10 +209,33 @@ textarea {
     border: 1px solid rgba(255, 255, 255, 0.22);
 }
 
+.cb-brand__text {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
 .cb-brand__title {
     font-size: clamp(14px, 1.25vw, 16px);
     font-weight: 700;
+    line-height: 1.15;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+}
+
+.cb-brand__sub {
+    font-size: clamp(10px, 1vw, 11px);
+    font-weight: 500;
     line-height: 1.1;
+    color: rgba(255, 255, 255, 0.72);
+    letter-spacing: 0.01em;
+}
+
+.cb-brand__logo {
+    transition: background 0.2s ease;
 }
 
 .cb-header__right {

@@ -22,8 +22,9 @@ import java.util.Set;
 public class DeptSwitchController {
 
     private final DeptContext deptContext;
+    private final DeptLabelService labelService;
 
-    /** 허용 dept 목록 + 현재 선택(자동 결정 포함). user=화면이 아는 사용자 id로 세션 신원 확립. */
+    /** 허용 dept 목록 + 현재 선택 + 표시명. user=화면이 아는 사용자 id로 세션 신원 확립. */
     @GetMapping("/me/depts")
     public ResponseEntity<String> list(
             @RequestParam(value = "user", required = false) String user,
@@ -33,6 +34,7 @@ public class DeptSwitchController {
         JSONObject o = new JSONObject();
         o.put("depts", new JSONArray(allowed));
         o.put("current", deptContext.resolve(request));
+        o.put("labels", new JSONObject(labelService.labels()));
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(o.toString());
     }
 
