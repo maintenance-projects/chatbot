@@ -224,7 +224,7 @@
 
                     <div class="tool-menu" id="tool-menu" role="menu" aria-hidden="true">
                         <button class="cb-pop__item" id="cbActionUpload" type="button" role="menuitem"
-                            data-tooltip="문서 업로드">
+                            th:if="${menuUpload}" data-tooltip="문서 업로드">
                             <svg width="16px" height="16px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"
                                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                                 stroke-linejoin="round" class="feather feather-upload-cloud">
@@ -235,7 +235,8 @@
                             </svg>
                         </button>
 
-                        <button class="cb-pop__item" id="cbDocsBtn" type="button" role="menuitem" data-tooltip="개인 문서함">
+                        <button class="cb-pop__item" id="cbDocsBtn" type="button" role="menuitem"
+                            th:if="${menuDocs}" data-tooltip="개인 문서함">
                             <svg width="16px" height="16px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"
                                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                                 stroke-linejoin="round" class="feather feather-hash">
@@ -247,7 +248,7 @@
                         </button>
 
                         <button class="cb-pop__item" id="cbActionSelect" type="button" role="menuitem"
-                            data-tooltip="양식 선택">
+                            th:if="${menuTemplate}" data-tooltip="양식 선택">
                             <svg width="16px" height="16px" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"
                                 fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                                 stroke-linejoin="round" class="feather feather-file-minus">
@@ -257,7 +258,7 @@
                             </svg>
                         </button>
 
-                        <div class="cb-lang-wrap" id="cbLangWrap">
+                        <div class="cb-lang-wrap" id="cbLangWrap" th:if="${menuTranslate}">
                             <button class="cb-pop__item" id="cbLangBtn" type="button" role="menuitem"
                                 aria-expanded="false" aria-haspopup="true" data-tooltip="번역">
                                 <svg width="16px" height="16px" viewBox="0 0 24 24"

@@ -37,9 +37,13 @@ public class GenerateController {
 
     private final AIRelayService relayService;
 
-    public GenerateController(UserAuthService userAuthService, AIRelayService relayService) {
+    private final kr.co.ultari.chatbot.generate.ChatbotMenuProperties menuProperties;
+
+    public GenerateController(UserAuthService userAuthService, AIRelayService relayService,
+                              kr.co.ultari.chatbot.generate.ChatbotMenuProperties menuProperties) {
         this.userAuthService = userAuthService;
         this.relayService = relayService;
+        this.menuProperties = menuProperties;
     }
 
     @GetMapping("")
@@ -75,6 +79,11 @@ public class GenerateController {
         }
         model.addAttribute("sessionId",sessionId);
         model.addAttribute("templateList", templateList.toString());
+        // 하단 도구 메뉴 노출 제어(서버 환경설정 전용)
+        model.addAttribute("menuUpload", menuProperties.isUpload());
+        model.addAttribute("menuDocs", menuProperties.isDocs());
+        model.addAttribute("menuTemplate", menuProperties.isTemplate());
+        model.addAttribute("menuTranslate", menuProperties.isTranslate());
         return "dialog";
     }
 
