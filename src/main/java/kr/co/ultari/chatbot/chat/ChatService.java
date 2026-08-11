@@ -92,6 +92,6 @@ public class ChatService {
 
     /** 2.5 대화 기록 조회 (JSON) */
     public ResponseEntity<String> history(String dept, String invokeId) {
-        return gateway.get(dept, "/history/" + invokeId);
+        return gateway.get(null, "/history/" + invokeId); // 개인 대화 기록: 파티션 무관
     }
 }
