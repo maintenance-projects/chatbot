@@ -192,6 +192,13 @@ textarea {
     background: #3d8def;
 }
 
+.cb-header__left {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
 .cb-brand {
     display: flex;
     align-items: center;
