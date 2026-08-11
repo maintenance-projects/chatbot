@@ -41,7 +41,7 @@ public class ChatService {
                 .contentType(MediaType.APPLICATION_OCTET_STREAM);
         // 새 문서 인덱싱 완료 시 파일목록 캐시 무효화
         return sseRelay.relay(
-                () -> gateway.stream(dept, "/upload/" + invokeId, b),
+                () -> gateway.stream(null, "/upload/" + invokeId, b), // 개인 업로드: 파티션 무관
                 () -> cachedService.FilesCacheClear(invokeId)
         );
     }
@@ -63,7 +63,7 @@ public class ChatService {
         b.part("message", message);
         b.part("target_filename", targetFilename);
         if (StringUtils.hasText(translateTo)) b.part("translate_to", translateTo);
-        return sseRelay.relay(() -> gateway.stream(dept, "/message/private/" + invokeId, b));
+        return sseRelay.relay(() -> gateway.stream(null, "/message/private/" + invokeId, b)); // 개인 문서 대화: 파티션 무관
     }
 
     /** 2.3 Open 대화 — 전체 문서 검색 (SSE) */
@@ -80,14 +80,14 @@ public class ChatService {
         aiUsageService.increase(userId, invokeId, "SUMMARY");
         MultipartBodyBuilder b = new MultipartBodyBuilder();
         b.part("target_filename", targetFilename);
-        return sseRelay.relay(() -> gateway.stream(dept, "/message/document-summary/" + invokeId, b));
+        return sseRelay.relay(() -> gateway.stream(null, "/message/document-summary/" + invokeId, b)); // 개인 업로드 문서 요약: 파티션 무관
     }
 
     /** 2.4 업로드 파일 목록 조회 (JSON). 성공 응답만 FILES 캐시. */
     @Cacheable(cacheNames = "FILES", key = "#invokeId",
             unless = "#result == null || !#result.statusCode.is2xxSuccessful()")
     public ResponseEntity<String> files(String dept, String invokeId) {
-        return gateway.get(dept, "/files/" + invokeId);
+        return gateway.get(null, "/files/" + invokeId); // 개인 파일 목록: 파티션 무관
     }
 
     /** 2.5 대화 기록 조회 (JSON) */

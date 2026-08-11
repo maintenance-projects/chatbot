@@ -35,7 +35,7 @@ public class FileSearchService {
         b.part("attachFile_bin", file.getResource())
                 .filename(filename)
                 .contentType(MediaType.APPLICATION_OCTET_STREAM);
-        return sseRelay.relay(() -> gateway.stream(dept, "/file-search/upload/" + invokeId, b));
+        return sseRelay.relay(() -> gateway.stream(null, "/file-search/upload/" + invokeId, b)); // 개인 첨부 업로드: 파티션 무관
     }
 
     /** 7.2 첨부파일 내용 질문 (SSE) */
@@ -44,11 +44,11 @@ public class FileSearchService {
         MultipartBodyBuilder b = new MultipartBodyBuilder();
         b.part("message", message);
         b.part("target_filename", targetFilename);
-        return sseRelay.relay(() -> gateway.stream(dept, "/file-search/ask/" + invokeId, b));
+        return sseRelay.relay(() -> gateway.stream(null, "/file-search/ask/" + invokeId, b)); // 개인 첨부 질문: 파티션 무관
     }
 
     /** 7.3 인덱싱된 파일 목록 조회 (JSON) */
     public ResponseEntity<String> files(String dept, String invokeId) {
-        return gateway.get(dept, "/file-search/files/" + invokeId);
+        return gateway.get(null, "/file-search/files/" + invokeId); // 개인 첨부 목록: 파티션 무관
     }
 }

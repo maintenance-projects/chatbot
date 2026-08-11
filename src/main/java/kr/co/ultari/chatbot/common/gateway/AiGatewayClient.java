@@ -37,8 +37,13 @@ public class AiGatewayClient {
                 .build();
     }
 
-    /** {@code baseUrl + "/" + dept + path} 조립. path는 선행 슬래시를 포함한다(예: "/message/{id}"). */
+    /**
+     * URL 조립. dept가 있으면 {@code baseUrl + "/" + dept + path},
+     * dept가 null/빈값이면 {@code baseUrl + path}(파티션 무관 개인 데이터용).
+     * path는 선행 슬래시를 포함한다(예: "/message/{id}").
+     */
     public String url(String dept, String path) {
+        if (dept == null || dept.isBlank()) return props.getBaseUrl() + path;
         return props.getBaseUrl() + "/" + dept + path;
     }
 
