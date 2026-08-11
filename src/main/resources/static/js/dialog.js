@@ -1406,8 +1406,14 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
                 return res.json();
             })
-            .then((list) => {
-                const arr = Array.isArray(list) ? list.map((x) => String(x || "").trim()).filter(Boolean) : [];
+            .then((data) => {
+                // 게이트웨이는 {"files":[...]} 봉투로 반환(구 버전은 최상위 배열). 둘 다 지원.
+                const raw = Array.isArray(data) ? data
+                    : (data && Array.isArray(data.files) ? data.files : []);
+                const arr = raw
+                    .map((x) => (x && typeof x === "object") ? (x.fileName || x.name || x.originalFileName || "") : x)
+                    .map((x) => String(x || "").trim())
+                    .filter(Boolean);
                 uploadedFilesCache = arr;
                 return arr;
             })
