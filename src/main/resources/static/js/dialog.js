@@ -151,13 +151,13 @@ document.addEventListener("DOMContentLoaded", () => {
         const brandLogo = document.getElementById("cbBrandLogo");
         let labels = {};
 
-        // 선택된 dept의 명칭을 브랜드 영역(좌측 상단)에 반영
+        // 선택된 dept의 친화 명칭만 브랜드에 반영. dept-a/dept-b 코드는 사용자에게 노출하지 않는다.
         function applyBrand(code) {
             if (!code) return;
-            const name = (labels && labels[code]) || code;
-            if (brandTitle) brandTitle.textContent = name;
-            if (brandSub) brandSub.textContent = "AI 파티션 · " + code;
-            if (brandLogo) brandLogo.textContent = String(name).trim().charAt(0).toUpperCase() || "A";
+            const label = labels && labels[code];
+            if (!label) return; // 명칭 미설정 시 코드 대신 기본 브랜드 유지
+            if (brandTitle) brandTitle.textContent = label;
+            if (brandLogo) brandLogo.textContent = String(label).trim().charAt(0).toUpperCase() || "A";
         }
 
         const uid = encodeURIComponent(window.sessionId || "");
