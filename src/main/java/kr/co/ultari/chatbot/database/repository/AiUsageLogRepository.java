@@ -2,23 +2,26 @@ package kr.co.ultari.chatbot.database.repository;
 
 import kr.co.ultari.chatbot.database.entity.AiUsageLog;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
-import java.util.Optional;
 
 @Repository
 public interface AiUsageLogRepository extends JpaRepository<AiUsageLog, Long> {
 
-    Optional<AiUsageLog> findByUserIdAndRequestTypeAndRequestDateAndRequestHour(
-            String userId,
-            String requestType,
-            LocalDate requestDate,
-            int requestHour
-    );
+    /** 해당 (user,type,date,hour) 행 카운트를 원자적으로 +1. 영향 행 수 반환(0이면 행 없음). */
+    @Transactional
+    @Modifying
+    @Query("UPDATE AiUsageLog a SET a.requestCount = a.requestCount + 1, a.updatedAt = CURRENT_TIMESTAMP " +
+           "WHERE a.userId = :userId AND a.requestType = :type " +
+           "AND a.requestDate = :date AND a.requestHour = :hour")
+    int incrementCount(@Param("userId") String userId, @Param("type") String type,
+                       @Param("date") LocalDate date, @Param("hour") int hour);
 
     @Query("SELECT a.requestDate, a.requestType, COUNT(DISTINCT a.userId), SUM(a.requestCount) " +
            "FROM AiUsageLog a WHERE a.requestDate BETWEEN :start AND :end " +
