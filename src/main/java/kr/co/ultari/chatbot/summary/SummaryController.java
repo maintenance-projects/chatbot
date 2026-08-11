@@ -1,7 +1,5 @@
 package kr.co.ultari.chatbot.summary;
 
-import jakarta.servlet.http.HttpServletRequest;
-import kr.co.ultari.chatbot.common.dept.DeptContext;
 import kr.co.ultari.chatbot.common.web.GatewayApi;
 import kr.co.ultari.chatbot.common.web.GatewayForward;
 import lombok.RequiredArgsConstructor;
@@ -20,7 +18,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 
 /**
- * 대화 요약 API (명세서 6장 대칭). 부서(dept)는 세션에서 주입.
+ * 대화 요약 API (명세서 6장 대칭). 메신저 대화 CSV는 개인·임시 데이터라 dept-less.
  */
 @GatewayApi
 @RestController
@@ -30,23 +28,20 @@ public class SummaryController {
     @Value("${ultari.ai.temp.path:tmp}")
     private String tempPath;
 
-    private final DeptContext deptContext;
     private final SummaryService service;
 
     /** 6.1 CSV 채팅 로그 → 대화록 변환 (text/plain) */
     @PostMapping("/convert/dialogue")
-    public ResponseEntity<String> dialogue(@RequestParam("csv_file") MultipartFile csvFile,
-                                           HttpServletRequest request) {
+    public ResponseEntity<String> dialogue(@RequestParam("csv_file") MultipartFile csvFile) {
         return GatewayForward.as(
-                service.dialogue(deptContext.resolve(request), csvFile),
+                service.dialogue(csvFile),
                 new MediaType(MediaType.TEXT_PLAIN, StandardCharsets.UTF_8));
     }
 
     /** 6.2 대화 로그 LLM 요약 (SSE) */
     @PostMapping(value = "/convert/dialogue-summary", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter dialogueSummary(@RequestParam("csv_file") MultipartFile csvFile,
-                                      HttpServletRequest request) {
-        return service.dialogueSummary(deptContext.resolve(request), csvFile);
+    public SseEmitter dialogueSummary(@RequestParam("csv_file") MultipartFile csvFile) {
+        return service.dialogueSummary(csvFile);
     }
 
     /**
@@ -55,9 +50,15 @@ public class SummaryController {
      */
     @GetMapping(value = "/convert/dialogue-summary/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter dialogueSummaryStream(@RequestParam("fileName") String fileName,
-                                            @RequestParam("sessionId") String sessionId,
-                                            HttpServletRequest request) {
-        Path csv = Paths.get(tempPath, sessionId, "dialog", fileName);
-        return service.dialogueSummaryFromFile(deptContext.resolve(request), csv);
+                                            @RequestParam("sessionId") String sessionId) {
+        // 경로 탈출 방지: 파일명/세션ID는 단일 세그먼트만 허용(디렉터리 구분자 제거) + base 하위 확인
+        String safeName = Paths.get(fileName).getFileName().toString();
+        String safeSid = Paths.get(sessionId).getFileName().toString();
+        Path base = Paths.get(tempPath).toAbsolutePath().normalize();
+        Path csv = base.resolve(safeSid).resolve("dialog").resolve(safeName).normalize();
+        if (!csv.startsWith(base)) {
+            throw new IllegalArgumentException("잘못된 파일 경로");
+        }
+        return service.dialogueSummaryFromFile(csv);
     }
 }

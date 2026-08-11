@@ -16,6 +16,7 @@ import kr.co.ultari.chatbot.generate.service.AIRelayService;
 import java.io.File;
 import java.io.IOException;
 import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -95,46 +96,38 @@ public class GenerateController {
         return "dialog";
     }
 
-    @RequestMapping("/csv/upload")
+    @PostMapping("/csv/upload")
     public ResponseEntity<String> summaryPage(@RequestParam("file") MultipartFile file, @RequestParam("sessionId") String sessionId) {
-        String code = "0000";
-        if(StringUtils.hasText(file.getOriginalFilename())) {
-            String safeFilename = Paths.get(file.getOriginalFilename()).getFileName().toString();
+        String original = file.getOriginalFilename();
+        if (!StringUtils.hasText(original)) {
+            JSONObject error = new JSONObject();
+            error.put("responseCode", "1111");
+            error.put("message", "업로드할 파일이 없습니다.");
+            return ResponseEntity.ok(error.toString());
+        }
+        // 경로 탈출 방지: 파일명은 단일 세그먼트만
+        String safeFilename = Paths.get(original).getFileName().toString();
 
-            File f = new File(tempPath + File.separator + sessionId + File.separator + "dialog");
-            if(!f.exists()) f.mkdirs();
-            // 2. 저장 경로
-            Path dirPath = Paths.get(f.getPath());
-            Path filePath = dirPath.resolve(safeFilename);
+        File f = new File(tempPath + File.separator + sessionId + File.separator + "dialog");
+        if (!f.exists()) f.mkdirs();
+        Path filePath = Paths.get(f.getPath()).resolve(safeFilename);
 
-            try {
-                // 3. 파일 저장 (덮어쓰기)
-                Files.copy(
-                        file.getInputStream(),
-                        filePath,
-                        StandardCopyOption.REPLACE_EXISTING
-                );
-
-                log.info("파일 저장 완료: {}", filePath);
-
-            } catch (IOException e) {
-                code="1111";
-                log.error("파일 저장 실패", e);
-                throw new RuntimeException("파일 저장 중 오류가 발생했습니다.", e);
-            }
-
+        try {
+            Files.copy(file.getInputStream(), filePath, StandardCopyOption.REPLACE_EXISTING);
+            log.info("파일 저장 완료: {}", filePath);
+        } catch (IOException e) {
+            log.error("파일 저장 실패", e);
+            throw new RuntimeException("파일 저장 중 오류가 발생했습니다.", e);
         }
 
-        //model.addAttribute("fileName", file.getOriginalFilename());
-        //model.addAttribute("sessionId", sessionId);
-
-        String openUrl = summaryUrl+"?fileName="+URLEncoder.encode(file.getOriginalFilename())+"&sessionId="+URLEncoder.encode(sessionId);
+        // 저장한 안전 파일명 기준으로 openUrl 구성(UTF-8 인코딩)
+        String openUrl = summaryUrl
+                + "?fileName=" + URLEncoder.encode(safeFilename, StandardCharsets.UTF_8)
+                + "&sessionId=" + URLEncoder.encode(sessionId, StandardCharsets.UTF_8);
 
         JSONObject json = new JSONObject();
-        json.put("responseCode",code);
-        if(code.equals("0000")) {
-            json.put("openUrl", openUrl);
-        }
+        json.put("responseCode", "0000");
+        json.put("openUrl", openUrl);
         return ResponseEntity.ok(json.toString());
     }
 
