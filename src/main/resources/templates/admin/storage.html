@@ -12,6 +12,21 @@
         // 문서 카운트는 페이지 로드 후 /admin/storage/count 로 비동기 로딩된다. (storage.js fetchCount)
         window.countList = [];
     </script>
+    <script th:inline="javascript">
+        window.deptCodes = /*[[${deptCodes}]]*/ [];
+        window.deptLabels = /*[[${deptLabels}]]*/ {};
+    </script>
+    <style>
+        /* dept(파티션) 탭 — 관리자 테마 */
+        .dept-tabs { display: flex; gap: 2px; margin-bottom: 18px; border-bottom: 1px solid var(--color-border); }
+        .dept-tab { position: relative; padding: 11px 24px; border: none; background: none; cursor: pointer;
+            font-size: 0.9375rem; font-weight: 600; color: var(--color-text-light);
+            transition: color var(--transition-fast); }
+        .dept-tab:hover { color: var(--color-primary); }
+        .dept-tab.active { color: var(--color-primary); }
+        .dept-tab.active::after { content: ''; position: absolute; left: 14px; right: 14px; bottom: -1px;
+            height: 2.5px; background: var(--color-primary); border-radius: 3px; }
+    </style>
 </head>
 
 <body>
@@ -139,6 +154,8 @@
             </header>
 
             <main class="page-body">
+                <div class="dept-tabs" id="deptTabs"></div>
+
                 <section class="stats-row">
                     <div class="stat-card">
                         <div class="stat-icon blue">

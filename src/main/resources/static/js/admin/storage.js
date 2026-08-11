@@ -118,6 +118,47 @@
         return adminId;
     }
 
+    // ── AI 파티션(dept) — 관리자는 전체 dept 접근 ────────────────
+    var deptCodes = Array.isArray(window.deptCodes) ? window.deptCodes.map(String) : [];
+    var deptLabels = (window.deptLabels && typeof window.deptLabels === "object") ? window.deptLabels : {};
+    var currentDept = deptCodes.length ? deptCodes[0] : "";
+
+    function deptLabelOf(c) { var l = deptLabels[c]; return (l && String(l).trim()) ? String(l) : String(c); }
+    // 모든 /admin/documents* 호출에 붙일 dept 쿼리 조각
+    function deptQS() { return currentDept ? "&dept=" + encodeURIComponent(currentDept) : ""; }
+
+    function renderDeptTabs() {
+        var box = document.getElementById("deptTabs");
+        if (!box) return;
+        if (deptCodes.length <= 1) { box.style.display = "none"; return; }
+        box.innerHTML = "";
+        deptCodes.forEach(function (code) {
+            var b = document.createElement("button");
+            b.type = "button";
+            b.className = "dept-tab" + (code === currentDept ? " active" : "");
+            b.textContent = deptLabelOf(code);
+            b.addEventListener("click", function () { switchDept(code); });
+            box.appendChild(b);
+        });
+    }
+
+    // 파티션 전환: 캐시/통계 초기화 후 해당 dept의 목록·통계 재로딩(검색모드 해제)
+    function switchDept(code) {
+        if (code === currentDept) return;
+        currentDept = code;
+        renderDeptTabs();
+        isSearchMode = false;
+        searchQuery = "";
+        if (dom.searchInput) dom.searchInput.value = "";
+        window.countList = [];
+        clearAllCaches();
+        resetPaging();
+        ui.pageBlockStart = 1;
+        currentPage = 1;
+        fetchListPage(1);
+        fetchCount();
+    }
+
     function pad2(n) {
         return String(n).padStart(2, "0");
     }
@@ -759,7 +800,7 @@
     function reloadProfanity() {
         var id = getAdminId();
         if (dom.btnReloadProfanity) dom.btnReloadProfanity.disabled = true;
-        fetch("/admin/profanity/reload?adminId=" + encodeURIComponent(id), { method: "POST" })
+        fetch("/admin/profanity/reload?adminId=" + encodeURIComponent(id) + deptQS(), { method: "POST" })
             .then(function (res) { return res.json().catch(function () { return {}; }); })
             .then(function (data) {
                 if (data && data.code === "0000") toast("금칙어 목록을 재로드했습니다.", "success");
@@ -774,7 +815,7 @@
     function fetchCount() {
         var id = getAdminId();
 
-        return fetch("/admin/documents/count?adminId=" + encodeURIComponent(id))
+        return fetch("/admin/documents/count?adminId=" + encodeURIComponent(id) + deptQS())
             .then(function (res) { return res.json(); })
             .then(function (json) {
                 // 신규 게이트웨이는 봉투일 수 있음: 배열이면 그대로, 아니면 data 배열 사용
@@ -866,7 +907,8 @@
             + "&page=" + encodeURIComponent(page)
             + "&size=" + encodeURIComponent(perPage)
             + "&orderType=" + encodeURIComponent(getOrderType())
-            + "&order=" + encodeURIComponent(sortOrder);
+            + "&order=" + encodeURIComponent(sortOrder)
+            + deptQS();
 
         return fetch("/admin/documents?" + qs)
             .then(function (res) {
@@ -927,7 +969,8 @@
             + "&page=" + encodeURIComponent(page)
             + "&size=" + encodeURIComponent(perPage)
             + "&orderType=" + encodeURIComponent(getOrderType())
-            + "&order=" + encodeURIComponent(sortOrder);
+            + "&order=" + encodeURIComponent(sortOrder)
+            + deptQS();
 
         return fetch("/admin/documents/search?" + qs)
             .then(function (res) {
@@ -1135,7 +1178,7 @@
         var id = getAdminId();
 
         // 신규 토글은 isUse를 반전(값 미전달). PATCH /admin/documents/{key}/toggle
-        fetch("/admin/documents/" + encodeURIComponent(key) + "/toggle?adminId=" + encodeURIComponent(id), { method: "PATCH" })
+        fetch("/admin/documents/" + encodeURIComponent(key) + "/toggle?adminId=" + encodeURIComponent(id) + deptQS(), { method: "PATCH" })
             .then(function (res) {
                 return res.json().catch(function () { return {}; });
             })
@@ -1165,7 +1208,7 @@
             showLoading(true);
             var id = getAdminId();
 
-            fetch("/admin/documents/" + encodeURIComponent(key) + "?adminId=" + encodeURIComponent(id), { method: "DELETE" })
+            fetch("/admin/documents/" + encodeURIComponent(key) + "?adminId=" + encodeURIComponent(id) + deptQS(), { method: "DELETE" })
                 .then(function (res) {
                     return res.json().catch(function () { return {}; });
                 })
@@ -1212,6 +1255,7 @@
             chain = chain.then(function () {
                 var formData = new FormData();
                 formData.append("adminId", id);
+                formData.append("dept", currentDept);
                 formData.append("file", file);
 
                 // key/adminName은 서버가 채움 (adminId+file만 전송)
@@ -1487,6 +1531,7 @@
 
         getAdminId();
 
+        renderDeptTabs();
         initDefaultSortOnLoad();
         bindEvents();
 

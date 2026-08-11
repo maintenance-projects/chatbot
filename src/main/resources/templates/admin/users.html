@@ -25,7 +25,8 @@
 
         /* dept 표시 명칭 편집기 */
         .dept-label-editor { display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-            padding: 13px 16px; margin-bottom: 18px; border-radius: var(--radius-md, 12px);
+            width: 700px; max-width: 100%; margin-left: 18px; margin-bottom: 18px;
+            padding: 13px 16px; border-radius: var(--radius-md, 12px);
             background: rgba(var(--primary-rgb), 0.045); border: 1px solid var(--color-border); }
         .dle-cap { font-size: 0.8125rem; font-weight: 700; color: var(--color-primary-dark); }
         .dept-label-editor .search-input { max-width: 240px; }
@@ -229,7 +230,6 @@
                         <input type="text" class="search-input" id="treeSearch" placeholder="이름 / 아이디 검색…">
                         <button class="btn btn-outline btn-sm" id="btnExpandAll" type="button">모두 펼치기</button>
                         <button class="btn btn-outline btn-sm" id="btnCollapseAll" type="button">모두 접기</button>
-                        <span style="flex:1"></span>
                         <span class="tsub" id="treeHint">조직·사용자에 체크하면 접근 권한이 부여됩니다 · 조직 부여는 하위 상속</span>
                     </div>
 

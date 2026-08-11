@@ -134,6 +134,8 @@ public class AdminLoginController {
         model.addAttribute("statistics", session.isAuthStatistics());
         model.addAttribute("master",session.isAuthMaster());
         model.addAttribute("sessionRemainingSeconds", sessionStore.getRemainingSeconds(sessionId));
+        model.addAttribute("deptCodes", deptProperties.getCodes());
+        model.addAttribute("deptLabels", deptLabelService.labels());
 
         return "admin/storage";
     }
