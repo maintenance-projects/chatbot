@@ -21,7 +21,8 @@ CREATE TABLE ai_usage_log (
     created_at    TIMESTAMP     NOT NULL,
     updated_at    TIMESTAMP     NOT NULL,
     CONSTRAINT pk_ai_usage_log PRIMARY KEY (log_id),
-    CONSTRAINT uk_ai_usage     UNIQUE (user_id, request_type, request_date)
+    -- 집계는 시간별(user,type,date,hour) 행 → 유니크키에 request_hour 포함(같은 날 여러 시간대 허용)
+    CONSTRAINT uk_ai_usage     UNIQUE (user_id, request_type, request_date, request_hour)
 )
 PARTITION BY RANGE (request_date) (
     -- ↓ 운영 시작 월로 조정 (예: 2026-07 오픈 → p202607, 경계값은 다음 달 1일)

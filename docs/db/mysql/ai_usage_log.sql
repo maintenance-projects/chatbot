@@ -22,7 +22,8 @@ CREATE TABLE ai_usage_log (
     created_at    DATETIME     NOT NULL,
     updated_at    DATETIME     NOT NULL,
     PRIMARY KEY (log_id, request_date),
-    UNIQUE KEY uk_ai_usage (user_id, request_type, request_date)
+    -- 집계는 시간별(user,type,date,hour) 행 → 유니크키에 request_hour 포함(같은 날 여러 시간대 허용)
+    UNIQUE KEY uk_ai_usage (user_id, request_type, request_date, request_hour)
 )
 ENGINE = InnoDB
 DEFAULT CHARSET = utf8mb4
