@@ -1,25 +1,25 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
-<!-- PKB 본문(헤더 제외) — 독립 화면(/mypkb)과 챗봇 임베드가 공유 -->
+<!-- PKB 본문(헤더 제외) — 독립 화면(/mypkb)과 챗봇 임베드가 공유. AI 챗봇과 동일 UI(색만 다름) -->
 <th:block th:fragment="content">
-    <!-- 상단 툴바 -->
-    <div class="p-toolbar">
-        <button class="p-btn" id="pIngestBtn" type="button">＋ 첨부파일 추가</button>
-        <input type="file" id="pFileInput" class="hidden" />
-        <button class="p-btn" id="pFilesBtn" type="button">📁 내 파일</button>
-        <span class="p-ingest" id="pIngestStatus"></span>
-    </div>
-
     <!-- 대화방(검색 Q&A) -->
     <div class="p-chat" id="pChat">
         <div class="p-hello" id="pHello">첨부파일에 대해 물어보세요.<br />예) "지난주 받은 계약서 요약해줘"</div>
     </div>
 
-    <!-- 하단 검색 입력 -->
-    <div class="p-inputbar">
-        <input class="p-inp grow" id="pSearchInput" type="text" placeholder="검색어를 입력하세요" />
-        <button class="p-btn primary" id="pSearchBtn" type="button">검색</button>
+    <!-- 하단 입력(＋도구메뉴 + 검색입력 + 검색) -->
+    <div class="p-footer">
+        <div class="p-inputwrap">
+            <button class="p-plus" id="pPlusBtn" type="button" aria-label="추가">＋</button>
+            <div class="p-menu" id="pMenu" aria-hidden="true">
+                <button class="p-menu__item" id="pIngestBtn" type="button">＋ 첨부파일 추가 (AI 분석)</button>
+                <button class="p-menu__item" id="pFilesBtn" type="button">📁 내 파일</button>
+            </div>
+            <input type="file" id="pFileInput" class="hidden" />
+            <input class="p-inp grow" id="pSearchInput" type="text" placeholder="검색어를 입력하세요" />
+            <button class="p-send" id="pSearchBtn" type="button">검색</button>
+        </div>
     </div>
 
     <!-- 내 파일 목록 패널(오버레이) -->

@@ -15,9 +15,10 @@ document.addEventListener("DOMContentLoaded", function () {
         hello: document.getElementById("pHello"),
         searchInput: document.getElementById("pSearchInput"),
         searchBtn: document.getElementById("pSearchBtn"),
+        plusBtn: document.getElementById("pPlusBtn"),
+        menu: document.getElementById("pMenu"),
         ingestBtn: document.getElementById("pIngestBtn"),
         fileInput: document.getElementById("pFileInput"),
-        ingestStatus: document.getElementById("pIngestStatus"),
         filesBtn: document.getElementById("pFilesBtn"),
         filesPanel: document.getElementById("pFilesPanel"),
         filesClose: document.getElementById("pFilesClose"),
@@ -260,7 +261,9 @@ document.addEventListener("DOMContentLoaded", function () {
     function ingest(file) {
         if (!file || busy) return;
         busy = true;
-        dom.ingestStatus.textContent = "업로드·분석 중: " + file.name;
+        if (dom.hello) dom.hello.style.display = "none";
+        var statusEl = addAiMsg();
+        statusEl.textContent = "업로드·분석 중: " + file.name;
 
         var fd = new FormData();
         fd.append("sender", ownerId);
@@ -272,32 +275,42 @@ document.addEventListener("DOMContentLoaded", function () {
             { method: "POST", headers: { Accept: "text/event-stream" }, body: fd, credentials: "same-origin" },
             {
                 onProgress: function (msg, percent) {
-                    dom.ingestStatus.textContent = (typeof percent !== "undefined" ? percent + "% " : "") + (msg || "분석 중…");
+                    statusEl.textContent = (typeof percent !== "undefined" ? percent + "% " : "") + (msg || "분석 중…");
+                    scrollChat();
                 },
                 onEvent: function (type, obj) {
                     if (type === "enrichment") {
                         var d = obj.data || {};
-                        dom.ingestStatus.textContent = "분석 완료: " + (d.ai_summary ? String(d.ai_summary).slice(0, 60) : file.name);
+                        statusEl.textContent = "분석 완료: " + (d.ai_summary ? String(d.ai_summary).slice(0, 60) : file.name);
                     }
                 },
-                onError: function (detail) { dom.ingestStatus.textContent = "오류: " + detail; },
+                onError: function (detail) { statusEl.textContent = "오류: " + detail; },
                 onDone: function () {
-                    dom.ingestStatus.textContent = "인덱싱 완료: " + file.name;
+                    statusEl.textContent = "인덱싱 완료: " + file.name;
                     if (dom.filesPanel.classList.contains("open")) loadFiles();
                 },
             }
         ).catch(function (err) {
-            dom.ingestStatus.textContent = "실패: " + (err && err.message ? err.message : "");
+            statusEl.textContent = "실패: " + (err && err.message ? err.message : "");
         }).finally(function () { busy = false; });
     }
 
     // ── 이벤트 바인딩 ─────────────────────────────────────────
-    dom.ingestBtn.addEventListener("click", function () { dom.fileInput.click(); });
+    function toggleMenu(open) {
+        var willOpen = (open === undefined) ? !dom.menu.classList.contains("open") : open;
+        dom.menu.classList.toggle("open", willOpen);
+        dom.menu.setAttribute("aria-hidden", willOpen ? "false" : "true");
+    }
+    dom.plusBtn.addEventListener("click", function (e) { e.stopPropagation(); toggleMenu(); });
+    document.addEventListener("click", function (e) {
+        if (dom.menu.classList.contains("open") && !dom.menu.contains(e.target) && e.target !== dom.plusBtn) toggleMenu(false);
+    });
+    dom.ingestBtn.addEventListener("click", function () { toggleMenu(false); dom.fileInput.click(); });
     dom.fileInput.addEventListener("change", function () {
         if (dom.fileInput.files && dom.fileInput.files[0]) ingest(dom.fileInput.files[0]);
         dom.fileInput.value = "";
     });
-    dom.filesBtn.addEventListener("click", openFiles);
+    dom.filesBtn.addEventListener("click", function () { toggleMenu(false); openFiles(); });
     dom.filesClose.addEventListener("click", closeFiles);
     dom.applyFilter.addEventListener("click", loadFiles);
     dom.refresh.addEventListener("click", loadFiles);

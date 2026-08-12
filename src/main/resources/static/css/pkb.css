@@ -1,51 +1,60 @@
-/* PKB(AI 첨부파일 검색) 공통 스타일 — 독립 화면(/mypkb)과 챗봇 임베드가 공유 */
+/* PKB(AI 첨부파일 검색) — AI 챗봇과 동일 UI, 구분은 색상(보라 accent)만 */
 :root {
-    --p-bg: #f4f5f7; --p-panel: #fff; --p-line: #e5e7eb; --p-primary: #6d28d9;
-    --p-text: #1f2937; --p-sub: #6b7280; --p-chip: #ede9fe; --p-ai-bg: #f1f5f9;
+    --p-bg: #f4f5f7; --p-panel: #fff; --p-line: rgba(15, 23, 42, 0.1); --p-primary: #6d28d9;
+    --p-text: #0f172a; --p-sub: #6b7280; --p-chip: #ede9fe; --p-ai-bg: #f1f5f9;
 }
 .p-shell * { box-sizing: border-box; }
 
-/* 셸: 세로 flex로 컨테이너 꽉 채움(툴바 / 대화방 / 입력바) */
+/* 셸: 세로 flex(대화방 / 입력바) */
 .p-shell {
     display: flex; flex-direction: column; position: relative; overflow: hidden;
     background: var(--p-panel); color: var(--p-text);
     font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
 }
 
-/* 상단 툴바 */
-.p-toolbar { flex: 0 0 auto; display: flex; align-items: center; gap: 8px;
-    padding: 10px 14px; border-bottom: 1px solid var(--p-line); }
-.p-ingest { font-size: 11px; color: var(--p-sub); flex: 1 1 auto; min-width: 0;
-    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* 대화방(챗봇 .cb-body와 동일) */
+.p-chat { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 16px;
+    display: flex; flex-direction: column; gap: 10px; background: #f8fafc; }
+.p-hello { margin: auto; color: var(--p-sub); font-size: 12px; text-align: center; line-height: 1.6; }
 
-/* 대화방(검색 Q&A) */
-.p-chat { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 14px;
-    display: flex; flex-direction: column; gap: 10px; background: var(--p-bg); }
-.p-hello { margin: auto; color: var(--p-sub); font-size: 13px; text-align: center; line-height: 1.6; }
-.p-msg { max-width: 90%; padding: 9px 12px; border-radius: 12px; font-size: 13px;
-    line-height: 1.55; word-break: break-word; }
-.p-msg--user { align-self: flex-end; background: var(--p-primary); color: #fff; border-bottom-right-radius: 4px; }
-.p-msg--ai { align-self: flex-start; background: var(--p-ai-bg); color: var(--p-text); border-bottom-left-radius: 4px; }
+/* 말풍선(챗봇 .cb-bubble과 동일 형태, user=보라) */
+.p-msg { max-width: 82%; padding: 11px 13px; border: 1px solid var(--p-line);
+    border-radius: 16px; font-size: 12px; line-height: 1.55; word-break: break-word; }
+.p-msg--ai { align-self: flex-start; background: var(--p-ai-bg); color: var(--p-text); border-top-left-radius: 6px; }
+.p-msg--user { align-self: flex-end; background: var(--p-primary); color: #fff;
+    border-color: rgba(255, 255, 255, 0.08); border-top-right-radius: 6px; }
 .p-msg--ai p { margin: 0 0 6px; }
 .p-msg--ai p:last-child { margin-bottom: 0; }
 .p-msg .p-analysis { font-size: 11px; color: var(--p-sub); margin-bottom: 6px; }
 .p-msg .p-refs { margin-top: 8px; font-size: 11px; color: var(--p-sub); }
 .p-msg .p-sub-title { font-size: 12px; font-weight: 700; color: var(--p-sub); margin: 10px 0 4px; }
 
-/* 하단 입력바(챗봇형) */
-.p-inputbar { flex: 0 0 auto; display: flex; align-items: center; gap: 8px;
-    padding: 10px 14px; border-top: 1px solid var(--p-line); background: #fff; }
+/* 하단 입력(챗봇 pill과 동일: ＋도구메뉴 + 입력 + send) */
+.p-footer { flex: 0 0 auto; padding: 12px 14px; border-top: 1px solid var(--p-line); background: #fff; }
+.p-inputwrap { display: flex; align-items: center; gap: 6px; position: relative;
+    border: 1px solid var(--p-line); background: #fff; border-radius: 25px; padding: 6px 8px; }
+.p-plus { flex: 0 0 auto; width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--p-line);
+    background: #fff; color: var(--p-primary); font-size: 18px; cursor: pointer; display: grid; place-items: center; }
+.p-menu { position: absolute; bottom: calc(100% + 8px); left: 0; min-width: 190px;
+    background: #fff; border: 1px solid var(--p-line); border-radius: 12px; box-shadow: 0 8px 24px rgba(2, 6, 23, 0.18);
+    padding: 6px; display: none; flex-direction: column; gap: 2px; z-index: 20; }
+.p-menu.open { display: flex; }
+.p-menu__item { text-align: left; border: none; background: none; padding: 8px 10px; border-radius: 8px;
+    font-size: 13px; cursor: pointer; color: var(--p-text); }
+.p-menu__item:hover { background: var(--p-bg); }
+.p-inp.grow { flex: 1 1 auto; min-width: 0; border: 0; outline: 0; background: transparent;
+    padding: 4px 6px; font-size: 13px; color: var(--p-text); }
+.p-send { flex: 0 0 auto; border: 0; border-radius: 16px; color: #fff; background: var(--p-primary);
+    cursor: pointer; padding: 8px 15px; font-size: 12px; }
+.p-send:disabled { opacity: .5; cursor: not-allowed; }
 
-/* 공통 버튼/인풋 */
+/* 공통 버튼/인풋(파일 패널용) */
 .p-btn { font-size: 13px; padding: 7px 12px; border-radius: 8px; border: 1px solid var(--p-line);
     background: #fff; cursor: pointer; white-space: nowrap; }
-.p-btn.primary { background: var(--p-primary); color: #fff; border-color: var(--p-primary); }
-.p-btn:disabled { opacity: .5; cursor: not-allowed; }
 .p-inp { font-size: 13px; padding: 8px 10px; border: 1px solid var(--p-line); border-radius: 8px; }
-.p-inp.grow { flex: 1 1 auto; min-width: 0; }
 
 /* 내 파일 목록 패널(오버레이) */
-.p-files { position: absolute; inset: 0; background: var(--p-panel); z-index: 6;
+.p-files { position: absolute; inset: 0; background: var(--p-panel); z-index: 30;
     display: none; flex-direction: column; }
 .p-files.open { display: flex; }
 .p-files__head { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between;
@@ -62,7 +71,7 @@
 .p-card { border: 1px solid var(--p-line); border-radius: 10px; padding: 12px; background: #fff; }
 .p-card .name { font-size: 13px; font-weight: 700; margin-bottom: 4px; word-break: break-all; }
 .p-card .sum { font-size: 12px; color: var(--p-sub); line-height: 1.45; max-height: 54px; overflow: hidden; }
-.p-card .meta { font-size: 11px; color: var(--p-sub); margin-top: 6px; }
+.p-card .meta { font-size: 11px; color: var(--p-sub); margin-top: 6px; line-height: 1.5; }
 .p-tags { margin-top: 6px; display: flex; flex-wrap: wrap; gap: 4px; }
 .p-tag { font-size: 11px; background: var(--p-chip); color: var(--p-primary); padding: 2px 7px; border-radius: 10px; }
 .p-card .acts { margin-top: 8px; display: flex; gap: 6px; }
