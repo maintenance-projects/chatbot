@@ -176,9 +176,18 @@ document.addEventListener("DOMContentLoaded", function () {
             if (state.analysis) html += '<div class="p-analysis">' + esc(state.analysis) + "</div>";
             if (state.answer) html += md(state.answer);
             if (state.refs.length) {
-                html += '<div class="p-refs">참조: ' + state.refs.map(function (d) {
-                    return esc(nameOf(d)) + (d.page != null ? (" p." + esc(d.page)) : "");
-                }).join(", ") + "</div>";
+                // 같은 파일의 여러 청크가 참조로 오므로 파일 단위로 중복 제거(페이지는 모아 표시)
+                var byName = {}, order = [];
+                state.refs.forEach(function (d) {
+                    var nm = nameOf(d);
+                    if (!byName[nm]) { byName[nm] = []; order.push(nm); }
+                    if (d.page != null && byName[nm].indexOf(d.page) < 0) byName[nm].push(d.page);
+                });
+                var refStr = order.map(function (nm) {
+                    var pages = byName[nm];
+                    return esc(nm) + (pages.length ? (" p." + pages.map(esc).join(",")) : "");
+                }).join(", ");
+                html += '<div class="p-refs">참조: ' + refStr + "</div>";
             }
             if (state.extraHtml) html += state.extraHtml;
             bubble.innerHTML = html || '<div class="p-analysis">검색 중…</div>';
