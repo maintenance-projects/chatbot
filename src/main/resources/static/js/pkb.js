@@ -530,9 +530,8 @@ document.addEventListener("DOMContentLoaded", function () {
     // ── 헤더 도구: 이용안내 / 인쇄 / 대화검색 (PKB 영역 대상) ──
     // 이용 안내
     if (dom.pkbGuideBtn && dom.guide) {
-        dom.pkbGuideBtn.addEventListener("click", function () { dom.guide.classList.add("open"); });
+        dom.pkbGuideBtn.addEventListener("click", function () { dom.guide.classList.toggle("open"); });
         dom.guideClose.addEventListener("click", function () { dom.guide.classList.remove("open"); });
-        dom.guide.addEventListener("click", function (e) { if (e.target === dom.guide) dom.guide.classList.remove("open"); });
     }
 
     // 인쇄 — PKB 대화창(p-chat) 내용을 새 창에 담아 인쇄
