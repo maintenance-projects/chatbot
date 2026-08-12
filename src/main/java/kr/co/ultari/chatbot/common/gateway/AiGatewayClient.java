@@ -13,6 +13,8 @@ import org.springframework.web.reactive.function.client.WebClient;
 import reactor.core.publisher.Flux;
 import reactor.netty.http.client.HttpClient;
 
+import java.net.URI;
+
 /**
  * AI 서버(게이트웨이) 호출을 단일 지점에서 담당한다.
  * <p>모든 URL은 {@code baseUrl + "/" + dept + path} 규칙으로 조립된다.
@@ -52,7 +54,7 @@ public class AiGatewayClient {
         String uri = url(dept, path);
         log.debug("gateway stream POST {}", uri);
         return webClient.post()
-                .uri(uri)
+                .uri(URI.create(uri))
                 .contentType(MediaType.MULTIPART_FORM_DATA)
                 .accept(MediaType.TEXT_EVENT_STREAM)
                 .header(HttpHeaders.CACHE_CONTROL, "no-cache")
@@ -66,7 +68,7 @@ public class AiGatewayClient {
         String uri = url(dept, path);
         log.debug("gateway POST {}", uri);
         return webClient.post()
-                .uri(uri)
+                .uri(URI.create(uri))
                 .contentType(MediaType.MULTIPART_FORM_DATA)
                 .body(BodyInserters.fromMultipartData(body.build()))
                 .exchangeToMono(resp -> resp.toEntity(String.class))
@@ -78,7 +80,7 @@ public class AiGatewayClient {
         String uri = url(dept, path);
         log.debug("gateway POST(no-body) {}", uri);
         return webClient.post()
-                .uri(uri)
+                .uri(URI.create(uri))
                 .exchangeToMono(resp -> resp.toEntity(String.class))
                 .block();
     }
@@ -88,7 +90,7 @@ public class AiGatewayClient {
         String uri = url(dept, path);
         log.debug("gateway GET {}", uri);
         return webClient.get()
-                .uri(uri)
+                .uri(URI.create(uri))
                 .exchangeToMono(resp -> resp.toEntity(String.class))
                 .block();
     }
@@ -98,7 +100,7 @@ public class AiGatewayClient {
         String uri = url(dept, path);
         log.debug("gateway DELETE {}", uri);
         return webClient.delete()
-                .uri(uri)
+                .uri(URI.create(uri))
                 .exchangeToMono(resp -> resp.toEntity(String.class))
                 .block();
     }
@@ -108,7 +110,7 @@ public class AiGatewayClient {
         String uri = url(dept, path);
         log.debug("gateway PATCH {}", uri);
         return webClient.patch()
-                .uri(uri)
+                .uri(URI.create(uri))
                 .exchangeToMono(resp -> resp.toEntity(String.class))
                 .block();
     }
@@ -118,7 +120,7 @@ public class AiGatewayClient {
         String uri = url(dept, path);
         log.debug("gateway GET(binary) {}", uri);
         return webClient.get()
-                .uri(uri)
+                .uri(URI.create(uri))
                 .exchangeToMono(resp -> resp.toEntity(byte[].class))
                 .block();
     }
