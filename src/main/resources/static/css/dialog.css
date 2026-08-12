@@ -735,37 +735,50 @@ textarea {
     border: 2px solid #fff;
 }
 
-/* 모드 탭(AI 챗봇 / AI 첨부파일 검색) — 헤더(#3d8def)와 어울리는 파랑 바 */
+/* 모드 탭 — 서류(폴더) 탭. 활성 탭이 위로 올라와 헤더 색과 이어짐 */
 .cb-modetabs {
     flex: 0 0 auto;
     display: flex;
-    gap: 6px;
-    padding: 8px 12px;
-    background: #3d8def;
+    align-items: flex-end;
+    gap: 4px;
+    padding: 7px 10px 0;   /* 하단 0 → 활성 탭이 헤더에 맞닿아 이어짐 */
+    background: #fff;
 }
 
 .cb-modetab {
     flex: 1 1 auto;
-    padding: 7px 12px;
-    border: 1px solid rgba(255, 255, 255, 0.35);
-    background: rgba(255, 255, 255, 0.15);
-    color: rgba(255, 255, 255, 0.9);
-    border-radius: 8px;
+    margin-top: 4px;       /* 비활성: 살짝 내려앉은(뒤) 탭 */
+    padding: 9px 12px 11px;
+    border: 0;
+    background: #eaeef3;
+    color: var(--cb-subtext);
+    border-radius: 10px 10px 0 0;
     font-size: 13px;
-    font-weight: 600;
+    font-weight: 700;
     cursor: pointer;
-    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+    transition: background 0.18s ease, color 0.18s ease, margin-top 0.15s ease;
 }
 
 .cb-modetab:hover {
-    background: rgba(255, 255, 255, 0.25);
+    background: #dfe5ec;
+}
+
+/* 활성 탭: 위로 올라오고, 헤더와 같은 색으로 이어짐(챗봇=파랑) */
+.cb-modetab.is-active {
+    margin-top: 0;
+    background: #3d8def;
     color: #fff;
 }
 
-.cb-modetab.is-active {
-    background: #fff;
-    color: #3d8def;
-    border-color: #fff;
+/* 헤더 색: 챗봇=파랑(기본), 첨부파일검색=보라. 활성 탭도 헤더 색을 따라감 */
+.cb-header {
+    transition: background 0.18s ease;
+}
+.cb-widget.is-pkb-mode .cb-header {
+    background: #6d28d9;
+}
+.cb-widget.is-pkb-mode .cb-modetab.is-active {
+    background: #6d28d9;
 }
 
 /* '내 지식함'(AI 첨부파일 검색) pane — PKB 네이티브 임베드 */
