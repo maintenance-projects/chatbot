@@ -226,6 +226,8 @@ document.addEventListener("DOMContentLoaded", function () {
         items.forEach(function (it) {
             var hash = hashOf(it);
             var when = fmtTime(timeOf(it));
+            // 보낸이: 내가 올린 파일(sender==접속 아이디)은 "나", 그 외엔 아이디
+            var senderLabel = it.sender ? (String(it.sender) === ownerId ? "나" : esc(it.sender)) : "";
             var card = document.createElement("div");
             card.className = "p-card";
             card.innerHTML =
@@ -233,7 +235,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 '<div class="sum">' + esc(summaryOf(it)) + "</div>" +
                 renderTags(tagsOf(it)) +
                 '<div class="meta">' +
-                (it.sender ? ("보낸이: " + esc(it.sender) + "<br>") : "") +
+                (senderLabel ? ("보낸이: " + senderLabel + "<br>") : "") +
                 (when ? esc(when) : "") + "</div>" +
                 '<div class="acts">' +
                 '<button data-act="detail">상세</button>' +
