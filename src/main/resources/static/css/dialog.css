@@ -735,6 +735,64 @@ textarea {
     border: 2px solid #fff;
 }
 
+/* 모드 탭(챗봇 / 내 지식함) */
+.cb-modetabs {
+    flex: 0 0 auto;
+    display: flex;
+    gap: 6px;
+    padding: 8px 14px;
+    background: var(--cb-bg);
+    border-bottom: 1px solid var(--cb-line);
+}
+
+.cb-modetab {
+    flex: 1 1 auto;
+    padding: 8px 12px;
+    border: 1px solid var(--cb-line);
+    background: #f8fafc;
+    color: var(--cb-subtext);
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.cb-modetab:hover {
+    color: var(--cb-user);
+}
+
+.cb-modetab.is-active {
+    background: var(--cb-user);
+    color: #fff;
+    border-color: var(--cb-user);
+}
+
+/* '내 지식함' pane (PKB iframe) */
+.cb-pkb {
+    flex: 1 1 auto;
+    min-height: 0;
+    display: none;
+}
+
+.cb-pkb__frame {
+    width: 100%;
+    height: 100%;
+    border: 0;
+    display: block;
+}
+
+/* PKB 모드: 챗봇 요소 숨기고 PKB pane 표시 */
+.cb-widget.is-pkb-mode .cb-searchbar,
+.cb-widget.is-pkb-mode .cb-body,
+.cb-widget.is-pkb-mode .cb-footer {
+    display: none;
+}
+
+.cb-widget.is-pkb-mode .cb-pkb {
+    display: block;
+}
+
 .cb-inputwrap {
     min-height: 88px;
     display: grid;

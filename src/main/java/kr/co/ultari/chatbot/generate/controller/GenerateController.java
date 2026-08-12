@@ -93,6 +93,7 @@ public class GenerateController {
         model.addAttribute("menuDocs", menuProperties.isDocs());
         model.addAttribute("menuTemplate", menuProperties.isTemplate());
         model.addAttribute("menuTranslate", menuProperties.isTranslate());
+        model.addAttribute("menuPkb", menuProperties.isPkb());
         return "dialog";
     }
 

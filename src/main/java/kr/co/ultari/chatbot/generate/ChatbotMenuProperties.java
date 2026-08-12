@@ -32,4 +32,7 @@ public class ChatbotMenuProperties {
 
     /** 번역 버튼 노출 */
     private boolean translate = true;
+
+    /** '내 지식함'(PKB) 탭 노출 */
+    private boolean pkb = true;
 }

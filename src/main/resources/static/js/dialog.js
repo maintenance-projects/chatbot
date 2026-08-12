@@ -187,6 +187,28 @@ document.addEventListener("DOMContentLoaded", () => {
             .catch(() => {});
     })();
 
+    // 모드 탭(챗봇 / 내 지식함=PKB). PKB는 /mypkb/{userId} iframe을 최초 진입 시 1회 로드.
+    (function initModeTabs() {
+        const tabs = document.getElementById("cbModeTabs");
+        const frame = document.getElementById("cbPkbFrame");
+        if (!tabs || !widget) return;
+        tabs.addEventListener("click", (e) => {
+            const btn = e.target.closest(".cb-modetab");
+            if (!btn) return;
+            const mode = btn.getAttribute("data-mode");
+            tabs.querySelectorAll(".cb-modetab").forEach((t) => t.classList.toggle("is-active", t === btn));
+            if (mode === "pkb") {
+                if (frame && frame.getAttribute("data-loaded") !== "1") {
+                    frame.src = "/mypkb/" + encodeURIComponent(window.sessionId || "");
+                    frame.setAttribute("data-loaded", "1");
+                }
+                widget.classList.add("is-pkb-mode");
+            } else {
+                widget.classList.remove("is-pkb-mode");
+            }
+        });
+    })();
+
     let isResearchMode = false;
     let researchTag = null;
 

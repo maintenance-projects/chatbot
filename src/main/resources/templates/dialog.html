@@ -76,6 +76,11 @@
                     </div>
                 </header>
 
+                <nav class="cb-modetabs" id="cbModeTabs" th:if="${menuPkb}">
+                    <button class="cb-modetab is-active" type="button" data-mode="chat">챗봇</button>
+                    <button class="cb-modetab" type="button" data-mode="pkb">내 지식함</button>
+                </nav>
+
                 <div class="cb-searchbar" id="cbSearchBar" aria-hidden="true">
                     <div class="cb-searchbar__inner">
                         <input class="cb-searchbar__input" id="cbSearchInput" type="text" placeholder="대화에서 검색"
@@ -297,6 +302,10 @@
                         <div class="cb-tray__body" id="cbTplTrayBody" data-render="tpl"></div>
                     </section>
                 </footer>
+
+                <section class="cb-pkb" id="cbPkbPane" aria-hidden="true" th:if="${menuPkb}">
+                    <iframe class="cb-pkb__frame" id="cbPkbFrame" title="내 지식함" data-loaded="0"></iframe>
+                </section>
             </aside>
 
             <section class="cb-viewer" id="cbViewer" aria-hidden="true">
