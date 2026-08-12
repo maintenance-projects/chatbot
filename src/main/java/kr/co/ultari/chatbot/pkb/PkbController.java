@@ -32,6 +32,12 @@ public class PkbController {
         return service.ingest(ownerId, sender, roomName, receivedAt, attachFileName, file);
     }
 
+    /** PKB 첨부파일 보관일수(PKB_DOC_TTL) 조회 */
+    @GetMapping("/ttl")
+    public ResponseEntity<String> ttl(@PathVariable String ownerId) {
+        return GatewayForward.json(service.ttl());
+    }
+
     /** 8.2 내 파일 목록 조회 */
     @GetMapping("/files")
     public ResponseEntity<String> files(@PathVariable String ownerId,

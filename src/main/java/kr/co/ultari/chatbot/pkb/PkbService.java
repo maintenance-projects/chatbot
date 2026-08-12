@@ -47,6 +47,11 @@ public class PkbService {
         return sseRelay.relay(() -> gateway.stream(null, "/pkb/" + seg(ownerId) + "/ingest", b));
     }
 
+    /** PKB 첨부파일 보관일수(PKB_DOC_TTL, 일) 조회 — 소유자 무관, dept-less */
+    public ResponseEntity<String> ttl() {
+        return gateway.get(null, "/admin/ttl");
+    }
+
     /** 8.2 내 파일 목록 조회 (JSON) */
     public ResponseEntity<String> files(String ownerId, String category, String tag) {
         StringBuilder path = new StringBuilder("/pkb/").append(seg(ownerId)).append("/files");

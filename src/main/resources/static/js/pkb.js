@@ -21,6 +21,7 @@ document.addEventListener("DOMContentLoaded", function () {
         filesBtn: document.getElementById("pFilesBtn"),
         filesPanel: document.getElementById("pFilesPanel"),
         filesClose: document.getElementById("pFilesClose"),
+        filesNote: document.getElementById("pFilesNote"),
         filterCategory: document.getElementById("pFilterCategory"),
         filterTag: document.getElementById("pFilterTag"),
         applyFilter: document.getElementById("pApplyFilter"),
@@ -40,6 +41,7 @@ document.addEventListener("DOMContentLoaded", function () {
     if (!dom.chat || !ownerId) return;
 
     var busy = false;
+    var ttlDays = null; // 첨부파일 보관일수(PKB_DOC_TTL)
 
     function esc(s) {
         return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
@@ -71,6 +73,43 @@ document.addEventListener("DOMContentLoaded", function () {
         var p = function (x) { return String(x).padStart(2, "0"); };
         return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) + " " +
             p(d.getHours()) + ":" + p(d.getMinutes()) + ":" + p(d.getSeconds());
+    }
+
+    // 시각값(epoch 초/ms 또는 날짜문자열) → 초 단위
+    function toEpochSec(v) {
+        if (v == null || v === "") return null;
+        if (typeof v === "number" || /^\d+(\.\d+)?$/.test(String(v))) {
+            var n = Number(v);
+            if (String(Math.trunc(n)).length > 10) n = n / 1000; // ms→초
+            return n;
+        }
+        var d = new Date(v);
+        return isNaN(d.getTime()) ? null : d.getTime() / 1000;
+    }
+    // 남은 보관 일수(보관일수 TTL - 경과). ttlDays/시각 없으면 null
+    function remainDays(o) {
+        if (ttlDays == null) return null;
+        var sec = toEpochSec(timeOf(o));
+        if (sec == null) return null;
+        return Math.ceil((sec + ttlDays * 86400 - Date.now() / 1000) / 86400);
+    }
+    function updateTtlNote() {
+        if (dom.filesNote && ttlDays != null) {
+            dom.filesNote.textContent = "첨부파일은 업로드 후 " + ttlDays + "일간 보관되며, 이후 자동 삭제됩니다.";
+            dom.filesNote.hidden = false;
+        }
+    }
+    function fetchTtl() {
+        fetch(base + "/ttl", { credentials: "same-origin" })
+            .then(function (r) { return r.json(); })
+            .then(function (j) {
+                if (j && j.PKB_DOC_TTL != null) {
+                    ttlDays = Number(j.PKB_DOC_TTL);
+                    updateTtlNote();
+                    if (dom.filesPanel.classList.contains("open")) loadFiles();
+                }
+            })
+            .catch(function () {});
     }
 
     function normalizeList(json) {
@@ -242,6 +281,12 @@ document.addEventListener("DOMContentLoaded", function () {
             var when = fmtTime(timeOf(it));
             // 보낸이: 내가 올린 파일(sender==접속 아이디)은 "나", 그 외엔 아이디
             var senderLabel = it.sender ? (String(it.sender) === ownerId ? "나" : esc(it.sender)) : "";
+            // 남은 보관 일수
+            var rem = remainDays(it), remHtml = "";
+            if (rem != null) {
+                if (rem <= 0) remHtml = '<span class="p-remain expired">보관 만료(삭제 예정)</span>';
+                else remHtml = '<span class="p-remain' + (rem <= 3 ? " soon" : "") + '">' + rem + "일 남음</span>";
+            }
             var card = document.createElement("div");
             card.className = "p-card";
             card.innerHTML =
@@ -251,6 +296,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 '<div class="meta">' +
                 (senderLabel ? ("보낸이: " + senderLabel + "<br>") : "") +
                 (when ? esc(when) : "") + "</div>" +
+                remHtml +
                 '<div class="acts">' +
                 '<button data-act="detail">상세</button>' +
                 '<button data-act="delete">삭제</button>' +
@@ -449,4 +495,7 @@ document.addEventListener("DOMContentLoaded", function () {
         '안녕하세요! 업로드한 첨부파일을 AI가 분석·검색해 드립니다.<br>' +
         '· 하단 입력창에 자연어로 물어보세요. 예) "지난주 받은 계약서 요약해줘"<br>' +
         '· <b>＋</b> 버튼으로 첨부파일을 추가하거나 <b>내 파일</b> 목록을 볼 수 있어요.';
+
+    // 첨부파일 보관일수(TTL) 조회 — 내 파일 안내/남은일수 표시용
+    fetchTtl();
 });
