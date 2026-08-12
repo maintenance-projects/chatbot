@@ -30,6 +30,10 @@
     <main class="cb-page">
         <section class="cb-shell" id="cbShell" aria-label="챗봇 상담">
             <aside class="cb-widget is-open" id="cbWidget" aria-hidden="false">
+                <nav class="cb-modetabs" id="cbModeTabs" th:if="${menuPkb}">
+                    <button class="cb-modetab is-active" type="button" data-mode="chat">AI 챗봇</button>
+                    <button class="cb-modetab" type="button" data-mode="pkb">AI 첨부파일 검색</button>
+                </nav>
                 <header class="cb-header">
                     <div class="cb-header__left">
                         <div class="cb-brand">
@@ -78,11 +82,6 @@
                         </button>
                     </div>
                 </header>
-
-                <nav class="cb-modetabs" id="cbModeTabs" th:if="${menuPkb}">
-                    <button class="cb-modetab is-active" type="button" data-mode="chat">AI 챗봇</button>
-                    <button class="cb-modetab" type="button" data-mode="pkb">AI 첨부파일 검색</button>
-                </nav>
 
                 <div class="cb-searchbar" id="cbSearchBar" aria-hidden="true">
                     <div class="cb-searchbar__inner">
