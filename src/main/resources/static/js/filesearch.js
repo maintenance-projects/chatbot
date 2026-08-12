@@ -109,6 +109,8 @@ document.addEventListener("DOMContentLoaded", function () {
         fd.append("attachFile_bin", file);
         fd.append("attachFile_name", file.name || "");
 
+        var hadError = false; // 오류 이벤트 뒤에도 done이 오므로, 완료 표시로 덮지 않기 위한 가드
+
         window.SseClient.stream(
             base + "/upload" + idPath,
             { method: "POST", headers: { Accept: "text/event-stream" }, body: fd, credentials: "same-origin" },
@@ -116,8 +118,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 onProgress: function (msg, percent) {
                     prog.textContent = (typeof percent !== "undefined" ? percent + "% " : "") + (msg || "인덱싱 중…");
                 },
-                onError: function (detail) { prog.textContent = "오류: " + detail; },
+                onError: function (detail) { hadError = true; prog.textContent = "오류: " + detail; },
                 onDone: function () {
+                    if (hadError) return;
                     prog.textContent = "인덱싱 완료: " + file.name;
                     loadFiles();
                 },

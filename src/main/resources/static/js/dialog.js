@@ -1084,6 +1084,7 @@ document.addEventListener("DOMContentLoaded", () => {
         handlers = handlers || {};
         let firstDone = false;
         let doneFired = false;
+        let errorDetail = null;   // 게이트웨이 error 이벤트 감지(오류를 완료로 오처리 방지)
 
         function firstToken() {
             if (firstDone) return;
@@ -1093,6 +1094,8 @@ document.addEventListener("DOMContentLoaded", () => {
         function fireDone(payload) {
             if (doneFired) return;
             doneFired = true;
+            // 오류로 종료된 경우 onDone(완료 처리)을 실행하지 않는다(error 뒤에도 done/스트림종료가 옴)
+            if (errorDetail != null) return;
             if (typeof handlers.onDone === "function") handlers.onDone(payload);
         }
 
@@ -1134,9 +1137,16 @@ document.addEventListener("DOMContentLoaded", () => {
                 else if (obj.type === "done") msg = String(obj.message || "");
                 else msg = JSON.stringify(obj);   // stage/done data 객체 → JSON 문자열(양식 다운로드 정보)
                 fireDone(msg);
+            },
+            onError: function (detail) {
+                // 게이트웨이 오류를 완료로 오처리하지 않도록 기록하고, 스트림 종료 후 reject 시킨다.
+                errorDetail = String(detail || "").trim() || "AI 서버 처리 중 오류가 발생했습니다.";
+                if (typeof handlers.onError === "function") handlers.onError(errorDetail);
             }
-            // onError: 구 동작 보존을 위해 미매핑(SSE error 이벤트는 렌더하지 않음)
         });
+
+        // 오류로 끝났으면 호출부의 .catch(오류 메시지 표시)로 위임한다.
+        if (errorDetail != null) throw new Error(errorDetail);
     }
 
     function closePop() {
