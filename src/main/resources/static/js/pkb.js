@@ -170,6 +170,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
         var bubble = addAiMsg();
         var state = { analysis: "", answer: "", refs: [], extraHtml: "" };
+        var done = false; // onDone은 여러 번 올 수 있어 1회만 처리
         function render() {
             var html = "";
             if (state.analysis) html += '<div class="p-analysis">' + esc(state.analysis) + "</div>";
@@ -211,7 +212,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 onReferences: function (docs) { state.refs = docs || []; render(); },
                 onAnswer: function (text) { state.answer += text; render(); },
                 onError: function (detail) { state.analysis = "오류: " + detail; render(); },
-                onDone: function () { render(); },
+                onDone: function () { if (done) return; done = true; render(); },
             }
         ).catch(function (err) {
             state.analysis = "검색 실패: " + (err && err.message ? err.message : "");
