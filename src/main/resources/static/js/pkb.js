@@ -530,6 +530,9 @@ document.addEventListener("DOMContentLoaded", function () {
     // ── 헤더 도구: 이용안내 / 인쇄 / 대화검색 (PKB 영역 대상) ──
     // 이용 안내
     if (dom.pkbGuideBtn && dom.guide) {
+        // 임베드(챗봇)에선 위젯 직속으로 옮겨 위젯 전체(탭/헤더 포함)를 덮게 함. 독립 화면은 그대로.
+        var gw = dom.chat.closest(".cb-widget");
+        if (gw) gw.appendChild(dom.guide);
         dom.pkbGuideBtn.addEventListener("click", function () { dom.guide.classList.toggle("open"); });
         dom.guideClose.addEventListener("click", function () { dom.guide.classList.remove("open"); });
     }

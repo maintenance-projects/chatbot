@@ -171,8 +171,9 @@
 .p-btn--danger { background: #dc2626; color: #fff; border-color: #dc2626; }
 .p-btn--danger:hover { background: #b91c1c; }
 
-/* 이용 안내(전체 화면 패널, 챗봇 .cb-guide-modal과 동일 톤) */
-.p-guide { position: absolute; inset: 0; z-index: 50; background: #fff;
+/* 이용 안내(전체 화면 패널, 챗봇 .cb-guide-modal과 동일 톤).
+   임베드 시 pkb.js가 .cb-widget 직속으로 옮겨 위젯 전체(탭/헤더 포함)를 덮는다. */
+.p-guide { position: absolute; inset: 0; z-index: 1500; background: #fff;
     display: none; flex-direction: column; }
 .p-guide.open { display: flex; }
 .p-guide__head { flex: 0 0 auto; height: 56px; padding: 0 16px; display: flex; align-items: center;
