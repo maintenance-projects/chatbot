@@ -175,9 +175,21 @@ textarea {
     width: 100%;
 }
 
-.cb-widget.is-dragover {
-    outline: 2px dashed rgba(61, 141, 239, 0.55);
-    outline-offset: -8px;
+.cb-widget.is-dragover::after {
+    content: "여기에 놓으면 파일이 업로드됩니다";
+    position: absolute;
+    inset: 8px;
+    z-index: 60;
+    pointer-events: none;
+    display: grid;
+    place-items: center;
+    text-align: center;
+    border: 2px dashed rgba(61, 141, 239, 0.85);
+    border-radius: 14px;
+    background: rgba(61, 141, 239, 0.08);
+    color: #3d8def;
+    font-size: 14px;
+    font-weight: 700;
 }
 
 .cb-header {
