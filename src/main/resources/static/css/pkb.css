@@ -12,8 +12,8 @@
     font-family: PretendardVariable, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif !important;
 }
 
-/* 드래그앤드롭 시각 강조 */
-.p-shell.p-dragover::after {
+/* 드래그앤드롭 시각 강조 — 대화창(.p-chat) 안에만 표시 */
+.p-shell.p-dragover .p-chat::after {
     content: "여기에 놓으면 첨부파일이 추가됩니다";
     position: absolute; inset: 8px; z-index: 40; pointer-events: none;
     display: grid; place-items: center; text-align: center;
@@ -24,7 +24,7 @@
 
 /* 대화방(챗봇 .cb-body와 동일) */
 .p-chat { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 16px;
-    display: flex; flex-direction: column; gap: 10px; background: #f8fafc; }
+    display: flex; flex-direction: column; gap: 10px; background: #f8fafc; position: relative; }
 .p-hello { margin: auto; color: var(--p-sub); font-size: 12px; text-align: center; line-height: 1.6; }
 
 /* 날짜 구분선(챗봇 .cb-divider와 동일) */
