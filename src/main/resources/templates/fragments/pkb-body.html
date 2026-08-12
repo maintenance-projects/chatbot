@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<!-- PKB 본문(헤더 제외) — 독립 화면(/mypkb)과 챗봇 임베드가 공유 -->
+<th:block th:fragment="content">
+    <!-- 자연어 검색 -->
+    <section class="p-sec">
+        <div class="p-title">자연어 검색</div>
+        <div class="p-row">
+            <input class="p-inp grow" id="pSearchInput" type="text"
+                placeholder="예) 지난주 받은 계약서 요약해줘 / 세금 관련 파일 찾아줘" />
+            <button class="p-btn primary" id="pSearchBtn" type="button">검색</button>
+        </div>
+        <div id="pSearchResult"></div>
+    </section>
+
+    <!-- 인제스트 + 필터 -->
+    <section class="p-sec">
+        <div class="p-row">
+            <button class="p-btn" id="pIngestBtn" type="button">＋ 첨부파일 추가(AI 분석)</button>
+            <input type="file" id="pFileInput" class="hidden" />
+            <span style="flex:1"></span>
+            <input class="p-inp" id="pFilterCategory" type="text" placeholder="카테고리 필터" />
+            <input class="p-inp" id="pFilterTag" type="text" placeholder="태그 필터" />
+            <button class="p-btn" id="pApplyFilter" type="button">적용</button>
+            <button class="p-btn" id="pRefresh" type="button">↻</button>
+        </div>
+        <div id="pIngestStatus" class="p-analysis"></div>
+    </section>
+
+    <!-- 내 파일 -->
+    <section class="p-sec" style="border-bottom:none">
+        <div class="p-title">내 파일</div>
+        <div class="p-cards" id="pCards"></div>
+        <div class="p-empty hidden" id="pCardsEmpty">저장된 파일이 없습니다.</div>
+    </section>
+
+    <!-- 상세 모달 -->
+    <div class="p-modal" id="pModal">
+        <div class="p-modal__box">
+            <button class="p-modal__close" id="pModalClose" type="button">×</button>
+            <div id="pModalBody"></div>
+        </div>
+    </div>
+</th:block>
+</body>
+</html>

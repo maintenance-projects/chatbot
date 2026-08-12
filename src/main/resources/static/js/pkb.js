@@ -30,6 +30,9 @@ document.addEventListener("DOMContentLoaded", function () {
         modalClose: document.getElementById("pModalClose"),
     };
 
+    // PKB 마크업이 없는 화면(menuPkb=false 등)에서는 초기화하지 않음
+    if (!dom.cards || !ownerId) return;
+
     var busy = false;
 
     function esc(s) {

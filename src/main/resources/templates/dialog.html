@@ -8,18 +8,21 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge" />
 
     <link rel="stylesheet" th:href="@{/css/dialog.css}" />
+    <link rel="stylesheet" th:if="${menuPkb}" th:href="@{/css/pkb.css}" />
 
     <script th:src="@{/jquery/jquery-3.7.1.min.js}"></script>
     <script th:src="@{/js/lib/marked.min.js}"></script>
     <script th:src="@{/js/i18n.js}"></script>
     <script th:src="@{/js/sse-client.js}"></script>
     <script th:src="@{/js/dialog.js}"></script>
+    <script th:if="${menuPkb}" th:src="@{/js/pkb.js}"></script>
 
     <script th:inline="javascript">
         const sessionId = /*[[${sessionId}]]*/ "";
         const tempList = JSON.parse(/*[[${templateList}]]*/ "[]");
         window.sessionId = sessionId;
         window.templateList = tempList;
+        window.ownerId = sessionId; // PKB(내 지식함) 임베드 소유자 = 챗봇 사용자
     </script>
 </head>
 
@@ -304,7 +307,9 @@
                 </footer>
 
                 <section class="cb-pkb" id="cbPkbPane" aria-hidden="true" th:if="${menuPkb}">
-                    <iframe class="cb-pkb__frame" id="cbPkbFrame" title="내 지식함" data-loaded="0"></iframe>
+                    <div class="p-shell">
+                        <th:block th:replace="~{fragments/pkb-body :: content}"></th:block>
+                    </div>
                 </section>
             </aside>
 
