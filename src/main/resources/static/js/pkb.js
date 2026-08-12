@@ -46,7 +46,7 @@ document.addEventListener("DOMContentLoaded", function () {
     function hashOf(o) { return (o && (o.fileHash || o.hash || o.file_hash || o.id)) || ""; }
     function tagsOf(o) { return (o && (o.ai_tags || o.tags)) || []; }
     function summaryOf(o) { return (o && (o.ai_summary || o.summary)) || ""; }
-    function nameOf(o) { return (o && (o.source || o.fileName || o.filename || o.name)) || "(이름 없음)"; }
+    function nameOf(o) { return (o && (o.file_name || o.source || o.fileName || o.filename || o.name)) || "(이름 없음)"; }
     function timeOf(o) {
         if (!o) return "";
         return o.received_at || o.created_at || o.ingested_at || o.timestamp || o.reg_date || o.registDate || "";
