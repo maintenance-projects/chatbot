@@ -1895,6 +1895,14 @@ textarea {
     transform: translateX(-50%) translateY(-2px);
 }
 
+/* 복사 완료 시 툴팁 문구 변경(위 중복 [data-tooltip] 규칙보다 뒤에 두어 우선) */
+.cb-actbtn--copy.is-done::after {
+    content: "복사했습니다.";
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(-2px);
+}
+
 .cb-viewer {
     display: flex;
     flex-direction: column;
