@@ -128,5 +128,17 @@
         if (handlers.onDone) handlers.onDone(null);
     }
 
-    global.SseClient = { stream: stream, parseFrame: parseFrame };
+    /**
+     * 게이트웨이 오류 메시지를 사용자용 문구로 정규화한다.
+     * 한국어 메시지는 그대로 노출(예: "관련 내용을 담은 문서를 찾지 못했습니다"),
+     * 영문/기술 원문(예: "All connection attempts failed")은 친절 문구로 대체하고 원문은 콘솔에만 남긴다.
+     */
+    function friendlyError(detail) {
+        var raw = String(detail == null ? "" : detail).trim();
+        if (raw) { try { console.warn("[SSE error]", raw); } catch (e) { } }
+        if (/[가-힣]/.test(raw)) return raw;
+        return "AI 서버가 일시적으로 응답하지 못했습니다. 잠시 후 다시 시도해 주세요.";
+    }
+
+    global.SseClient = { stream: stream, parseFrame: parseFrame, friendlyError: friendlyError };
 })(window);

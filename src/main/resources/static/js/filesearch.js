@@ -118,7 +118,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 onProgress: function (msg, percent) {
                     prog.textContent = (typeof percent !== "undefined" ? percent + "% " : "") + (msg || "인덱싱 중…");
                 },
-                onError: function (detail) { hadError = true; prog.textContent = "오류: " + detail; },
+                onError: function (detail) { hadError = true; prog.textContent = "오류: " + window.SseClient.friendlyError(detail); },
                 onDone: function () {
                     if (hadError) return;
                     prog.textContent = "인덱싱 완료: " + file.name;
@@ -180,7 +180,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 onProgress: function (msg) { if (prog) prog.textContent = msg || "검색 중…"; },
                 onReferences: function (docs) { refs = docs || []; render(); },
                 onAnswer: function (text) { answer += text; render(); },
-                onError: function (detail) { ensureBot(); botEl.textContent = "오류: " + detail; },
+                onError: function (detail) { ensureBot(); botEl.textContent = "오류: " + window.SseClient.friendlyError(detail); },
                 onDone: function () {
                     if (!botEl) { ensureBot(); botEl.textContent = "답변이 없습니다."; }
                     if (prog && prog.parentNode) prog.parentNode.removeChild(prog);

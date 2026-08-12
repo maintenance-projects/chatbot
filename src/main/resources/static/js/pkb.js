@@ -274,7 +274,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 },
                 onReferences: function (docs) { state.refs = docs || []; render(); },
                 onAnswer: function (text) { state.answer += text; render(); },
-                onError: function (detail) { state.analysis = "오류: " + detail; render(); },
+                onError: function (detail) { state.analysis = "오류: " + window.SseClient.friendlyError(detail); render(); },
                 onDone: function () { if (done) return; done = true; render(); },
             }
         ).catch(function (err) {
@@ -459,7 +459,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 onError: function (detail) {
                     hadError = true;
                     if (ptext) ptext.textContent = "오류";
-                    addAiMsg().textContent = "분석 오류: " + detail;
+                    addAiMsg().textContent = "분석 오류: " + window.SseClient.friendlyError(detail);
                 },
                 onDone: function () {
                     if (done) return;

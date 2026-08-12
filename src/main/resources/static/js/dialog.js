@@ -1140,7 +1140,8 @@ document.addEventListener("DOMContentLoaded", () => {
             },
             onError: function (detail) {
                 // 게이트웨이 오류를 완료로 오처리하지 않도록 기록하고, 스트림 종료 후 reject 시킨다.
-                errorDetail = String(detail || "").trim() || "AI 서버 처리 중 오류가 발생했습니다.";
+                // 원문은 콘솔에만 남기고 사용자에겐 친절 문구로 노출.
+                errorDetail = window.SseClient.friendlyError(detail);
                 if (typeof handlers.onError === "function") handlers.onError(errorDetail);
             }
         });
