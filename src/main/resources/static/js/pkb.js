@@ -325,8 +325,22 @@ document.addEventListener("DOMContentLoaded", function () {
     function ingest(file) {
         if (!file || busy) return;
         busy = true;
-        var statusEl = addAiMsg();
-        statusEl.textContent = "업로드·분석 중: " + file.name;
+
+        // 접속자(오른쪽) 말풍선에 파일명 + 진행바 (챗봇 업로드와 동일한 위치)
+        var upEl = makeMsg("p-msg--user");
+        upEl.innerHTML =
+            '<div class="p-upname">📎 ' + esc(file.name) + '</div>' +
+            '<div class="p-upbar"><div class="p-upfill" style="width:0%"></div></div>' +
+            '<div class="p-uptext">0%</div>';
+        var fill = upEl.querySelector(".p-upfill");
+        var ptext = upEl.querySelector(".p-uptext");
+        function setPct(p) {
+            p = Math.max(0, Math.min(100, Number(p) || 0));
+            if (fill) fill.style.width = p + "%";
+            if (ptext) ptext.textContent = Math.round(p) + "%";
+        }
+
+        var lastSummary = "";
 
         var fd = new FormData();
         fd.append("sender", ownerId);
@@ -338,23 +352,33 @@ document.addEventListener("DOMContentLoaded", function () {
             { method: "POST", headers: { Accept: "text/event-stream" }, body: fd, credentials: "same-origin" },
             {
                 onProgress: function (msg, percent) {
-                    statusEl.textContent = (typeof percent !== "undefined" ? percent + "% " : "") + (msg || "분석 중…");
+                    if (typeof percent !== "undefined") setPct(percent);
+                    else if (ptext && msg) ptext.textContent = msg;
                     scrollChat();
                 },
                 onEvent: function (type, obj) {
                     if (type === "enrichment") {
                         var d = obj.data || {};
-                        statusEl.textContent = "분석 완료: " + (d.ai_summary ? String(d.ai_summary).slice(0, 60) : file.name);
+                        lastSummary = d.ai_summary || "";
                     }
                 },
-                onError: function (detail) { statusEl.textContent = "오류: " + detail; },
+                onError: function (detail) {
+                    if (ptext) ptext.textContent = "오류";
+                    addAiMsg().textContent = "분석 오류: " + detail;
+                },
                 onDone: function () {
-                    statusEl.textContent = "인덱싱 완료: " + file.name;
+                    setPct(100);
+                    if (ptext) ptext.textContent = "완료";
+                    // 완료 결과를 AI(왼쪽) 말풍선으로 덧붙임
+                    var aiEl = addAiMsg();
+                    aiEl.innerHTML = '<b>분석 완료</b> · ' + esc(file.name) +
+                        (lastSummary ? ('<br>' + md(lastSummary)) : '');
                     if (dom.filesPanel.classList.contains("open")) loadFiles();
                 },
             }
         ).catch(function (err) {
-            statusEl.textContent = "실패: " + (err && err.message ? err.message : "");
+            if (ptext) ptext.textContent = "실패";
+            addAiMsg().textContent = "업로드 실패: " + (err && err.message ? err.message : "");
         }).finally(function () { busy = false; });
     }
 

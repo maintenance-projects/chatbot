@@ -42,6 +42,12 @@
 .p-msg--ai p:last-child { margin-bottom: 0; }
 .p-msg__text { overflow-wrap: anywhere; }
 
+/* 업로드 진행바(접속자 말풍선 안) */
+.p-upname { font-size: 12px; font-weight: 700; word-break: break-all; margin-bottom: 6px; }
+.p-upbar { height: 6px; border-radius: 999px; background: rgba(255, 255, 255, 0.3); overflow: hidden; }
+.p-upfill { height: 100%; width: 0; background: #fff; border-radius: 999px; transition: width 0.2s ease; }
+.p-uptext { margin-top: 4px; font-size: 11px; opacity: 0.9; text-align: right; }
+
 /* 시간(챗봇 .cb-meta와 동일) */
 .p-meta { margin-top: 6px; font-size: 11px; opacity: 0.65; }
 
