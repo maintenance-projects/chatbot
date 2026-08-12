@@ -28,6 +28,7 @@ document.addEventListener("DOMContentLoaded", function () {
         refresh: document.getElementById("pRefresh"),
         cards: document.getElementById("pCards"),
         cardsEmpty: document.getElementById("pCardsEmpty"),
+        moreBtn: document.getElementById("pMoreBtn"),
         modal: document.getElementById("pModal"),
         modalBody: document.getElementById("pModalBody"),
         modalClose: document.getElementById("pModalClose"),
@@ -42,6 +43,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
     var busy = false;
     var ttlDays = null; // 첨부파일 보관일수(PKB_DOC_TTL)
+    var allFiles = [], shownCount = 0;   // 내 파일: 전체(최신순) + 표시 개수(더보기)
+    var PAGE_SIZE = 20;
 
     function esc(s) {
         return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
@@ -272,10 +275,22 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     // ── 내 파일 목록(패널) ────────────────────────────────────
-    function renderCards(items) {
+    function sortByNewest(list) {
+        return list.slice().sort(function (a, b) {
+            var ta = toEpochSec(timeOf(a)), tb = toEpochSec(timeOf(b));
+            return (tb == null ? 0 : tb) - (ta == null ? 0 : ta);
+        });
+    }
+
+    function renderCards() {
         dom.cards.innerHTML = "";
-        if (!items.length) { dom.cardsEmpty.classList.remove("hidden"); return; }
+        if (!allFiles.length) {
+            dom.cardsEmpty.classList.remove("hidden");
+            if (dom.moreBtn) dom.moreBtn.hidden = true;
+            return;
+        }
         dom.cardsEmpty.classList.add("hidden");
+        var items = allFiles.slice(0, shownCount);
         items.forEach(function (it) {
             var hash = hashOf(it);
             var when = fmtTime(timeOf(it));
@@ -305,6 +320,11 @@ document.addEventListener("DOMContentLoaded", function () {
             card.querySelector('[data-act="delete"]').addEventListener("click", function () { removeFile(hash, nameOf(it)); });
             dom.cards.appendChild(card);
         });
+        if (dom.moreBtn) {
+            var remaining = allFiles.length - shownCount;
+            dom.moreBtn.hidden = remaining <= 0;
+            if (remaining > 0) dom.moreBtn.textContent = "더 보기 (" + remaining + ")";
+        }
     }
 
     function loadFiles() {
@@ -316,8 +336,12 @@ document.addEventListener("DOMContentLoaded", function () {
         var url = base + "/files" + (qs.length ? "?" + qs.join("&") : "");
         return fetch(url, { credentials: "same-origin" })
             .then(function (r) { return r.json().catch(function () { return []; }); })
-            .then(function (json) { renderCards(normalizeList(json)); })
-            .catch(function () { renderCards([]); });
+            .then(function (json) {
+                allFiles = sortByNewest(normalizeList(json)); // 최신순
+                shownCount = PAGE_SIZE;
+                renderCards();
+            })
+            .catch(function () { allFiles = []; shownCount = 0; renderCards(); });
     }
 
     function openFiles() {
@@ -458,6 +482,7 @@ document.addEventListener("DOMContentLoaded", function () {
     });
     dom.filesBtn.addEventListener("click", function () { toggleMenu(false); openFiles(); });
     dom.filesClose.addEventListener("click", closeFiles);
+    if (dom.moreBtn) dom.moreBtn.addEventListener("click", function () { shownCount += PAGE_SIZE; renderCards(); });
     dom.applyFilter.addEventListener("click", loadFiles);
     dom.refresh.addEventListener("click", function () { // 필터 초기화 후 전체 재조회
         dom.filterCategory.value = "";

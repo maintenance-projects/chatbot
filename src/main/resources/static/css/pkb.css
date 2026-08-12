@@ -135,6 +135,9 @@
 .p-card .acts button { font-size: 11px; padding: 4px 8px; border: 1px solid var(--p-line); border-radius: 6px;
     background: #fff; cursor: pointer; }
 .p-empty { font-size: 13px; color: var(--p-sub); padding: 8px 0; }
+.p-more { display: block; width: 100%; margin-top: 12px; padding: 10px; font-size: 13px; font-weight: 700;
+    border: 1px solid var(--p-line); border-radius: 10px; background: #fff; color: var(--p-primary); cursor: pointer; }
+.p-more:hover { background: var(--p-bg); }
 
 /* 상세 모달 */
 .p-modal { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: none; align-items: center;
