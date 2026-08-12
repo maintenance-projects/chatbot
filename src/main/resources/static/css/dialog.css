@@ -828,6 +828,15 @@ textarea {
     display: flex;
 }
 
+/* PKB 전용 헤더 도구(안내/인쇄/검색) — PKB 모드에서만 표시 */
+.cb-header__pkbtools {
+    display: none;
+    align-items: center;
+}
+.cb-widget.is-pkb-mode .cb-header__pkbtools {
+    display: flex;
+}
+
 .cb-inputwrap {
     min-height: 88px;
     display: grid;

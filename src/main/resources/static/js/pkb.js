@@ -36,6 +36,18 @@ document.addEventListener("DOMContentLoaded", function () {
         confirmMsg: document.getElementById("pConfirmMsg"),
         confirmCancel: document.getElementById("pConfirmCancel"),
         confirmOk: document.getElementById("pConfirmOk"),
+        // 헤더 도구(안내/인쇄/검색) + 검색바 + 안내 모달
+        pkbGuideBtn: document.getElementById("pkbGuideBtn"),
+        pkbPrintBtn: document.getElementById("pkbPrintBtn"),
+        pkbSearchBtn: document.getElementById("pkbSearchBtn"),
+        searchBar: document.getElementById("pSearchBar"),
+        searchbarInput: document.getElementById("pSearchbarInput"),
+        searchMeta: document.getElementById("pSearchMeta"),
+        searchPrev: document.getElementById("pSearchPrev"),
+        searchNext: document.getElementById("pSearchNext"),
+        searchbarClose: document.getElementById("pSearchbarClose"),
+        guide: document.getElementById("pGuide"),
+        guideClose: document.getElementById("pGuideClose"),
     };
 
     // PKB 마크업이 없는 화면(menuPkb=false 등)에서는 초기화하지 않음
@@ -513,6 +525,109 @@ document.addEventListener("DOMContentLoaded", function () {
             var files = (e.dataTransfer && e.dataTransfer.files) ? Array.prototype.slice.call(e.dataTransfer.files) : [];
             if (files.length) ingest(files[0]);
         });
+    }
+
+    // ── 헤더 도구: 이용안내 / 인쇄 / 대화검색 (PKB 영역 대상) ──
+    // 이용 안내
+    if (dom.pkbGuideBtn && dom.guide) {
+        dom.pkbGuideBtn.addEventListener("click", function () { dom.guide.classList.add("open"); });
+        dom.guideClose.addEventListener("click", function () { dom.guide.classList.remove("open"); });
+        dom.guide.addEventListener("click", function (e) { if (e.target === dom.guide) dom.guide.classList.remove("open"); });
+    }
+
+    // 인쇄 — PKB 대화창(p-chat) 내용을 새 창에 담아 인쇄
+    function pkbPrint() {
+        pkbClearSearch();
+        var html = dom.chat.innerHTML;
+        var w = window.open("", "_blank", "width=900,height=700");
+        if (!w) return;
+        var css = 'body{font-family:PretendardVariable,"Malgun Gothic",sans-serif;margin:24px;background:#fff;color:#111;}' +
+            '.wrap{max-width:820px;margin:0 auto;display:flex;flex-direction:column;gap:8px;}' +
+            '.p-divider{text-align:center;color:#666;font-size:12px;margin:6px 0;}' +
+            '.p-msg{max-width:82%;border:1px solid #ddd;border-radius:14px;padding:10px 12px;font-size:13px;line-height:1.5;word-break:break-word;}' +
+            '.p-msg--user{align-self:flex-end;background:#6d28d9;color:#fff;}' +
+            '.p-msg--ai{align-self:flex-start;background:#f1f5f9;}' +
+            '.p-meta{margin-top:6px;font-size:11px;opacity:.7;}' +
+            '.p-copybar{display:none!important;}.p-mark{background:#fde68a;}';
+        w.document.open();
+        w.document.write('<!DOCTYPE html><html><head><meta charset="utf-8"/><title>첨부파일 검색 대화 인쇄</title><style>' +
+            css + '</style></head><body><div class="wrap">' + html + '</div><scr' + 'ipt>window.onload=function(){window.focus();window.print();};</scr' + 'ipt></body></html>');
+        w.document.close();
+    }
+    if (dom.pkbPrintBtn) dom.pkbPrintBtn.addEventListener("click", pkbPrint);
+
+    // 대화 내용 검색(하이라이트 + 이전/다음)
+    var pkbHits = [], pkbHitIdx = -1;
+    function pkbClearSearch() {
+        dom.chat.querySelectorAll(".p-msg__text[data-orig]").forEach(function (el) {
+            el.innerHTML = el.getAttribute("data-orig"); el.removeAttribute("data-orig");
+        });
+        dom.chat.querySelectorAll(".p-msg.p-hit").forEach(function (el) { el.classList.remove("p-hit"); });
+        pkbHits = []; pkbHitIdx = -1;
+    }
+    function pkbHighlight(root, re) {
+        var walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, null), nodes = [];
+        while (walker.nextNode()) nodes.push(walker.currentNode);
+        nodes.forEach(function (node) {
+            var text = node.nodeValue; re.lastIndex = 0;
+            if (!re.test(text)) return;
+            re.lastIndex = 0;
+            var frag = document.createDocumentFragment(), last = 0, m;
+            while ((m = re.exec(text)) !== null) {
+                if (m.index > last) frag.appendChild(document.createTextNode(text.slice(last, m.index)));
+                var mk = document.createElement("mark"); mk.className = "p-mark"; mk.textContent = m[0];
+                frag.appendChild(mk); last = m.index + m[0].length;
+                if (m[0].length === 0) re.lastIndex++;
+            }
+            if (last < text.length) frag.appendChild(document.createTextNode(text.slice(last)));
+            node.parentNode.replaceChild(frag, node);
+        });
+    }
+    function pkbFocusHit(i) {
+        if (!pkbHits.length) return;
+        dom.chat.querySelectorAll(".p-msg.p-hit").forEach(function (el) { el.classList.remove("p-hit"); });
+        var t = pkbHits[i]; t.classList.add("p-hit");
+        var cr = dom.chat.getBoundingClientRect(), mr = t.getBoundingClientRect();
+        dom.chat.scrollTo({ top: Math.max(0, dom.chat.scrollTop + (mr.top - cr.top) - 40), behavior: "smooth" });
+        if (dom.searchMeta) dom.searchMeta.textContent = (i + 1) + " / " + pkbHits.length;
+    }
+    function pkbMoveHit(dir) {
+        if (!pkbHits.length) return;
+        pkbHitIdx = (pkbHitIdx + dir + pkbHits.length) % pkbHits.length;
+        pkbFocusHit(pkbHitIdx);
+    }
+    function pkbDoSearch(kw) {
+        pkbClearSearch();
+        kw = (kw || "").trim();
+        if (!kw) { if (dom.searchMeta) dom.searchMeta.textContent = "0 / 0"; return; }
+        var re = new RegExp(kw.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi");
+        dom.chat.querySelectorAll(".p-msg__text").forEach(function (el) {
+            re.lastIndex = 0;
+            if (!re.test(el.textContent || "")) return;
+            el.setAttribute("data-orig", el.innerHTML);
+            re.lastIndex = 0; pkbHighlight(el, re);
+            var msg = el.closest(".p-msg");
+            if (msg) pkbHits.push(msg);
+        });
+        if (!pkbHits.length) { if (dom.searchMeta) dom.searchMeta.textContent = "0 / 0"; return; }
+        pkbHitIdx = 0; pkbFocusHit(0);
+    }
+    function pkbToggleSearch(open) {
+        if (!dom.searchBar) return;
+        dom.searchBar.hidden = !open;
+        if (open) { if (dom.searchbarInput) dom.searchbarInput.focus(); }
+        else { if (dom.searchbarInput) dom.searchbarInput.value = ""; pkbClearSearch(); if (dom.searchMeta) dom.searchMeta.textContent = "0 / 0"; }
+    }
+    if (dom.pkbSearchBtn && dom.searchBar) {
+        dom.pkbSearchBtn.addEventListener("click", function () { pkbToggleSearch(dom.searchBar.hidden); });
+        dom.searchbarInput.addEventListener("input", function () { pkbDoSearch(dom.searchbarInput.value); });
+        dom.searchbarInput.addEventListener("keydown", function (e) {
+            if (e.key === "Enter") { e.preventDefault(); pkbMoveHit(e.shiftKey ? -1 : 1); }
+            else if (e.key === "Escape") pkbToggleSearch(false);
+        });
+        dom.searchPrev.addEventListener("click", function () { pkbMoveHit(-1); });
+        dom.searchNext.addEventListener("click", function () { pkbMoveHit(1); });
+        dom.searchbarClose.addEventListener("click", function () { pkbToggleSearch(false); });
     }
 
     // 첫 진입 안내(시간·복사 포함 말풍선)

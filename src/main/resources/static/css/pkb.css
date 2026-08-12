@@ -80,6 +80,18 @@
 .p-msg .p-refs { margin-top: 8px; font-size: 11px; color: var(--p-sub); }
 .p-msg .p-sub-title { font-size: 12px; font-weight: 700; color: var(--p-sub); margin: 10px 0 4px; }
 
+/* 대화 내용 검색바 */
+.p-searchbar { flex: 0 0 auto; display: flex; align-items: center; gap: 6px;
+    padding: 8px 12px; border-bottom: 1px solid var(--p-line); background: #fff; }
+.p-searchbar[hidden] { display: none; }
+.p-searchbar .p-inp { border: 1px solid var(--p-line); }
+.p-searchbar__meta { font-size: 11px; color: var(--p-sub); white-space: nowrap; }
+.p-searchbar__nav, .p-searchbar__close { border: 1px solid var(--p-line); background: #fff; cursor: pointer;
+    border-radius: 6px; width: 26px; height: 26px; font-size: 12px; color: var(--p-sub); display: grid; place-items: center; }
+.p-searchbar__nav:hover, .p-searchbar__close:hover { background: var(--p-bg); }
+.p-mark { background: #fde68a; color: inherit; border-radius: 3px; }
+.p-msg.p-hit { outline: 2px solid var(--p-primary); outline-offset: 2px; }
+
 /* 하단 입력(챗봇 pill과 동일: ＋도구메뉴 + 입력 + send) */
 .p-footer { flex: 0 0 auto; padding: 12px 14px; border-top: 1px solid var(--p-line); background: #fff; }
 .p-inputwrap { display: flex; align-items: center; gap: 6px; position: relative;
