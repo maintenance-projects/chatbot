@@ -735,22 +735,21 @@ textarea {
     border: 2px solid #fff;
 }
 
-/* 모드 탭(챗봇 / 내 지식함) */
+/* 모드 탭(AI 챗봇 / AI 첨부파일 검색) — 헤더(#3d8def)와 어울리는 파랑 바 */
 .cb-modetabs {
     flex: 0 0 auto;
     display: flex;
     gap: 6px;
-    padding: 8px 14px;
-    background: var(--cb-bg);
-    border-bottom: 1px solid var(--cb-line);
+    padding: 8px 12px;
+    background: #3d8def;
 }
 
 .cb-modetab {
     flex: 1 1 auto;
-    padding: 8px 12px;
-    border: 1px solid var(--cb-line);
-    background: #f8fafc;
-    color: var(--cb-subtext);
+    padding: 7px 12px;
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    background: rgba(255, 255, 255, 0.15);
+    color: rgba(255, 255, 255, 0.9);
     border-radius: 8px;
     font-size: 13px;
     font-weight: 600;
@@ -759,13 +758,14 @@ textarea {
 }
 
 .cb-modetab:hover {
-    color: var(--cb-user);
+    background: rgba(255, 255, 255, 0.25);
+    color: #fff;
 }
 
 .cb-modetab.is-active {
-    background: var(--cb-user);
-    color: #fff;
-    border-color: var(--cb-user);
+    background: #fff;
+    color: #3d8def;
+    border-color: #fff;
 }
 
 /* '내 지식함'(AI 첨부파일 검색) pane — PKB 네이티브 임베드 */
