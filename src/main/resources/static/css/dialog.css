@@ -343,11 +343,10 @@ textarea {
     flex: 1;
     min-width: 0;
     height: 34px;
-    border: 1px solid var(--cb-line);
-    border-radius: 8px;
-    background: #fff;
+    border: none;
+    background: transparent;
     color: var(--cb-text);
-    padding: 0 10px;
+    padding: 0 6px;
     outline: none;
     font-size: 13px;
 }
