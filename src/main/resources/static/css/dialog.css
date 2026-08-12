@@ -741,13 +741,13 @@ textarea {
     display: flex;
     align-items: flex-end;
     gap: 4px;
-    padding: 7px 10px 0;   /* 하단 0 → 활성 탭이 헤더에 맞닿아 이어짐 */
+    padding: 3px 10px 0;   /* 상단 여백 최소, 하단 0 → 활성 탭이 헤더에 맞닿아 이어짐 */
     background: #fff;
 }
 
 .cb-modetab {
     flex: 1 1 auto;
-    margin-top: 4px;       /* 비활성: 살짝 내려앉은(뒤) 탭 */
+    margin-top: 3px;       /* 비활성: 살짝 내려앉은(뒤) 탭 */
     padding: 9px 12px 11px;
     border: 0;
     background: #eaeef3;
