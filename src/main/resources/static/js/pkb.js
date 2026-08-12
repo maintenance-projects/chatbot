@@ -83,20 +83,61 @@ document.addEventListener("DOMContentLoaded", function () {
     }
 
     // ── 대화방 ────────────────────────────────────────────────
-    function addUserMsg(text) {
-        var el = document.createElement("div");
-        el.className = "p-msg p-msg--user";
-        el.textContent = text;
-        dom.chat.appendChild(el);
-        scrollChat();
+    function pad2(n) { return String(n).padStart(2, "0"); }
+    function fmtNow() { // 챗봇과 동일: "오전/오후 h:mm"
+        var d = new Date(), h = d.getHours();
+        var hh = (h % 12 === 0) ? 12 : (h % 12);
+        return (h < 12 ? "오전" : "오후") + " " + hh + ":" + pad2(d.getMinutes());
     }
-    function addAiMsg() {
-        var el = document.createElement("div");
-        el.className = "p-msg p-msg--ai";
-        dom.chat.appendChild(el);
-        scrollChat();
-        return el;
+    function fallbackCopy(t) {
+        try {
+            var ta = document.createElement("textarea");
+            ta.value = t; ta.setAttribute("readonly", "");
+            ta.style.position = "fixed"; ta.style.left = "-9999px";
+            document.body.appendChild(ta); ta.select();
+            document.execCommand("copy"); ta.remove();
+        } catch (e) { }
     }
+    function copyText(t) {
+        t = String(t == null ? "" : t);
+        if (!t.trim()) return;
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(t).catch(function () { fallbackCopy(t); });
+        } else { fallbackCopy(t); }
+    }
+    function makeCopyBar() {
+        var bar = document.createElement("div");
+        bar.className = "p-copybar";
+        var btn = document.createElement("button");
+        btn.className = "p-copybtn"; btn.type = "button";
+        btn.setAttribute("aria-label", "복사"); btn.title = "복사";
+        btn.innerHTML = '<img src="/img/ic-copy.png" alt="복사" />';
+        btn.addEventListener("click", function () {
+            var msg = bar.parentElement;
+            var textEl = msg && msg.querySelector(".p-msg__text");
+            copyText(textEl ? (textEl.innerText || textEl.textContent || "") : "");
+        });
+        bar.appendChild(btn);
+        return bar;
+    }
+    // 말풍선 생성 → 내용 요소(.p-msg__text) 반환. 시간·복사버튼 포함(챗봇과 동일)
+    function makeMsg(variant) {
+        var msg = document.createElement("div");
+        msg.className = "p-msg " + variant;
+        var text = document.createElement("div");
+        text.className = "p-msg__text";
+        msg.appendChild(text);
+        var meta = document.createElement("div");
+        meta.className = "p-meta";
+        meta.textContent = fmtNow();
+        msg.appendChild(meta);
+        msg.appendChild(makeCopyBar());
+        dom.chat.appendChild(msg);
+        scrollChat();
+        return text;
+    }
+    function addUserMsg(text) { makeMsg("p-msg--user").textContent = text; }
+    function addAiMsg() { return makeMsg("p-msg--ai"); }
     function scrollChat() { dom.chat.scrollTop = dom.chat.scrollHeight; }
 
     // ── 자연어 검색(intent별) ─────────────────────────────────
@@ -317,4 +358,10 @@ document.addEventListener("DOMContentLoaded", function () {
     });
     dom.modalClose.addEventListener("click", function () { dom.modal.classList.remove("open"); });
     dom.modal.addEventListener("click", function (e) { if (e.target === dom.modal) dom.modal.classList.remove("open"); });
+
+    // 첫 진입 안내(시간·복사 포함 말풍선)
+    addAiMsg().innerHTML =
+        '안녕하세요! 업로드한 첨부파일을 AI가 분석·검색해 드립니다.<br>' +
+        '· 하단 입력창에 자연어로 물어보세요. 예) "지난주 받은 계약서 요약해줘"<br>' +
+        '· <b>＋</b> 버튼으로 첨부파일을 추가하거나 <b>내 파일</b> 목록을 볼 수 있어요.';
 });

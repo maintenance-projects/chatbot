@@ -5,11 +5,11 @@
 }
 .p-shell * { box-sizing: border-box; }
 
-/* 셸: 세로 flex(대화방 / 입력바) */
+/* 셸: 세로 flex(대화방 / 입력바). 폰트는 AI 챗봇과 동일(PretendardVariable) */
 .p-shell {
     display: flex; flex-direction: column; position: relative; overflow: hidden;
     background: var(--p-panel); color: var(--p-text);
-    font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+    font-family: PretendardVariable, "Malgun Gothic", "Apple SD Gothic Neo", sans-serif !important;
 }
 
 /* 대화방(챗봇 .cb-body와 동일) */
@@ -23,13 +23,27 @@
     border: 1px solid var(--p-line); padding: 1px 10px 5px 10px; border-radius: 999px; }
 
 /* 말풍선(챗봇 .cb-bubble과 동일 형태, user=보라) */
-.p-msg { max-width: 82%; padding: 11px 13px; border: 1px solid var(--p-line);
+.p-msg { position: relative; max-width: 82%; padding: 11px 13px; border: 1px solid var(--p-line);
     border-radius: 16px; font-size: 12px; line-height: 1.55; word-break: break-word; }
 .p-msg--ai { align-self: flex-start; background: var(--p-ai-bg); color: var(--p-text); border-top-left-radius: 6px; }
 .p-msg--user { align-self: flex-end; background: var(--p-primary); color: #fff;
     border-color: rgba(255, 255, 255, 0.08); border-top-right-radius: 6px; }
 .p-msg--ai p { margin: 0 0 6px; }
 .p-msg--ai p:last-child { margin-bottom: 0; }
+.p-msg__text { overflow-wrap: anywhere; }
+
+/* 시간(챗봇 .cb-meta와 동일) */
+.p-meta { margin-top: 6px; font-size: 11px; opacity: 0.65; }
+
+/* 호버 시 복사 버튼(챗봇 .cb-actionsbar와 동일) */
+.p-copybar { position: absolute; top: 50%; transform: translateY(-50%); z-index: 5;
+    opacity: 0; visibility: hidden; pointer-events: none; transition: opacity .14s ease, visibility .14s ease; }
+.p-msg--ai .p-copybar { right: -34px; }
+.p-msg--user .p-copybar { left: -34px; }
+.p-msg:hover .p-copybar, .p-msg:focus-within .p-copybar { opacity: 1; visibility: visible; pointer-events: auto; }
+.p-copybtn { width: 28px; height: 28px; padding: 0; border: 1px solid var(--p-line); background: #fff;
+    border-radius: 8px; cursor: pointer; display: grid; place-items: center; box-shadow: 0 2px 6px rgba(2, 6, 23, 0.08); }
+.p-copybtn img { width: 14px; height: 14px; display: block; }
 .p-msg .p-analysis { font-size: 11px; color: var(--p-sub); margin-bottom: 6px; }
 .p-msg .p-refs { margin-top: 8px; font-size: 11px; color: var(--p-sub); }
 .p-msg .p-sub-title { font-size: 12px; font-weight: 700; color: var(--p-sub); margin: 10px 0 4px; }
@@ -48,7 +62,7 @@
     font-size: 13px; cursor: pointer; color: var(--p-text); }
 .p-menu__item:hover { background: var(--p-bg); }
 .p-inp.grow { flex: 1 1 auto; min-width: 0; border: 0; outline: 0; background: transparent;
-    padding: 4px 6px; font-size: 13px; color: var(--p-text); }
+    padding: 4px 6px; font-size: 12px; color: var(--p-text); }
 .p-send { flex: 0 0 auto; border: 0; border-radius: 16px; color: #fff; background: var(--p-primary);
     cursor: pointer; padding: 8px 15px; font-size: 12px; }
 .p-send:disabled { opacity: .5; cursor: not-allowed; }
