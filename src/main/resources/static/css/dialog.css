@@ -342,13 +342,12 @@ textarea {
 .cb-searchbar__input {
     flex: 1;
     min-width: 0;
-    height: 34px;
     border: none;
     background: transparent;
     color: var(--cb-text);
-    padding: 0 6px;
+    padding: 4px 6px;
     outline: none;
-    font-size: 13px;
+    font-size: 12px;
 }
 
 .cb-searchbar__meta {
