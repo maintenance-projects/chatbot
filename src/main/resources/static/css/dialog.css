@@ -175,7 +175,8 @@ textarea {
     width: 100%;
 }
 
-.cb-widget.is-dragover::after {
+/* 드롭 강조는 대화창(.cb-body) 안에만 표시(탭/헤더 제외) */
+.cb-widget.is-dragover .cb-body::after {
     content: "여기에 놓으면 파일이 업로드됩니다";
     position: absolute;
     inset: 8px;
@@ -384,6 +385,7 @@ textarea {
     padding: clamp(14px, 2vw, 18px);
     overflow: auto;
     background: #f8fafc;
+    position: relative;
 }
 
 .cb-divider {
