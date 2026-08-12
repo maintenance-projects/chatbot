@@ -279,13 +279,14 @@ document.addEventListener("DOMContentLoaded", function () {
                 var d = (json && json.data) ? json.data : json;
                 var kw = (d.ai_keywords || d.keywords || []);
                 var when = fmtTime(timeOf(d));
+                var senderLabel = d.sender ? (String(d.sender) === ownerId ? "나" : esc(d.sender)) : "";
                 dom.modalBody.innerHTML =
                     "<h3>" + esc(nameOf(d)) + "</h3>" +
                     '<div class="k">AI 요약</div><div class="v">' + md(summaryOf(d)) + "</div>" +
                     (d.ai_category ? ('<div class="k">카테고리</div><div class="v">' + esc(d.ai_category) + "</div>") : "") +
                     '<div class="k">태그</div><div class="v">' + (tagsOf(d).map(esc).join(", ") || "-") + "</div>" +
                     '<div class="k">키워드</div><div class="v">' + (kw.map(esc).join(", ") || "-") + "</div>" +
-                    (d.sender ? ('<div class="k">보낸이</div><div class="v">' + esc(d.sender) + "</div>") : "") +
+                    (senderLabel ? ('<div class="k">보낸이</div><div class="v">' + senderLabel + "</div>") : "") +
                     (when ? ('<div class="k">수신일</div><div class="v">' + esc(when) + "</div>") : "");
                 dom.modal.classList.add("open");
             })
