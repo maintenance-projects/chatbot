@@ -30,6 +30,10 @@ document.addEventListener("DOMContentLoaded", function () {
         modal: document.getElementById("pModal"),
         modalBody: document.getElementById("pModalBody"),
         modalClose: document.getElementById("pModalClose"),
+        confirm: document.getElementById("pConfirm"),
+        confirmMsg: document.getElementById("pConfirmMsg"),
+        confirmCancel: document.getElementById("pConfirmCancel"),
+        confirmOk: document.getElementById("pConfirmOk"),
     };
 
     // PKB 마크업이 없는 화면(menuPkb=false 등)에서는 초기화하지 않음
@@ -296,13 +300,25 @@ document.addEventListener("DOMContentLoaded", function () {
             });
     }
 
+    var confirmCb = null;
+    function openConfirm(message, onOk) {
+        dom.confirmMsg.textContent = message;
+        confirmCb = onOk;
+        dom.confirm.classList.add("open");
+    }
+    function closeConfirm() {
+        dom.confirm.classList.remove("open");
+        confirmCb = null;
+    }
+
     function removeFile(hash, name) {
         if (!hash) return;
-        if (!window.confirm('"' + name + '" 파일을 삭제할까요?')) return;
-        fetch(base + "/file/" + encodeURIComponent(hash), { method: "DELETE", credentials: "same-origin" })
-            .then(function (r) { return r.json().catch(function () { return {}; }); })
-            .then(function () { loadFiles(); })
-            .catch(function () { loadFiles(); });
+        openConfirm('"' + name + '" 파일을 삭제할까요?\n삭제하면 되돌릴 수 없습니다.', function () {
+            fetch(base + "/file/" + encodeURIComponent(hash), { method: "DELETE", credentials: "same-origin" })
+                .then(function (r) { return r.json().catch(function () { return {}; }); })
+                .then(function () { loadFiles(); })
+                .catch(function () { loadFiles(); });
+        });
     }
 
     // ── 인제스트(AI 분석) ─────────────────────────────────────
@@ -367,6 +383,9 @@ document.addEventListener("DOMContentLoaded", function () {
     });
     dom.modalClose.addEventListener("click", function () { dom.modal.classList.remove("open"); });
     dom.modal.addEventListener("click", function (e) { if (e.target === dom.modal) dom.modal.classList.remove("open"); });
+    dom.confirmCancel.addEventListener("click", closeConfirm);
+    dom.confirmOk.addEventListener("click", function () { var cb = confirmCb; closeConfirm(); if (cb) cb(); });
+    dom.confirm.addEventListener("click", function (e) { if (e.target === dom.confirm) closeConfirm(); });
 
     // 첫 진입 안내(시간·복사 포함 말풍선)
     addAiMsg().innerHTML =

@@ -122,4 +122,13 @@
 .p-modal__box .k { font-size: 12px; color: var(--p-sub); margin-top: 10px; font-weight: 700; }
 .p-modal__box .v { font-size: 13px; line-height: 1.5; }
 .p-modal__close { float: right; cursor: pointer; border: none; background: none; font-size: 18px; color: var(--p-sub); }
+
+/* 삭제 확인 모달 */
+.p-confirm__box { max-width: 340px; }
+.p-confirm__title { font-size: 15px; font-weight: 700; margin-bottom: 8px; }
+.p-confirm__msg { font-size: 13px; line-height: 1.55; color: var(--p-text); word-break: break-all; white-space: pre-line; }
+.p-confirm__acts { margin-top: 18px; display: flex; justify-content: flex-end; gap: 8px; }
+.p-btn--danger { background: #dc2626; color: #fff; border-color: #dc2626; }
+.p-btn--danger:hover { background: #b91c1c; }
+
 .p-shell .hidden { display: none; }
