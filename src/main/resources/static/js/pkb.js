@@ -95,27 +95,33 @@ document.addEventListener("DOMContentLoaded", function () {
             ta.value = t; ta.setAttribute("readonly", "");
             ta.style.position = "fixed"; ta.style.left = "-9999px";
             document.body.appendChild(ta); ta.select();
-            document.execCommand("copy"); ta.remove();
-        } catch (e) { }
+            var ok = document.execCommand("copy"); ta.remove();
+            return !!ok;
+        } catch (e) { return false; }
     }
-    function copyText(t) {
+    function copyText(t) { // 복사 성공여부 Promise<boolean>
         t = String(t == null ? "" : t);
-        if (!t.trim()) return;
+        if (!t.trim()) return Promise.resolve(false);
         if (navigator.clipboard && navigator.clipboard.writeText) {
-            navigator.clipboard.writeText(t).catch(function () { fallbackCopy(t); });
-        } else { fallbackCopy(t); }
+            return navigator.clipboard.writeText(t).then(function () { return true; })
+                .catch(function () { return fallbackCopy(t); });
+        }
+        return Promise.resolve(fallbackCopy(t));
     }
     function makeCopyBar() {
         var bar = document.createElement("div");
         bar.className = "p-copybar";
         var btn = document.createElement("button");
         btn.className = "p-copybtn"; btn.type = "button";
-        btn.setAttribute("aria-label", "복사"); btn.title = "복사";
+        btn.setAttribute("aria-label", "복사"); btn.setAttribute("data-tooltip", "복사");
         btn.innerHTML = '<img src="/img/ic-copy.png" alt="복사" />';
         btn.addEventListener("click", function () {
             var msg = bar.parentElement;
             var textEl = msg && msg.querySelector(".p-msg__text");
-            copyText(textEl ? (textEl.innerText || textEl.textContent || "") : "");
+            copyText(textEl ? (textEl.innerText || textEl.textContent || "") : "").then(function (ok) {
+                btn.classList.toggle("is-done", !!ok);
+                setTimeout(function () { btn.classList.remove("is-done"); }, 900);
+            });
         });
         bar.appendChild(btn);
         return bar;

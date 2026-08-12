@@ -41,9 +41,23 @@
 .p-msg--ai .p-copybar { left: 100%; padding-left: 6px; }
 .p-msg--user .p-copybar { right: 100%; padding-right: 6px; }
 .p-msg:hover .p-copybar, .p-msg:focus-within .p-copybar { opacity: 1; visibility: visible; pointer-events: auto; }
-.p-copybtn { width: 28px; height: 28px; padding: 0; border: 1px solid var(--p-line); background: #fff;
-    border-radius: 8px; cursor: pointer; display: grid; place-items: center; box-shadow: 0 2px 6px rgba(2, 6, 23, 0.08); }
-.p-copybtn img { width: 14px; height: 14px; display: block; }
+.p-copybtn { position: relative; width: 32px; height: 32px; padding: 0; border: none; background: rgb(248 250 252);
+    border-radius: 10px; cursor: pointer; display: grid; place-items: center;
+    box-shadow: 0 10px 20px rgba(2, 6, 23, 0.1); overflow: visible; }
+.p-copybtn img { width: 16px; height: 16px; display: block; opacity: 0.95; }
+.p-copybtn:active { transform: scale(0.98); }
+.p-copybtn.is-done { outline: 2px solid rgba(59, 130, 246, 0.45); outline-offset: 2px; }
+/* 툴팁(챗봇 .cb-actbtn과 동일) */
+.p-copybtn[data-tooltip]::after {
+    content: attr(data-tooltip); position: absolute; left: 50%; bottom: calc(100% + 8px);
+    transform: translateX(-50%) translateY(2px); padding: 6px 8px; border-radius: 6px;
+    background: #30364F; color: #fff; font-size: 10px; line-height: 1; white-space: nowrap;
+    opacity: 0; visibility: hidden; pointer-events: none;
+    transition: opacity .15s ease, transform .15s ease, visibility .15s ease; z-index: 9999; }
+.p-copybtn:hover::after, .p-copybtn:focus-visible::after {
+    opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
+.p-copybtn.is-done::after {
+    content: "복사했습니다."; opacity: 1; visibility: visible; transform: translateX(-50%) translateY(0); }
 .p-msg .p-analysis { font-size: 11px; color: var(--p-sub); margin-bottom: 6px; }
 .p-msg .p-refs { margin-top: 8px; font-size: 11px; color: var(--p-sub); }
 .p-msg .p-sub-title { font-size: 12px; font-weight: 700; color: var(--p-sub); margin: 10px 0 4px; }
