@@ -836,6 +836,13 @@ textarea {
 .cb-widget.is-pkb-mode .cb-header__pkbtools {
     display: flex;
 }
+/* 도구 아이콘 배경을 PKB 테마(보라)에 맞춤 */
+.cb-header__pkbtools .cb-iconbtn {
+    background: #6d28d9;
+}
+.cb-header__pkbtools .cb-iconbtn:hover {
+    background: #5b21b6;
+}
 
 .cb-inputwrap {
     min-height: 88px;
