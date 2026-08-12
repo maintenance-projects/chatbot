@@ -376,7 +376,11 @@ document.addEventListener("DOMContentLoaded", function () {
     dom.filesBtn.addEventListener("click", function () { toggleMenu(false); openFiles(); });
     dom.filesClose.addEventListener("click", closeFiles);
     dom.applyFilter.addEventListener("click", loadFiles);
-    dom.refresh.addEventListener("click", loadFiles);
+    dom.refresh.addEventListener("click", function () { // 필터 초기화 후 전체 재조회
+        dom.filterCategory.value = "";
+        dom.filterTag.value = "";
+        loadFiles();
+    });
     dom.searchBtn.addEventListener("click", search);
     dom.searchInput.addEventListener("keydown", function (e) {
         if (e.key === "Enter") { e.preventDefault(); search(); }
