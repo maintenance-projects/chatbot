@@ -175,8 +175,8 @@ textarea {
     width: 100%;
 }
 
-/* 드롭 강조는 대화창(.cb-body) 안에만 표시(탭/헤더 제외) */
-.cb-widget.is-dragover .cb-body::after {
+/* 드롭 강조는 대화창(.cb-bodywrap) 안에만 표시(탭/헤더 제외, 스크롤 무관 고정) */
+.cb-widget.is-dragover .cb-bodywrap::after {
     content: "여기에 놓으면 파일이 업로드됩니다";
     position: absolute;
     inset: 8px;
@@ -379,13 +379,21 @@ textarea {
     opacity: 0.9;
 }
 
+/* 스크롤되지 않는 래퍼 — 드롭 오버레이 고정용 */
+.cb-bodywrap {
+    flex: 1 1 auto;
+    min-height: 0;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
 .cb-body {
     flex: 1 1 auto;
     min-height: 0;
     padding: clamp(14px, 2vw, 18px);
     overflow: auto;
     background: #f8fafc;
-    position: relative;
 }
 
 .cb-divider {

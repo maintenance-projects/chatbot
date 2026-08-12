@@ -4,8 +4,10 @@
 <!-- PKB 본문(헤더 제외) — 독립 화면(/mypkb)과 챗봇 임베드가 공유. AI 챗봇과 동일 UI(색만 다름) -->
 <th:block th:fragment="content">
     <!-- 대화방(검색 Q&A). 안내 말풍선은 pkb.js가 생성(시간·복사 포함) -->
-    <div class="p-chat" id="pChat">
-        <div class="p-divider"><span>오늘</span></div>
+    <div class="p-chatwrap">
+        <div class="p-chat" id="pChat">
+            <div class="p-divider"><span>오늘</span></div>
+        </div>
     </div>
 
     <!-- 하단 입력(＋도구메뉴 + 검색입력 + 검색) -->
