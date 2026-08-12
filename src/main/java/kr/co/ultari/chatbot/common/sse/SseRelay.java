@@ -1,6 +1,7 @@
 package kr.co.ultari.chatbot.common.sse;
 
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import reactor.core.Disposable;
@@ -20,9 +21,16 @@ import java.util.function.Supplier;
 @Component
 public class SseRelay {
 
-    private static final long SSE_TIMEOUT_MS = 300_000L;
     private static final String ERROR_EVENT =
             "{\"type\":\"error\",\"detail\":\"AI 서버 연결에 실패하였습니다.\"}";
+
+    /**
+     * SSE 응답 타임아웃(ms). 게이트웨이가 완료 시점의 주체이므로 넉넉히 잡는다.
+     * 대용량 문서 인제스트(AI 분석)가 오래 걸려도 우리 쪽에서 먼저 끊지 않도록 한다.
+     * {@code 0} 이하이면 무제한(게이트웨이 완료/브라우저 종료로만 종료).
+     */
+    @Value("${ultari.sse.timeout-ms:1800000}")
+    private long sseTimeoutMs;
 
     /** 스트림을 투명 중계한다. */
     public SseEmitter relay(Supplier<Flux<String>> streamSupplier) {
@@ -36,7 +44,8 @@ public class SseRelay {
      * @param onComplete     정상 완료 시 실행할 후처리(예: 캐시 무효화). 없으면 null
      */
     public SseEmitter relay(Supplier<Flux<String>> streamSupplier, Runnable onComplete) {
-        SseEmitter emitter = new SseEmitter(SSE_TIMEOUT_MS);
+        // 0 이하이면 무제한(서블릿 규약상 timeout<=0 은 만료 없음)
+        SseEmitter emitter = new SseEmitter(sseTimeoutMs > 0 ? sseTimeoutMs : 0L);
         AtomicBoolean completed = new AtomicBoolean(false);
 
         final Disposable[] holder = new Disposable[1];
