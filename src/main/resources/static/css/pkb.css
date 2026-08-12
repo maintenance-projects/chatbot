@@ -22,10 +22,10 @@
     font-size: 14px; font-weight: 700;
 }
 
-/* 스크롤되지 않는 래퍼 — 드롭 오버레이 고정용 */
-.p-chatwrap { flex: 1 1 auto; min-height: 0; position: relative; display: flex; flex-direction: column; }
-/* 대화방(챗봇 .cb-body와 동일) */
-.p-chat { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 16px;
+/* 스크롤되지 않는 래퍼 — 드롭 오버레이 고정용. p-chat은 이 안을 absolute로 꽉 채움 */
+.p-chatwrap { flex: 1 1 auto; min-height: 0; position: relative; }
+/* 대화방(챗봇 .cb-body와 동일 역할) — 래퍼를 절대 위치로 채워 flex 중첩 이슈 제거 */
+.p-chat { position: absolute; inset: 0; overflow-y: auto; padding: 16px;
     display: flex; flex-direction: column; gap: 10px; background: #f8fafc; }
 .p-hello { margin: auto; color: var(--p-sub); font-size: 12px; text-align: center; line-height: 1.6; }
 
