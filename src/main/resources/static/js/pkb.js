@@ -186,8 +186,9 @@ document.addEventListener("DOMContentLoaded", function () {
                 '<div class="name">' + esc(nameOf(it)) + "</div>" +
                 '<div class="sum">' + esc(summaryOf(it)) + "</div>" +
                 renderTags(tagsOf(it)) +
-                '<div class="meta">' + (it.sender ? ("보낸이: " + esc(it.sender)) : "") +
-                (when ? ((it.sender ? " · " : "") + esc(when)) : "") + "</div>" +
+                '<div class="meta">' +
+                (it.sender ? ("보낸이: " + esc(it.sender) + "<br>") : "") +
+                (when ? esc(when) : "") + "</div>" +
                 '<div class="acts">' +
                 '<button data-act="detail">상세</button>' +
                 '<button data-act="delete">삭제</button>' +
