@@ -2152,21 +2152,27 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (widget) {
         let dragDepth = 0;
+        // PKB(내 지식함) 모드에선 챗봇 드롭 처리를 하지 않음(PKB가 자체 처리)
+        const inPkbMode = () => widget.classList.contains("is-pkb-mode");
         widget.addEventListener("dragenter", (e) => {
+            if (inPkbMode()) return;
             e.preventDefault();
             dragDepth += 1;
             setDragOver(true);
         });
         widget.addEventListener("dragover", (e) => {
+            if (inPkbMode()) return;
             e.preventDefault();
             setDragOver(true);
         });
         widget.addEventListener("dragleave", (e) => {
+            if (inPkbMode()) return;
             e.preventDefault();
             dragDepth = Math.max(0, dragDepth - 1);
             if (dragDepth === 0) setDragOver(false);
         });
         widget.addEventListener("drop", (e) => {
+            if (inPkbMode()) return;
             e.preventDefault();
             dragDepth = 0;
             setDragOver(false);

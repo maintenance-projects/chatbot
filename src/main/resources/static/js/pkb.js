@@ -391,6 +391,22 @@ document.addEventListener("DOMContentLoaded", function () {
     dom.confirmOk.addEventListener("click", function () { var cb = confirmCb; closeConfirm(); if (cb) cb(); });
     dom.confirm.addEventListener("click", function (e) { if (e.target === dom.confirm) closeConfirm(); });
 
+    // 드래그앤드롭: PKB 영역에 파일을 놓으면 인제스트(AI 분석). 챗봇으로 넘어가지 않게 격리
+    var shell = dom.chat.closest(".p-shell");
+    if (shell) {
+        var dragDepth = 0;
+        function setDrag(on) { shell.classList.toggle("p-dragover", !!on); }
+        shell.addEventListener("dragenter", function (e) { e.preventDefault(); e.stopPropagation(); dragDepth++; setDrag(true); });
+        shell.addEventListener("dragover", function (e) { e.preventDefault(); e.stopPropagation(); setDrag(true); });
+        shell.addEventListener("dragleave", function (e) { e.preventDefault(); e.stopPropagation(); dragDepth = Math.max(0, dragDepth - 1); if (dragDepth === 0) setDrag(false); });
+        shell.addEventListener("drop", function (e) {
+            e.preventDefault(); e.stopPropagation();
+            dragDepth = 0; setDrag(false);
+            var files = (e.dataTransfer && e.dataTransfer.files) ? Array.prototype.slice.call(e.dataTransfer.files) : [];
+            if (files.length) ingest(files[0]);
+        });
+    }
+
     // 첫 진입 안내(시간·복사 포함 말풍선)
     addAiMsg().innerHTML =
         '안녕하세요! 업로드한 첨부파일을 AI가 분석·검색해 드립니다.<br>' +
