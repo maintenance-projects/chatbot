@@ -781,6 +781,15 @@ textarea {
     min-height: 0;
 }
 
+/* 좁은 챗봇 폭(~500px)에 맞춘 PKB 임베드 컴팩트 레이아웃 */
+.cb-pkb .p-sec { padding: 12px 14px; }
+.cb-pkb .p-row { gap: 6px; }
+.cb-pkb .p-cards { grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+.cb-pkb .p-inp { flex: 1 1 130px; min-width: 0; }
+.cb-pkb .p-inp.grow { flex: 1 1 100%; }
+.cb-pkb .p-btn { padding: 7px 10px; }
+.cb-pkb .p-modal { padding: 14px; }
+
 /* PKB 모드: 챗봇 요소 숨기고 PKB pane 표시 */
 .cb-widget.is-pkb-mode .cb-searchbar,
 .cb-widget.is-pkb-mode .cb-body,
