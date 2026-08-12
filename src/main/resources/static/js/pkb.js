@@ -12,7 +12,6 @@ document.addEventListener("DOMContentLoaded", function () {
 
     var dom = {
         chat: document.getElementById("pChat"),
-        hello: document.getElementById("pHello"),
         searchInput: document.getElementById("pSearchInput"),
         searchBtn: document.getElementById("pSearchBtn"),
         plusBtn: document.getElementById("pPlusBtn"),
@@ -115,7 +114,6 @@ document.addEventListener("DOMContentLoaded", function () {
         if (!q || busy) return;
         busy = true;
         dom.searchBtn.disabled = true;
-        if (dom.hello) dom.hello.style.display = "none";
         addUserMsg(q);
         dom.searchInput.value = "";
 
@@ -261,7 +259,6 @@ document.addEventListener("DOMContentLoaded", function () {
     function ingest(file) {
         if (!file || busy) return;
         busy = true;
-        if (dom.hello) dom.hello.style.display = "none";
         var statusEl = addAiMsg();
         statusEl.textContent = "업로드·분석 중: " + file.name;
 
