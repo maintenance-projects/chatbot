@@ -433,7 +433,8 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         var lastSummary = "";
-        var done = false; // onDone은 (done 이벤트 + 스트림 종료로) 여러 번 올 수 있어 1회만 처리
+        var done = false;     // onDone은 (done 이벤트 + 스트림 종료로) 여러 번 올 수 있어 1회만 처리
+        var hadError = false; // 오류 이벤트 뒤에도 done이 오므로, 완료 말풍선을 띄우지 않기 위한 가드
 
         var fd = new FormData();
         fd.append("sender", ownerId);
@@ -456,12 +457,15 @@ document.addEventListener("DOMContentLoaded", function () {
                     }
                 },
                 onError: function (detail) {
+                    hadError = true;
                     if (ptext) ptext.textContent = "오류";
                     addAiMsg().textContent = "분석 오류: " + detail;
                 },
                 onDone: function () {
                     if (done) return;
                     done = true;
+                    // 오류로 종료된 경우 완료 말풍선을 띄우지 않는다(오류 이벤트 뒤에도 done이 옴)
+                    if (hadError) return;
                     setPct(100);
                     if (ptext) ptext.textContent = "완료";
                     // 완료 결과를 AI(왼쪽) 말풍선으로 덧붙임
