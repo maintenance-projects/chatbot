@@ -1,30 +1,64 @@
-/* PKB(AI 첨부파일 비서) 공통 스타일 — 독립 화면(/mypkb)과 챗봇 임베드가 공유 */
+/* PKB(AI 첨부파일 검색) 공통 스타일 — 독립 화면(/mypkb)과 챗봇 임베드가 공유 */
 :root {
     --p-bg: #f4f5f7; --p-panel: #fff; --p-line: #e5e7eb; --p-primary: #6d28d9;
-    --p-text: #1f2937; --p-sub: #6b7280; --p-chip: #ede9fe;
+    --p-text: #1f2937; --p-sub: #6b7280; --p-chip: #ede9fe; --p-ai-bg: #f1f5f9;
 }
 .p-shell * { box-sizing: border-box; }
-/* body 규칙은 두지 않음(임베드 시 챗봇 body 오염 방지). 폰트/색은 shell에 적용 */
-.p-shell { background: var(--p-panel); color: var(--p-text);
-    font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif; }
-.p-head { padding: 16px 20px; border-bottom: 1px solid var(--p-line); display: flex; align-items: center; gap: 10px; }
-.p-head h1 { font-size: 17px; margin: 0; font-weight: 700; }
-.p-head .sub { font-size: 12px; color: var(--p-sub); }
-.p-sec { padding: 16px 20px; border-bottom: 1px solid var(--p-line); }
-.p-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
-.p-btn { font-size: 13px; padding: 7px 14px; border-radius: 8px; border: 1px solid var(--p-line);
-    background: #fff; cursor: pointer; }
+
+/* 셸: 세로 flex로 컨테이너 꽉 채움(툴바 / 대화방 / 입력바) */
+.p-shell {
+    display: flex; flex-direction: column; position: relative; overflow: hidden;
+    background: var(--p-panel); color: var(--p-text);
+    font-family: "Malgun Gothic", "Apple SD Gothic Neo", sans-serif;
+}
+
+/* 상단 툴바 */
+.p-toolbar { flex: 0 0 auto; display: flex; align-items: center; gap: 8px;
+    padding: 10px 14px; border-bottom: 1px solid var(--p-line); }
+.p-ingest { font-size: 11px; color: var(--p-sub); flex: 1 1 auto; min-width: 0;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* 대화방(검색 Q&A) */
+.p-chat { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 14px;
+    display: flex; flex-direction: column; gap: 10px; background: var(--p-bg); }
+.p-hello { margin: auto; color: var(--p-sub); font-size: 13px; text-align: center; line-height: 1.6; }
+.p-msg { max-width: 90%; padding: 9px 12px; border-radius: 12px; font-size: 13px;
+    line-height: 1.55; word-break: break-word; }
+.p-msg--user { align-self: flex-end; background: var(--p-primary); color: #fff; border-bottom-right-radius: 4px; }
+.p-msg--ai { align-self: flex-start; background: var(--p-ai-bg); color: var(--p-text); border-bottom-left-radius: 4px; }
+.p-msg--ai p { margin: 0 0 6px; }
+.p-msg--ai p:last-child { margin-bottom: 0; }
+.p-msg .p-analysis { font-size: 11px; color: var(--p-sub); margin-bottom: 6px; }
+.p-msg .p-refs { margin-top: 8px; font-size: 11px; color: var(--p-sub); }
+.p-msg .p-sub-title { font-size: 12px; font-weight: 700; color: var(--p-sub); margin: 10px 0 4px; }
+
+/* 하단 입력바(챗봇형) */
+.p-inputbar { flex: 0 0 auto; display: flex; align-items: center; gap: 8px;
+    padding: 10px 14px; border-top: 1px solid var(--p-line); background: #fff; }
+
+/* 공통 버튼/인풋 */
+.p-btn { font-size: 13px; padding: 7px 12px; border-radius: 8px; border: 1px solid var(--p-line);
+    background: #fff; cursor: pointer; white-space: nowrap; }
 .p-btn.primary { background: var(--p-primary); color: #fff; border-color: var(--p-primary); }
 .p-btn:disabled { opacity: .5; cursor: not-allowed; }
 .p-inp { font-size: 13px; padding: 8px 10px; border: 1px solid var(--p-line); border-radius: 8px; }
-.p-inp.grow { flex: 1; min-width: 160px; }
-.p-title { font-size: 13px; font-weight: 700; color: var(--p-sub); margin-bottom: 10px; }
-/* 검색 결과 */
-.p-analysis { font-size: 12px; color: var(--p-sub); margin: 8px 0; }
-.p-answer { font-size: 14px; line-height: 1.6; }
-.p-refs { margin-top: 8px; font-size: 12px; color: var(--p-sub); }
+.p-inp.grow { flex: 1 1 auto; min-width: 0; }
+
+/* 내 파일 목록 패널(오버레이) */
+.p-files { position: absolute; inset: 0; background: var(--p-panel); z-index: 6;
+    display: none; flex-direction: column; }
+.p-files.open { display: flex; }
+.p-files__head { flex: 0 0 auto; display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 14px; border-bottom: 1px solid var(--p-line); }
+.p-files__title { font-size: 14px; font-weight: 700; }
+.p-files__close { border: none; background: none; font-size: 20px; color: var(--p-sub); cursor: pointer; line-height: 1; }
+.p-files__filters { flex: 0 0 auto; display: flex; gap: 6px; flex-wrap: wrap;
+    padding: 10px 14px; border-bottom: 1px solid var(--p-line); }
+.p-files__filters .p-inp { flex: 1 1 130px; min-width: 0; }
+.p-files__body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 14px; }
+
 /* 카드 */
-.p-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; }
+.p-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
 .p-card { border: 1px solid var(--p-line); border-radius: 10px; padding: 12px; background: #fff; }
 .p-card .name { font-size: 13px; font-weight: 700; margin-bottom: 4px; word-break: break-all; }
 .p-card .sum { font-size: 12px; color: var(--p-sub); line-height: 1.45; max-height: 54px; overflow: hidden; }
@@ -35,14 +69,15 @@
 .p-card .acts button { font-size: 11px; padding: 4px 8px; border: 1px solid var(--p-line); border-radius: 6px;
     background: #fff; cursor: pointer; }
 .p-empty { font-size: 13px; color: var(--p-sub); padding: 8px 0; }
-/* 모달 */
+
+/* 상세 모달 */
 .p-modal { position: fixed; inset: 0; background: rgba(0,0,0,.4); display: none; align-items: center;
-    justify-content: center; padding: 20px; z-index: 1000; }
+    justify-content: center; padding: 16px; z-index: 1000; }
 .p-modal.open { display: flex; }
 .p-modal__box { background: #fff; border-radius: 12px; max-width: 520px; width: 100%; max-height: 80vh;
     overflow-y: auto; padding: 20px; }
 .p-modal__box h3 { margin: 0 0 10px; font-size: 15px; word-break: break-all; }
-.p-modal__box .k { font-size: 12px; color: var(--p-sub); margin-top: 10px; }
+.p-modal__box .k { font-size: 12px; color: var(--p-sub); margin-top: 10px; font-weight: 700; }
 .p-modal__box .v { font-size: 13px; line-height: 1.5; }
 .p-modal__close { float: right; cursor: pointer; border: none; background: none; font-size: 18px; color: var(--p-sub); }
 .p-shell .hidden { display: none; }

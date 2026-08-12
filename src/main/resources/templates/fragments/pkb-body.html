@@ -3,36 +3,42 @@
 <body>
 <!-- PKB 본문(헤더 제외) — 독립 화면(/mypkb)과 챗봇 임베드가 공유 -->
 <th:block th:fragment="content">
-    <!-- 자연어 검색 -->
-    <section class="p-sec">
-        <div class="p-title">자연어 검색</div>
-        <div class="p-row">
-            <input class="p-inp grow" id="pSearchInput" type="text"
-                placeholder="예) 지난주 받은 계약서 요약해줘 / 세금 관련 파일 찾아줘" />
-            <button class="p-btn primary" id="pSearchBtn" type="button">검색</button>
-        </div>
-        <div id="pSearchResult"></div>
-    </section>
+    <!-- 상단 툴바 -->
+    <div class="p-toolbar">
+        <button class="p-btn" id="pIngestBtn" type="button">＋ 첨부파일 추가</button>
+        <input type="file" id="pFileInput" class="hidden" />
+        <button class="p-btn" id="pFilesBtn" type="button">📁 내 파일</button>
+        <span class="p-ingest" id="pIngestStatus"></span>
+    </div>
 
-    <!-- 인제스트 + 필터 -->
-    <section class="p-sec">
-        <div class="p-row">
-            <button class="p-btn" id="pIngestBtn" type="button">＋ 첨부파일 추가(AI 분석)</button>
-            <input type="file" id="pFileInput" class="hidden" />
+    <!-- 대화방(검색 Q&A) -->
+    <div class="p-chat" id="pChat">
+        <div class="p-hello" id="pHello">첨부파일에 대해 물어보세요.<br />예) "지난주 받은 계약서 요약해줘"</div>
+    </div>
+
+    <!-- 하단 검색 입력 -->
+    <div class="p-inputbar">
+        <input class="p-inp grow" id="pSearchInput" type="text" placeholder="검색어를 입력하세요" />
+        <button class="p-btn primary" id="pSearchBtn" type="button">검색</button>
+    </div>
+
+    <!-- 내 파일 목록 패널(오버레이) -->
+    <div class="p-files" id="pFilesPanel" aria-hidden="true">
+        <div class="p-files__head">
+            <span class="p-files__title">내 파일</span>
+            <button class="p-files__close" id="pFilesClose" type="button">×</button>
+        </div>
+        <div class="p-files__filters">
             <input class="p-inp" id="pFilterCategory" type="text" placeholder="카테고리 필터" />
             <input class="p-inp" id="pFilterTag" type="text" placeholder="태그 필터" />
             <button class="p-btn" id="pApplyFilter" type="button">적용</button>
             <button class="p-btn" id="pRefresh" type="button">↻</button>
         </div>
-        <div id="pIngestStatus" class="p-analysis"></div>
-    </section>
-
-    <!-- 내 파일 -->
-    <section class="p-sec" style="border-bottom:none">
-        <div class="p-title">내 파일</div>
-        <div class="p-cards" id="pCards"></div>
-        <div class="p-empty hidden" id="pCardsEmpty">저장된 파일이 없습니다.</div>
-    </section>
+        <div class="p-files__body">
+            <div class="p-cards" id="pCards"></div>
+            <div class="p-empty hidden" id="pCardsEmpty">저장된 파일이 없습니다.</div>
+        </div>
+    </div>
 
     <!-- 상세 모달 -->
     <div class="p-modal" id="pModal">
