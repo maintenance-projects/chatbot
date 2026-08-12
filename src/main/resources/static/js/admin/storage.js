@@ -818,8 +818,25 @@
         return fetch("/at-i/documents/count?adminId=" + encodeURIComponent(id) + deptQS())
             .then(function (res) { return res.json(); })
             .then(function (json) {
-                // 신규 게이트웨이는 봉투일 수 있음: 배열이면 그대로, 아니면 data 배열 사용
-                var arr = Array.isArray(json) ? json : (json && Array.isArray(json.data) ? json.data : []);
+                // 게이트웨이 응답 형태 정규화 → 내부 규약 배열([0]미사용,[1]오늘,[2]사용,[3]전체)
+                var arr;
+                if (Array.isArray(json)) {
+                    arr = json;
+                } else if (json && Array.isArray(json.data)) {
+                    arr = json.data;
+                } else if (json && typeof json === "object" &&
+                    (json.totalCount != null || json.useCount != null ||
+                     json.todayCount != null || json.unUseCount != null)) {
+                    // 신규 단일 객체 봉투: {totalCount,useCount,todayCount,unUseCount}
+                    arr = [
+                        { count: json.unUseCount != null ? json.unUseCount : 0 },
+                        { count: json.todayCount != null ? json.todayCount : 0 },
+                        { count: json.useCount != null ? json.useCount : 0 },
+                        { count: json.totalCount != null ? json.totalCount : 0 }
+                    ];
+                } else {
+                    arr = [];
+                }
                 window.countList = arr;
                 computeStatsFromVisible();
             })
