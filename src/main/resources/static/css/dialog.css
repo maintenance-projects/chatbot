@@ -818,7 +818,7 @@ textarea {
 
 /* PKB 모드: 챗봇 요소 숨기고 PKB pane 표시 */
 .cb-widget.is-pkb-mode .cb-searchbar,
-.cb-widget.is-pkb-mode .cb-body,
+.cb-widget.is-pkb-mode .cb-bodywrap,
 .cb-widget.is-pkb-mode .cb-footer,
 .cb-widget.is-pkb-mode .cb-header__right {
     display: none;
