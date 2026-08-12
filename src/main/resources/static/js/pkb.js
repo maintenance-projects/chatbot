@@ -341,6 +341,7 @@ document.addEventListener("DOMContentLoaded", function () {
         }
 
         var lastSummary = "";
+        var done = false; // onDone은 (done 이벤트 + 스트림 종료로) 여러 번 올 수 있어 1회만 처리
 
         var fd = new FormData();
         fd.append("sender", ownerId);
@@ -367,6 +368,8 @@ document.addEventListener("DOMContentLoaded", function () {
                     addAiMsg().textContent = "분석 오류: " + detail;
                 },
                 onDone: function () {
+                    if (done) return;
+                    done = true;
                     setPct(100);
                     if (ptext) ptext.textContent = "완료";
                     // 완료 결과를 AI(왼쪽) 말풍선으로 덧붙임
