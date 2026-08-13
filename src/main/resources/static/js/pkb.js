@@ -270,6 +270,12 @@ document.addEventListener("DOMContentLoaded", function () {
                         var sums = Array.isArray(d) ? d : normalizeList(obj);
                         state.extraHtml = '<div class="p-sub-title">요약</div>' + sums.map(sumMini).join("");
                         render();
+                    } else if (type === "doc_answer") {
+                        // content_search intent는 답변을 문서별 doc_answer로 보낸다(answer 아님).
+                        var name = d.source || d.file_name || "";
+                        state.answer += (state.answer ? "\n\n" : "")
+                            + (name ? "**" + name + "**\n" : "") + (d.answer || "");
+                        render();
                     }
                 },
                 onReferences: function (docs) { state.refs = docs || []; render(); },
