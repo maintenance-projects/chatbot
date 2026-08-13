@@ -259,7 +259,7 @@ document.addEventListener("DOMContentLoaded", function () {
         dom.searchInput.value = "";
 
         var bubble = addAiMsg();
-        var state = { analysis: "", answer: "", refs: [], extraHtml: "" };
+        var state = { analysis: "", answer: "", refs: [], extraHtml: "", ended: false };
         var done = false; // onDone은 여러 번 올 수 있어 1회만 처리
         function render() {
             var html = "";
@@ -280,7 +280,15 @@ document.addEventListener("DOMContentLoaded", function () {
                 html += '<div class="p-refs">참조: ' + refStr + "</div>";
             }
             if (state.extraHtml) html += state.extraHtml;
-            bubble.innerHTML = html || '<div class="p-analysis">검색 중…</div>';
+            // 대기 인디케이터: 실제 답변(또는 파일/요약)·종료가 아직 없을 때 "준비 중" 표시.
+            // 참조만 온 상태는 아직 답변 생성 중이므로 인디케이터를 유지한다(느린 구간 커버).
+            var hasContent = state.answer || state.extraHtml;
+            if (!state.ended && !hasContent) {
+                var label = state.analysis ? "답변을 준비하고 있어요" : "검색 중";
+                html += '<div class="p-typing">' + label +
+                    '<span class="p-typing__dots"><i></i><i></i><i></i></span></div>';
+            }
+            bubble.innerHTML = html;
             scrollChat();
         }
         render();
@@ -316,10 +324,11 @@ document.addEventListener("DOMContentLoaded", function () {
                 },
                 onReferences: function (docs) { state.refs = docs || []; render(); },
                 onAnswer: function (text) { state.answer += text; render(); },
-                onError: function (detail) { state.analysis = "오류: " + window.SseClient.friendlyError(detail); render(); },
-                onDone: function () { if (done) return; done = true; render(); },
+                onError: function (detail) { state.ended = true; state.analysis = "오류: " + window.SseClient.friendlyError(detail); render(); },
+                onDone: function () { if (done) return; done = true; state.ended = true; render(); },
             }
         ).catch(function (err) {
+            state.ended = true;
             state.analysis = "검색 실패: " + (err && err.message ? err.message : "");
             render();
         }).finally(function () {
