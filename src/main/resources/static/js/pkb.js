@@ -284,9 +284,9 @@ document.addEventListener("DOMContentLoaded", function () {
             // 참조만 온 상태는 아직 답변 생성 중이므로 인디케이터를 유지한다(느린 구간 커버).
             var hasContent = state.answer || state.extraHtml;
             if (!state.ended && !hasContent) {
-                var label = state.analysis ? "답변을 준비하고 있어요" : "검색 중";
-                html += '<div class="p-typing">' + label +
-                    '<span class="p-typing__dots"><i></i><i></i><i></i></span></div>';
+                // AI 챗봇 탭과 동일한 shimmer 진행 표시
+                var label = state.analysis ? "답변을 생성하고 있습니다." : "질문의 의도를 파악하고 있습니다.";
+                html += '<div class="p-progress"><span class="p-progress__text">' + label + '</span></div>';
             }
             bubble.innerHTML = html;
             scrollChat();

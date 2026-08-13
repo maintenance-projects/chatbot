@@ -112,17 +112,18 @@
     background: #ef4444; border: 2px solid #fff;
 }
 
-/* 검색 대기 인디케이터 — 점 3개가 통통 튀는 타이핑 표시(답변 오면 제거됨) */
-.p-typing { display: flex; align-items: center; gap: 8px; margin-top: 4px;
-    color: var(--p-sub); font-size: 13px; }
-.p-typing__dots { display: inline-flex; gap: 4px; }
-.p-typing__dots i { width: 6px; height: 6px; border-radius: 50%; background: var(--p-primary);
-    opacity: .35; animation: pTyping 1.2s infinite ease-in-out; }
-.p-typing__dots i:nth-child(2) { animation-delay: .2s; }
-.p-typing__dots i:nth-child(3) { animation-delay: .4s; }
-@keyframes pTyping {
-    0%, 60%, 100% { transform: translateY(0); opacity: .35; }
-    30% { transform: translateY(-4px); opacity: 1; }
+/* 검색 대기 인디케이터 — AI 챗봇 탭과 동일한 shimmer 진행 표시(.cb-progress와 동일) */
+.p-progress { display: flex; align-items: center; gap: 8px; min-height: 20px; margin-top: 4px; }
+.p-progress__text {
+    font-size: 11px; font-weight: 500; letter-spacing: -0.01em;
+    background: linear-gradient(90deg, rgba(68, 77, 91, 0.6), rgba(210, 210, 210, 0.95), rgba(68, 77, 91, 0.6));
+    background-size: 220% 100%;
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    animation: pShimmer 1.05s infinite linear; user-select: none;
+}
+@keyframes pShimmer {
+    0% { background-position: 0% 0; }
+    100% { background-position: 220% 0; }
 }
 .p-inputwrap { display: flex; align-items: center; gap: 6px; position: relative;
     border: 1px solid var(--p-line); background: #fff; border-radius: 25px; padding: 6px 8px; }
