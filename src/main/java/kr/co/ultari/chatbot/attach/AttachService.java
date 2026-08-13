@@ -20,8 +20,8 @@ import java.nio.file.Paths;
 
 /**
  * 메신저 첨부파일 등록(단순 등록) 도메인.
- * <p>메신저 클라이언트가 로컬에 받은 파일을 우리 서버로 multipart POST 하면, 개인(dept-less)
- * 게이트웨이 업로드({@code /upload/{ownerId}})로 릴레이한다.
+ * <p>메신저 클라이언트가 로컬에 받은 파일을 우리 서버로 multipart POST 하면, 개인 지식함(PKB)
+ * 인제스트({@code /pkb/{ownerId}/ingest}, dept-less)로 릴레이한다 → "AI 첨부파일 검색" 탭에서 조회·검색된다.
  * <p><b>접수 후 비동기(옵션 C)</b>: 요청 수명과 분리하기 위해 우리 임시파일로 복사한 뒤 202로 즉시
  * 접수하고, 게이트웨이 릴레이는 백그라운드(Reactor)에서 수행한다. 대용량 대비 메모리가 아닌 디스크에 적재한다.
  */
@@ -63,8 +63,8 @@ public class AttachService {
                 .filename(safeName)
                 .contentType(MediaType.APPLICATION_OCTET_STREAM);
 
-        // 백그라운드 릴레이: SSE를 끝까지 소비하고, 종료 시 임시파일 정리(성공/실패 무관)
-        gateway.stream(null, "/upload/" + seg(ownerId), b)
+        // 백그라운드 릴레이(PKB 인제스트): SSE(progress/enrichment)를 끝까지 소비하고, 종료 시 임시파일 정리(성공/실패 무관)
+        gateway.stream(null, "/pkb/" + seg(ownerId) + "/ingest", b)
                 .doOnComplete(() -> log.info("[attach] 등록 완료 ownerId={}, file={}", ownerId, displayName))
                 .doOnError(e -> log.error("[attach] 릴레이 실패 ownerId={}, file={}", ownerId, displayName, e))
                 .doFinally(sig -> {
