@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <body>
-<!-- PKB 본문(헤더 제외) — 독립 화면(/mypkb)과 챗봇 임베드가 공유. AI 챗봇과 동일 UI(색만 다름) -->
+<!-- PKB 본문(헤더 제외) — 챗봇 dialog에 임베드(th:replace). AI 챗봇과 동일 UI(색만 다름) -->
 <th:block th:fragment="content">
     <!-- 대화 내용 검색바(헤더 검색버튼으로 토글) -->
     <div class="p-searchbar" id="pSearchBar" hidden>
