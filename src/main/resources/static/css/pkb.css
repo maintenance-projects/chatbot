@@ -104,6 +104,13 @@
 .p-scrolldown.is-visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
 .p-scrolldown:hover { background: var(--p-bg); color: var(--p-primary); }
 .p-scrolldown svg { width: 20px; height: 20px; }
+
+/* 위로 올라가 있는 동안 새 답변이 오면 빨간 점 뱃지(챗봇 .cb-scrolldown.has-new와 동일) */
+.p-scrolldown.has-new::after {
+    content: ""; position: absolute; top: -1px; right: -1px;
+    width: 11px; height: 11px; border-radius: 50%;
+    background: #ef4444; border: 2px solid #fff;
+}
 .p-inputwrap { display: flex; align-items: center; gap: 6px; position: relative;
     border: 1px solid var(--p-line); background: #fff; border-radius: 25px; padding: 6px 8px; }
 .p-plus { flex: 0 0 auto; width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--p-line);

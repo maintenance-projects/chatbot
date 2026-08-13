@@ -215,17 +215,26 @@ document.addEventListener("DOMContentLoaded", function () {
         var dist = dom.chat.scrollHeight - dom.chat.scrollTop - dom.chat.clientHeight;
         stickToBottom = dist <= SCROLL_STICK_THRESHOLD;
         dom.scrollDown.classList.toggle("is-visible", dist > SCROLL_DOWN_THRESHOLD);
+        if (stickToBottom) dom.scrollDown.classList.remove("has-new"); // 바닥 도달 시 새 답변 뱃지 제거
     }
     function scrollChat() {
-        if (!stickToBottom) return;    // 위로 올라가 있으면 새 내용에 자동 추종하지 않음
+        if (!stickToBottom) {
+            // 위로 올라가 있는데 새 내용(답변)이 도착 → 빨간 점으로 알림(챗봇과 동일)
+            if (dom.scrollDown) dom.scrollDown.classList.add("has-new");
+            return;
+        }
         dom.chat.scrollTop = dom.chat.scrollHeight;
-        if (dom.scrollDown) dom.scrollDown.classList.remove("is-visible");
+        if (dom.scrollDown) {
+            dom.scrollDown.classList.remove("is-visible");
+            dom.scrollDown.classList.remove("has-new");
+        }
     }
     dom.chat.addEventListener("scroll", updateScrollDownBtn, { passive: true });
     if (dom.scrollDown) {
         dom.scrollDown.addEventListener("click", function () {
             stickToBottom = true;
             suppressScrollUpdate = true;
+            dom.scrollDown.classList.remove("has-new");
             dom.chat.scrollTo({ top: dom.chat.scrollHeight, behavior: "smooth" });
             setTimeout(function () { suppressScrollUpdate = false; updateScrollDownBtn(); }, 450);
         });
@@ -672,7 +681,7 @@ document.addEventListener("DOMContentLoaded", function () {
     // 첫 진입 안내(시간·복사 포함 말풍선)
     addAiMsg().innerHTML =
         '안녕하세요! 업로드한 첨부파일을 AI가 분석·검색해 드립니다.<br>' +
-        '· 하단 입력창에 자연어로 물어보세요. 예) "지난주 받은 계약서 요약해줘"<br>' +
+        '· 하단 입력창에 자연어로 물어보세요. 예) "x월 x일 회의록 내용이 뭐야?"<br>' +
         '· <b>＋</b> 버튼으로 첨부파일을 추가하거나 <b>내 파일</b> 목록을 볼 수 있어요.';
 
     // 첨부파일 보관일수(TTL) 조회 — 내 파일 안내/남은일수 표시용
