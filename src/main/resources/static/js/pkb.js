@@ -12,6 +12,7 @@ document.addEventListener("DOMContentLoaded", function () {
 
     var dom = {
         chat: document.getElementById("pChat"),
+        scrollDown: document.getElementById("pScrollDown"),
         searchInput: document.getElementById("pSearchInput"),
         searchBtn: document.getElementById("pSearchBtn"),
         plusBtn: document.getElementById("pPlusBtn"),
@@ -200,9 +201,35 @@ document.addEventListener("DOMContentLoaded", function () {
         scrollChat();
         return text;
     }
-    function addUserMsg(text) { makeMsg("p-msg--user").textContent = text; }
+    // 사용자가 보낸 메시지는 항상 바닥 추종(위로 올라가 있어도 되돌림)
+    function addUserMsg(text) { stickToBottom = true; makeMsg("p-msg--user").textContent = text; }
     function addAiMsg() { return makeMsg("p-msg--ai"); }
-    function scrollChat() { dom.chat.scrollTop = dom.chat.scrollHeight; }
+
+    // ── 맨 아래로 스크롤(챗봇 .cb-scrolldown과 동일 동작) ──────────
+    var SCROLL_DOWN_THRESHOLD = 120;   // 바닥에서 이만큼 위로 오르면 버튼 표시
+    var SCROLL_STICK_THRESHOLD = 40;   // 이내면 '바닥에 붙음'으로 간주(새 내용 자동 추종)
+    var stickToBottom = true;
+    var suppressScrollUpdate = false;  // 프로그램 스크롤 애니메이션 중 토글 억제(깜빡임 방지)
+    function updateScrollDownBtn() {
+        if (!dom.scrollDown || suppressScrollUpdate) return;
+        var dist = dom.chat.scrollHeight - dom.chat.scrollTop - dom.chat.clientHeight;
+        stickToBottom = dist <= SCROLL_STICK_THRESHOLD;
+        dom.scrollDown.classList.toggle("is-visible", dist > SCROLL_DOWN_THRESHOLD);
+    }
+    function scrollChat() {
+        if (!stickToBottom) return;    // 위로 올라가 있으면 새 내용에 자동 추종하지 않음
+        dom.chat.scrollTop = dom.chat.scrollHeight;
+        if (dom.scrollDown) dom.scrollDown.classList.remove("is-visible");
+    }
+    dom.chat.addEventListener("scroll", updateScrollDownBtn, { passive: true });
+    if (dom.scrollDown) {
+        dom.scrollDown.addEventListener("click", function () {
+            stickToBottom = true;
+            suppressScrollUpdate = true;
+            dom.chat.scrollTo({ top: dom.chat.scrollHeight, behavior: "smooth" });
+            setTimeout(function () { suppressScrollUpdate = false; updateScrollDownBtn(); }, 450);
+        });
+    }
 
     // ── 자연어 검색(intent별) ─────────────────────────────────
     function fileMini(f) {

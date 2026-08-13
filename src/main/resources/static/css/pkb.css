@@ -93,7 +93,17 @@
 .p-msg.p-hit { outline: 2px solid var(--p-primary); outline-offset: 2px; }
 
 /* 하단 입력(챗봇 pill과 동일: ＋도구메뉴 + 입력 + send) */
-.p-footer { flex: 0 0 auto; padding: 12px 14px; border-top: 1px solid var(--p-line); background: #fff; }
+.p-footer { flex: 0 0 auto; padding: 12px 14px; border-top: 1px solid var(--p-line); background: #fff; position: relative; }
+
+/* 맨 아래로 스크롤 버튼(챗봇 .cb-scrolldown과 동일 동작, 입력창 위에 떠 있음) */
+.p-scrolldown { position: absolute; right: 16px; top: -52px; width: 40px; height: 40px;
+    border-radius: 50%; border: 1px solid var(--p-line); background: #fff; color: #334155;
+    display: grid; place-items: center; cursor: pointer; box-shadow: 0 6px 18px rgba(15, 23, 42, .18);
+    opacity: 0; transform: translateY(8px); pointer-events: none;
+    transition: opacity .18s ease, transform .18s ease, background .15s ease, color .15s ease; z-index: 25; }
+.p-scrolldown.is-visible { opacity: 1; transform: translateY(0); pointer-events: auto; }
+.p-scrolldown:hover { background: var(--p-bg); color: var(--p-primary); }
+.p-scrolldown svg { width: 20px; height: 20px; }
 .p-inputwrap { display: flex; align-items: center; gap: 6px; position: relative;
     border: 1px solid var(--p-line); background: #fff; border-radius: 25px; padding: 6px 8px; }
 .p-plus { flex: 0 0 auto; width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--p-line);
