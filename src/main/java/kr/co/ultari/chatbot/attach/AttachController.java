@@ -26,6 +26,8 @@ public class AttachController {
     /** 메신저 첨부 등록: 접수 즉시 202 반환, 릴레이는 백그라운드 */
     @PostMapping(value = "/chatbot/attach", produces = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<String> attach(@RequestParam("ownerId") String ownerId,
+                                         @RequestParam(value = "sender", required = false) String sender,
+                                         @RequestParam(value = "room_name", required = false) String roomName,
                                          @RequestParam(value = "attachFile_name", required = false) String attachFileName,
                                          @RequestParam("attachFile_bin") MultipartFile file) {
         if (file == null || file.isEmpty()) {
@@ -33,7 +35,7 @@ public class AttachController {
                     .body("{\"responseCode\":\"1111\",\"message\":\"업로드할 파일이 없습니다.\"}");
         }
         try {
-            attachService.registerAsync(ownerId, attachFileName, file);
+            attachService.registerAsync(ownerId, sender, roomName, attachFileName, file);
         } catch (Exception e) {
             log.error("[attach] 접수 실패 ownerId={}, file={}", ownerId, file.getOriginalFilename(), e);
             return ResponseEntity.internalServerError()

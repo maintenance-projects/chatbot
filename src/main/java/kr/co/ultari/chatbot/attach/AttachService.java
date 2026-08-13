@@ -42,7 +42,8 @@ public class AttachService {
      *
      * @throws IOException 임시파일 복사 실패(이 경우에만 접수 실패로 응답)
      */
-    public void registerAsync(String ownerId, String attachFileName, MultipartFile file) throws IOException {
+    public void registerAsync(String ownerId, String sender, String roomName,
+                              String attachFileName, MultipartFile file) throws IOException {
         String original = file.getOriginalFilename();
         // 경로 탈출 방지: 파일명은 단일 세그먼트만
         String safeName = Paths.get(original == null ? "file" : original).getFileName().toString();
@@ -55,6 +56,8 @@ public class AttachService {
         file.transferTo(tmp);
 
         MultipartBodyBuilder b = new MultipartBodyBuilder();
+        if (StringUtils.hasText(sender)) b.part("sender", sender);
+        if (StringUtils.hasText(roomName)) b.part("room_name", roomName);
         b.part("attachFile_name", displayName);
         b.part("attachFile_bin", new FileSystemResource(tmp))
                 .filename(safeName)
