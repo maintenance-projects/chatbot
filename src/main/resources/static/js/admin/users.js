@@ -120,9 +120,13 @@
 
         parts.forEach(function (p) { partsById[p.partId] = p; });
         parts.forEach(function (p) {
-            var high = p.partHigh;
-            if (high && partsById[high]) (childrenOf[high] = childrenOf[high] || []).push(p.partId);
-            else roots.push(p.partId);  // 부모가 없거나(루트: 예 '0') 미존재 → 루트
+            var high = String(p.partHigh == null ? "" : p.partHigh).trim();
+            if (high === "0") {
+                roots.push(p.partId);  // 최상위: HIGH == 0 인 부서만
+            } else if (partsById[high] && high !== p.partId) {
+                (childrenOf[high] = childrenOf[high] || []).push(p.partId);  // 존재하는 부모 밑 자식
+            }
+            // 그 외(HIGH≠0 인데 부모가 목록에 없음 = 고아, 자기참조): 트리에서 제외(숨김)
         });
         users.forEach(function (u) {
             (usersByPart[u.userHigh] = usersByPart[u.userHigh] || []).push(u);
