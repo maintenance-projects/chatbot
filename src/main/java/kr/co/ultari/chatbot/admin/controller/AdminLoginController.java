@@ -69,9 +69,12 @@ public class AdminLoginController {
             if (session != null) {
                 sessionStore.save(uuid, session, ttlSeconds);
             }
-            httpRequest.getSession(true)
-                    .setAttribute("sessionId", uuid);
             long effectiveTtl = ttlSeconds > 0 ? ttlSeconds : sessionStore.getDefaultTtlSeconds();
+            jakarta.servlet.http.HttpSession httpSession = httpRequest.getSession(true);
+            httpSession.setAttribute("sessionId", uuid);
+            // HttpSession 수명을 관리자 세션 TTL과 정렬 — 기본 30분에 먼저 만료돼 타이머(1시간)와
+            // 어긋나던 문제 방지. 이후 요청마다 슬라이딩 갱신된다.
+            httpSession.setMaxInactiveInterval((int) effectiveTtl);
             log.info("[admin login] adminId={}, rememberMe={}, sessionTtlSeconds={}",
                     request.getAdminId(), request.isRememberMe(), effectiveTtl);
         }
@@ -138,7 +141,7 @@ public class AdminLoginController {
         model.addAttribute("statistics", session.isAuthStatistics());
         model.addAttribute("master",session.isAuthMaster());
         model.addAttribute("partition", session.isAuthPartition());
-        model.addAttribute("sessionRemainingSeconds", sessionStore.getRemainingSeconds(sessionId));
+        model.addAttribute("sessionRemainingSeconds", sessionStore.refresh(sessionId)); // 활동(페이지 이동) 시 세션 연장
         model.addAttribute("deptCodes", deptProperties.getCodes());
         model.addAttribute("deptLabels", deptLabelService.labels());
 
@@ -162,7 +165,7 @@ public class AdminLoginController {
         model.addAttribute("statistics", session.isAuthStatistics());
         model.addAttribute("master",session.isAuthMaster());
         model.addAttribute("partition", session.isAuthPartition());
-        model.addAttribute("sessionRemainingSeconds", sessionStore.getRemainingSeconds(sessionId));
+        model.addAttribute("sessionRemainingSeconds", sessionStore.refresh(sessionId)); // 활동(페이지 이동) 시 세션 연장
         model.addAttribute("audioEnabled", statsAudioEnabled);
 
         return "admin/statistics";
@@ -185,7 +188,7 @@ public class AdminLoginController {
         model.addAttribute("statistics", session.isAuthStatistics());
         model.addAttribute("master",session.isAuthMaster());
         model.addAttribute("partition", session.isAuthPartition());
-        model.addAttribute("sessionRemainingSeconds", sessionStore.getRemainingSeconds(sessionId));
+        model.addAttribute("sessionRemainingSeconds", sessionStore.refresh(sessionId)); // 활동(페이지 이동) 시 세션 연장
 
         return "admin/master";
     }
@@ -207,7 +210,7 @@ public class AdminLoginController {
         model.addAttribute("statistics", session.isAuthStatistics());
         model.addAttribute("master",session.isAuthMaster());
         model.addAttribute("partition", session.isAuthPartition());
-        model.addAttribute("sessionRemainingSeconds", sessionStore.getRemainingSeconds(sessionId));
+        model.addAttribute("sessionRemainingSeconds", sessionStore.refresh(sessionId)); // 활동(페이지 이동) 시 세션 연장
 
         return "admin/guide";
     }
@@ -228,7 +231,7 @@ public class AdminLoginController {
         model.addAttribute("statistics", session.isAuthStatistics());
         model.addAttribute("master", session.isAuthMaster());
         model.addAttribute("partition", session.isAuthPartition());
-        model.addAttribute("sessionRemainingSeconds", sessionStore.getRemainingSeconds(sessionId));
+        model.addAttribute("sessionRemainingSeconds", sessionStore.refresh(sessionId)); // 활동(페이지 이동) 시 세션 연장
         model.addAttribute("deptCodes", deptProperties.getCodes());
         model.addAttribute("deptLabels", deptLabelService.labels());
 

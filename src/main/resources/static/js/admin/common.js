@@ -226,23 +226,18 @@
         }
 
         function bindAutoRefreshOnRequests() {
-            var refreshTargets = [
-                "/at-i/storage",
-                "/at-i/statistics",
-                "/at-i/master",
-                "/at-i/users",
-                "/at-i/guide",
-                "/at-i/changePassword"
-            ];
-
+            // 관리자 활동 시 세션 연장: 모든 /at-i 요청에서 갱신(갱신 호출 자체는 제외해 무한루프 방지).
             function shouldRefresh(url) {
                 if (!url) return false;
-                for (var i = 0; i < refreshTargets.length; i++) {
-                    if (url.indexOf(refreshTargets[i]) === 0) {
-                        return true;
-                    }
-                }
-                return false;
+                var path = url;
+                var origin = window.location.origin;
+                if (path.indexOf(origin) === 0) path = path.slice(origin.length);
+                if (path.indexOf("/at-i/") !== 0) return false;
+                // 갱신 호출 자체(재귀)·로그인/로그아웃은 제외
+                if (path.indexOf("/at-i/session/refresh") === 0) return false;
+                if (path.indexOf("/at-i/login") === 0) return false;
+                if (path.indexOf("/at-i/logout") === 0) return false;
+                return true;
             }
 
             if (window.jQuery && window.jQuery(document).ajaxComplete) {
