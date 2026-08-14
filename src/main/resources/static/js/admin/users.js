@@ -157,10 +157,22 @@
 
     // ── 렌더 ──────────────────────────────────────────────────
     function renderTree() {
+        // 재렌더(권한 저장 후 loadTree 등) 시 기존 펼침 상태 보존.
+        // 최초 로드는 펼쳐둔 노드가 없으므로 자연히 '모두 접기'가 기본이 된다.
+        var expanded = {};
+        dom.tree.querySelectorAll(".tpart").forEach(function (li) {
+            if (!li.classList.contains("collapsed") && li.getAttribute("data-part-id")) {
+                expanded[li.getAttribute("data-part-id")] = true;
+            }
+        });
         var ul = document.createElement("ul");
         roots.forEach(function (pid) { ul.appendChild(renderPart(pid)); });
         dom.tree.innerHTML = "";
         dom.tree.appendChild(ul);
+        // 기본은 접힘, 직전에 펼쳐져 있던 노드만 복원
+        dom.tree.querySelectorAll(".tpart").forEach(function (li) {
+            li.classList.toggle("collapsed", !expanded[li.getAttribute("data-part-id")]);
+        });
         applySearch();
     }
 
@@ -168,6 +180,7 @@
         var p = partsById[partId];
         var li = document.createElement("li");
         li.className = "tpart";
+        li.setAttribute("data-part-id", partId);  // 재렌더 시 펼침 상태 보존용
 
         var node = document.createElement("div");
         node.className = "tnode part";
