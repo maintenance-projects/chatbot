@@ -25,11 +25,11 @@ public class AttachController {
 
     /** 메신저 첨부 등록: 접수 즉시 202 반환, 릴레이는 백그라운드 */
     @PostMapping(value = "/chatbot/attach", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<String> attach(@RequestParam("ownerId") String ownerId,
+    public ResponseEntity<String> attach(@RequestParam("sessionId") String ownerId,
                                          @RequestParam(value = "sender", required = false) String sender,
-                                         @RequestParam(value = "room_name", required = false) String roomName,
-                                         @RequestParam(value = "attachFile_name", required = false) String attachFileName,
-                                         @RequestParam("attachFile_bin") MultipartFile file) {
+                                         @RequestParam(value = "roomname", required = false) String roomName,
+                                         @RequestParam(value = "filename", required = false) String attachFileName,
+                                         @RequestParam("file") MultipartFile file) {
         if (file == null || file.isEmpty()) {
             return ResponseEntity.badRequest()
                     .body("{\"responseCode\":\"1111\",\"message\":\"업로드할 파일이 없습니다.\"}");
