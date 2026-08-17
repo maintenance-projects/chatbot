@@ -40,11 +40,15 @@ public class GenerateController {
 
     private final kr.co.ultari.chatbot.generate.ChatbotMenuProperties menuProperties;
 
+    private final kr.co.ultari.chatbot.generate.ChatbotLoginCrypto loginCrypto;
+
     public GenerateController(UserAuthService userAuthService, AIRelayService relayService,
-                              kr.co.ultari.chatbot.generate.ChatbotMenuProperties menuProperties) {
+                              kr.co.ultari.chatbot.generate.ChatbotMenuProperties menuProperties,
+                              kr.co.ultari.chatbot.generate.ChatbotLoginCrypto loginCrypto) {
         this.userAuthService = userAuthService;
         this.relayService = relayService;
         this.menuProperties = menuProperties;
+        this.loginCrypto = loginCrypto;
     }
 
     @GetMapping("")
@@ -65,8 +69,16 @@ public class GenerateController {
     }
 
     @RequestMapping("/{key}")
-    public String login(Model model, @PathVariable("key") String sessionId, HttpServletRequest request,
+    public String login(Model model, @PathVariable("key") String key, HttpServletRequest request,
                         jakarta.servlet.http.HttpServletResponse response) {
+        // 암호화 로그인 활성 시 key=AES256(아이디|yyyyMMddHHmmss) → 복호화·시각(±5분,KST)검증 후 아이디.
+        // 비활성 시 key=평문 아이디(기존 동작). 복호화/시각 검증 실패면 null → 접근 거부.
+        String sessionId = loginCrypto.resolveUserId(key);
+        if (!StringUtils.hasText(sessionId)) {
+            log.debug("[chatbot access denied] invalid/expired token (encryptEnabled={})", loginCrypto.isEnabled());
+            response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_FORBIDDEN);
+            return "error";
+        }
         // 인사(HR) DB에 존재하는 사용자만 챗봇 화면 진입 허용. 없으면 '잘못된 접근' 안내.
         if (!userAuthService.exists(sessionId)) {
             log.debug("[chatbot access denied] unknown userId={}", sessionId);
