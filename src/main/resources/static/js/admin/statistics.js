@@ -24,7 +24,7 @@
         DOCUMENT:   { border: "#27ae60", bg: "rgba(39,174,96,0.1)", bar: "rgba(39,174,96,0.7)", dot: "#27ae60" },
         TEMPLATE:   { border: "#2980b9", bg: "rgba(41,128,185,0.1)",bar: "rgba(41,128,185,0.7)",dot: "#2980b9" },
         PKB_SEARCH: { border: "#6d28d9", bg: "rgba(109,40,217,0.1)",bar: "rgba(109,40,217,0.7)",dot: "#6d28d9" },
-        DIALOG:     { border: "#8e44ad", bg: "rgba(142,68,173,0.1)",bar: "rgba(142,68,173,0.7)",dot: "#8e44ad" },
+        DIALOG:     { border: "#f1c40f", bg: "rgba(241,196,15,0.1)",bar: "rgba(241,196,15,0.7)",dot: "#f1c40f" },
         AUDIO:      { border: "#d35400", bg: "rgba(211,84,0,0.1)",  bar: "rgba(211,84,0,0.7)",  dot: "#d35400" }
     };
 
