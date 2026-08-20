@@ -23,6 +23,13 @@ public class AdminStatisticsService {
     @Autowired
     AiUsageLogRepository repository;
 
+    /** 통계 항목 표시여부(엑셀에서도 비활성 항목 제외). */
+    @org.springframework.beans.factory.annotation.Value("${ultari.statistics.audio-enabled:true}")
+    private boolean audioEnabled;
+
+    @org.springframework.beans.factory.annotation.Value("${ultari.statistics.template-enabled:true}")
+    private boolean templateEnabled;
+
     private boolean hasUser(String userId) {
         return StringUtils.hasText(userId);
     }
@@ -122,8 +129,12 @@ public class AdminStatisticsService {
         headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
         headerStyle.setBorderBottom(BorderStyle.THIN);
 
-        // 타입 목록
-        String[] TYPES = {"CHAT", "DOCUMENT", "TEMPLATE", "PKB_SEARCH", "DIALOG", "AUDIO"};
+        // 타입 목록 — 표시여부(enabled=false)인 항목은 엑셀에서도 제외
+        java.util.List<String> typeList = new java.util.ArrayList<>(
+                java.util.List.of("CHAT", "DOCUMENT", "TEMPLATE", "PKB_SEARCH", "DIALOG", "AUDIO"));
+        if (!audioEnabled) typeList.remove("AUDIO");
+        if (!templateEnabled) typeList.remove("TEMPLATE");
+        String[] TYPES = typeList.toArray(new String[0]);
         java.util.Map<String, String> TYPE_LABELS = new java.util.HashMap<>();
         TYPE_LABELS.put("CHAT", "대화");
         TYPE_LABELS.put("DOCUMENT", "문서");

@@ -40,6 +40,10 @@ public class AdminLoginController {
     @org.springframework.beans.factory.annotation.Value("${ultari.statistics.audio-enabled:true}")
     boolean statsAudioEnabled;
 
+    /** 통계 화면의 '양식(TEMPLATE)' 표시 여부. 기본 노출. */
+    @org.springframework.beans.factory.annotation.Value("${ultari.statistics.template-enabled:true}")
+    boolean statsTemplateEnabled;
+
     private final AdminAuthService authService;
 
     public AdminLoginController(AdminAuthService authService) {
@@ -167,6 +171,7 @@ public class AdminLoginController {
         model.addAttribute("partition", session.isAuthPartition());
         model.addAttribute("sessionRemainingSeconds", sessionStore.refresh(sessionId)); // 활동(페이지 이동) 시 세션 연장
         model.addAttribute("audioEnabled", statsAudioEnabled);
+        model.addAttribute("templateEnabled", statsTemplateEnabled);
 
         return "admin/statistics";
     }

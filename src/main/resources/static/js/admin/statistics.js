@@ -28,9 +28,12 @@
         AUDIO:      { border: "#d35400", bg: "rgba(211,84,0,0.1)",  bar: "rgba(211,84,0,0.7)",  dot: "#d35400" }
     };
 
-    // 통화요약(AUDIO) 표시 옵션 — 서버 설정(ultari.statistics.audio-enabled)이 false면 통계에서 제외
+    // 항목별 표시 옵션 — 서버 설정(ultari.statistics.*-enabled)이 false면 통계 화면·엑셀에서 제외
     if (window.statsAudioEnabled === false) {
         TYPES = TYPES.filter(function (t) { return t !== "AUDIO"; });
+    }
+    if (window.statsTemplateEnabled === false) {
+        TYPES = TYPES.filter(function (t) { return t !== "TEMPLATE"; });
     }
 
     var $ = function (sel) { return document.querySelector(sel); };
@@ -40,6 +43,7 @@
     var elEndDate = $("#endDate");
     var elBtnApply = $("#btnApplyDate");
     var elRankingBody = $("#rankingTableBody");
+    var elRankingHead = $("#rankingHeadRow");
     var elUserInput = $("#userSearchInput");
     var elBtnUserSearch = $("#btnUserSearch");
     var elBtnUserClear = $("#btnUserClear");
@@ -628,7 +632,19 @@ var isScreenGuideOpen = false;
         });
     }
 
+    // 랭킹 테이블 헤더를 TYPES(표시여부 반영) 기준으로 동적 생성 — 본문 셀과 항상 정합
+    function renderRankingHead() {
+        if (!elRankingHead) return;
+        var h = '<th style="width:60px;" class="center">순위</th><th class="center">사용자 ID</th>';
+        TYPES.forEach(function (t) {
+            h += '<th style="width:100px;" class="center">' + TYPE_LABELS[t] + '</th>';
+        });
+        h += '<th style="width:100px;" class="center">합계</th>';
+        elRankingHead.innerHTML = h;
+    }
+
     function loadRanking() {
+        renderRankingHead();
         postData("/at-i/statistics/ranking").then(function (rows) {
             var userMap = {};
             rows.forEach(function (r) {

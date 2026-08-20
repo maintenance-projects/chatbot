@@ -248,20 +248,12 @@
                     <div class="table-wrap">
                         <table>
                             <thead>
-                                <tr>
-                                    <th style="width:60px;" class="center">순위</th>
-                                    <th class="center">사용자 ID</th>
-                                    <th style="width:100px;" class="center">대화</th>
-                                    <th style="width:100px;" class="center">문서</th>
-                                    <th style="width:100px;" class="center">양식</th>
-                                    <th style="width:100px;" class="center">채팅요약</th>
-                                    <th style="width:100px;" class="center" th:if="${audioEnabled}">통화요약</th>
-                                    <th style="width:100px;" class="center">합계</th>
-                                </tr>
+                                <!-- 타입 컬럼은 statistics.js가 TYPES(표시여부 반영) 기준으로 동적 생성 -->
+                                <tr id="rankingHeadRow"></tr>
                             </thead>
                             <tbody id="rankingTableBody">
                                 <tr>
-                                    <td th:attr="colspan=${audioEnabled} ? 8 : 7" colspan="8" class="center" style="padding:40px;color:var(--text-light);">
+                                    <td colspan="10" class="center" style="padding:40px;color:var(--text-light);">
                                         데이터를 불러오는 중...
                                     </td>
                                 </tr>
@@ -323,6 +315,7 @@
     <script th:src="@{/js/admin/common.js}" src="/js/admin/common.js"></script>
     <script th:inline="javascript">
         window.statsAudioEnabled = /*[[${audioEnabled}]]*/ true;
+        window.statsTemplateEnabled = /*[[${templateEnabled}]]*/ true;
     </script>
     <script th:src="@{/js/admin/statistics.js}" src="/js/admin/statistics.js"></script>
 </body>
