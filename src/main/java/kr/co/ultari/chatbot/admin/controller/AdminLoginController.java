@@ -19,7 +19,6 @@ import org.springframework.web.bind.annotation.*;
 import jakarta.servlet.http.HttpServletRequest;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.concurrent.TimeUnit;
 import java.util.UUID;
 
 @Slf4j
@@ -66,21 +65,19 @@ public class AdminLoginController {
         String clientIp = getClientIp(httpRequest);
         String rtn = authService.login(request.getAdminId(), request.getPassword(), clientIp, uuid);
         if ("ok".equals(rtn)) {
-            long ttlSeconds = request.isRememberMe()
-                    ? TimeUnit.HOURS.toSeconds(10)
-                    : -1;
+            // 로그인 상태 유지 기능 제거 → 항상 기본 TTL 사용
             AdminSession session = sessionStore.get(uuid);
             if (session != null) {
-                sessionStore.save(uuid, session, ttlSeconds);
+                sessionStore.save(uuid, session, -1);
             }
-            long effectiveTtl = ttlSeconds > 0 ? ttlSeconds : sessionStore.getDefaultTtlSeconds();
+            long effectiveTtl = sessionStore.getDefaultTtlSeconds();
             jakarta.servlet.http.HttpSession httpSession = httpRequest.getSession(true);
             httpSession.setAttribute("sessionId", uuid);
             // HttpSession 수명을 관리자 세션 TTL과 정렬 — 기본 30분에 먼저 만료돼 타이머(1시간)와
             // 어긋나던 문제 방지. 이후 요청마다 슬라이딩 갱신된다.
             httpSession.setMaxInactiveInterval((int) effectiveTtl);
-            log.info("[admin login] adminId={}, rememberMe={}, sessionTtlSeconds={}",
-                    request.getAdminId(), request.isRememberMe(), effectiveTtl);
+            log.info("[admin login] adminId={}, sessionTtlSeconds={}",
+                    request.getAdminId(), effectiveTtl);
         }
 
         return ResponseEntity.ok(rtn);

@@ -4,7 +4,6 @@
     const loginForm = document.getElementById("loginForm");
     const usernameInput = document.getElementById("username");
     const passwordInput = document.getElementById("password");
-    const rememberMeCheckbox = document.getElementById("rememberMe");
     const loginBtn = document.querySelector(".login-btn");
     const btnText = document.querySelector(".btn-text");
     const btnLoader = document.querySelector(".btn-loader");
@@ -12,7 +11,6 @@
     const togglePasswordBtn = document.querySelector(".toggle-password");
 
     function init() {
-        loadSavedCredentials();
         bindEvents();
     }
 
@@ -51,28 +49,6 @@
         }
     }
 
-    function loadSavedCredentials() {
-        const savedUsername = localStorage.getItem("admin_username");
-        const rememberMe = localStorage.getItem("admin_remember") === "true";
-
-        if (rememberMe && savedUsername && usernameInput && rememberMeCheckbox) {
-            usernameInput.value = savedUsername;
-            rememberMeCheckbox.checked = true;
-        }
-    }
-
-    function saveCredentials(username) {
-        if (!rememberMeCheckbox) return;
-
-        if (rememberMeCheckbox.checked) {
-            localStorage.setItem("admin_username", username);
-            localStorage.setItem("admin_remember", "true");
-        } else {
-            localStorage.removeItem("admin_username");
-            localStorage.setItem("admin_remember", "false");
-        }
-    }
-
     async function handleLogin(e) {
         e.preventDefault();
 
@@ -85,12 +61,9 @@
         hideError();
 
         try {
-            const rememberMe = !!rememberMeCheckbox?.checked;
-            const result = await performLoginAjax(adminId, password, rememberMe);
+            const result = await performLoginAjax(adminId, password);
 
             if (result.code === "ok") {
-                saveCredentials(adminId);
-
                 sessionStorage.setItem("adminId", adminId);
                 showSuccessAnimation();
 
@@ -122,7 +95,7 @@
         return true;
     }
 
-    function performLoginAjax(adminId, password, rememberMe) {
+    function performLoginAjax(adminId, password) {
         return new Promise((resolve, reject) => {
             if (!window.jQuery) {
                 reject(new Error("jQuery is not loaded"));
@@ -136,8 +109,7 @@
                 dataType: "text",
                 data: JSON.stringify({
                     adminId: adminId,
-                    password: password,
-                    rememberMe: !!rememberMe
+                    password: password
                 }),
                 success: function (data, _status, xhr) {
                     const code = String(data || "").trim();
