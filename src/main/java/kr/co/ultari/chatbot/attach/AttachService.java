@@ -44,16 +44,32 @@ public class AttachService {
      */
     public void registerAsync(String ownerId, String sender, String roomName,
                               String attachFileName, MultipartFile file) throws IOException {
-        String original = file.getOriginalFilename();
-        // 경로 탈출 방지: 파일명은 단일 세그먼트만
-        String safeName = Paths.get(original == null ? "file" : original).getFileName().toString();
-        String displayName = StringUtils.hasText(attachFileName) ? attachFileName : safeName;
+        String safeName = safeName(file.getOriginalFilename());
+        Path tmp = createTmp(ownerId, safeName);
+        file.transferTo(tmp);
+        relay(ownerId, sender, roomName, attachFileName, tmp, safeName);
+    }
 
-        // 요청 수명과 분리 — 우리 임시파일(디스크)로 복사
+    /** 관대 파싱 경로용 — 파일 바이트를 직접 받아 동일하게 처리. */
+    public void registerAsync(String ownerId, String sender, String roomName,
+                              String attachFileName, byte[] fileBytes, String originalFilename) throws IOException {
+        String safeName = safeName(originalFilename);
+        Path tmp = createTmp(ownerId, safeName);
+        Files.write(tmp, fileBytes);
+        relay(ownerId, sender, roomName, attachFileName, tmp, safeName);
+    }
+
+    /** 임시파일 생성(요청 수명과 분리). */
+    private Path createTmp(String ownerId, String safeName) throws IOException {
         Path dir = Paths.get(tempPath, "attach", safeSeg(ownerId));
         Files.createDirectories(dir);
-        Path tmp = Files.createTempFile(dir, "att-", "-" + safeName);
-        file.transferTo(tmp);
+        return Files.createTempFile(dir, "att-", "-" + safeName);
+    }
+
+    /** 임시파일을 게이트웨이(PKB 인제스트)로 백그라운드 릴레이하고 종료 시 정리. */
+    private void relay(String ownerId, String sender, String roomName, String attachFileName,
+                       Path tmp, String safeName) {
+        String displayName = StringUtils.hasText(attachFileName) ? attachFileName : safeName;
 
         MultipartBodyBuilder b = new MultipartBodyBuilder();
         if (StringUtils.hasText(sender)) b.part("sender", sender);
@@ -77,6 +93,11 @@ public class AttachService {
                 .subscribe();
 
         log.info("[attach] 접수 ownerId={}, file={}, tmp={}", ownerId, displayName, tmp);
+    }
+
+    /** 경로 탈출 방지: 파일명은 단일 세그먼트만(널이면 "file") */
+    private static String safeName(String original) {
+        return Paths.get(original == null ? "file" : original).getFileName().toString();
     }
 
     /** 경로 세그먼트 인코딩(게이트웨이 URL용) */

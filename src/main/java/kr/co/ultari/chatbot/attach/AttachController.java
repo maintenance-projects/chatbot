@@ -1,47 +1,79 @@
 package kr.co.ultari.chatbot.attach;
 
+import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.web.multipart.MultipartHttpServletRequest;
 
 /**
  * 메신저 첨부파일 등록 API. 메신저 클라이언트가 로컬 파일을 직접 multipart POST 하면
  * 개인 지식함(PKB) 인제스트({@code /pkb/{ownerId}/ingest})로 릴레이한다 → "AI 첨부파일 검색" 탭에 노출.
  * <p><b>접수 후 비동기(옵션 C)</b>: 파일을 접수(서버 임시 적재)하면 즉시 202를 반환하고,
  * 게이트웨이 릴레이는 백그라운드에서 수행한다(완료를 기다리지 않음).
- * <p>인증/신원 검증은 후속 보안 작업에서 추가한다(현재 ownerId를 파라미터로 신뢰).
+ * <p><b>멀티파트 파싱 분기</b>: {@code lenient-multipart} 토글이 켜지면 이 경로만 서블릿 멀티파트
+ * 파싱을 건너뛰므로({@link AttachMultipartConfig}) 요청이 {@link MultipartHttpServletRequest}가
+ * 아니며, raw 바디를 {@link LenientMultipartParser}로 직접 파싱(LF/CRLF·빈 줄 누락 허용). 꺼지면 표준 파싱.
+ * <p>인증/신원 검증은 후속 보안 작업에서 추가한다(현재 sessionId를 신뢰).
  */
 @Slf4j
 @RestController
 @RequiredArgsConstructor
 public class AttachController {
 
+    /** raw 파싱 시 메모리 적재 상한(표준 max-request-size와 동일 수준). */
+    private static final int MAX_BYTES = 200 * 1024 * 1024;
+
+    private static final String OK = "{\"responseCode\":\"0000\"}";
+    private static final String EMPTY = "{\"responseCode\":\"1111\",\"message\":\"업로드할 파일이 없습니다.\"}";
+    private static final String NO_OWNER = "{\"responseCode\":\"1111\",\"message\":\"sessionId가 없습니다.\"}";
+    private static final String FAIL = "{\"responseCode\":\"1111\",\"message\":\"파일 접수 중 오류가 발생했습니다.\"}";
+
     private final AttachService attachService;
 
     /** 메신저 첨부 등록: 접수 즉시 202 반환, 릴레이는 백그라운드 */
     @PostMapping(value = "/chatbot/attach", produces = MediaType.APPLICATION_JSON_VALUE)
-    public ResponseEntity<String> attach(@RequestParam("sessionId") String ownerId,
-                                         @RequestParam(value = "sender", required = false) String sender,
-                                         @RequestParam(value = "roomname", required = false) String roomName,
-                                         @RequestParam(value = "filename", required = false) String attachFileName,
-                                         @RequestParam("file") MultipartFile file) {
-        if (file == null || file.isEmpty()) {
-            return ResponseEntity.badRequest()
-                    .body("{\"responseCode\":\"1111\",\"message\":\"업로드할 파일이 없습니다.\"}");
-        }
+    public ResponseEntity<String> attach(HttpServletRequest request) {
         try {
-            attachService.registerAsync(ownerId, sender, roomName, attachFileName, file);
+            if (request instanceof MultipartHttpServletRequest mpr) {
+                return standard(mpr);   // 표준 경로(서블릿이 이미 파싱)
+            }
+            return lenient(request);    // 관대 경로(raw 직접 파싱, LF/CRLF·빈 줄 누락 허용)
         } catch (Exception e) {
-            log.error("[attach] 접수 실패 ownerId={}, file={}", ownerId, file.getOriginalFilename(), e);
-            return ResponseEntity.internalServerError()
-                    .body("{\"responseCode\":\"1111\",\"message\":\"파일 접수 중 오류가 발생했습니다.\"}");
+            log.error("[attach] 접수 실패", e);
+            return ResponseEntity.internalServerError().body(FAIL);
         }
-        // 202 Accepted — 접수 완료(게이트웨이 등록은 백그라운드 진행)
-        return ResponseEntity.accepted().body("{\"responseCode\":\"0000\"}");
+    }
+
+    /** 서블릿이 멀티파트로 파싱한 경우(표준). */
+    private ResponseEntity<String> standard(MultipartHttpServletRequest mpr) throws Exception {
+        String ownerId = mpr.getParameter("sessionId");
+        if (!StringUtils.hasText(ownerId)) return ResponseEntity.badRequest().body(NO_OWNER);
+        MultipartFile file = mpr.getFile("file");
+        if (file == null || file.isEmpty()) return ResponseEntity.badRequest().body(EMPTY);
+        attachService.registerAsync(ownerId, mpr.getParameter("sender"),
+                mpr.getParameter("roomname"), mpr.getParameter("filename"), file);
+        return ResponseEntity.accepted().body(OK);
+    }
+
+    /** 서블릿 파싱을 건너뛴 경우(관대) — raw 바디를 직접 파싱. */
+    private ResponseEntity<String> lenient(HttpServletRequest request) throws Exception {
+        String boundary = LenientMultipartParser.extractBoundary(request.getContentType());
+        if (boundary == null) return ResponseEntity.badRequest().body(EMPTY);
+        LenientMultipartParser.Result r =
+                LenientMultipartParser.parse(request.getInputStream(), boundary, MAX_BYTES);
+
+        String ownerId = r.fields.get("sessionId");
+        if (!StringUtils.hasText(ownerId)) return ResponseEntity.badRequest().body(NO_OWNER);
+        if (r.fileBytes == null || r.fileBytes.length == 0) return ResponseEntity.badRequest().body(EMPTY);
+
+        attachService.registerAsync(ownerId, r.fields.get("sender"),
+                r.fields.get("roomname"), r.fields.get("filename"), r.fileBytes, r.fileName);
+        return ResponseEntity.accepted().body(OK);
     }
 }
