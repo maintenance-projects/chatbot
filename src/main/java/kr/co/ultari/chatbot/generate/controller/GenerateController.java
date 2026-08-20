@@ -171,7 +171,9 @@ public class GenerateController {
     }
 
     @PostMapping("/summary")
-    public String summaryPage(@RequestParam("fileName") String fileName, @RequestParam("sessionId") String sessionId, Model model) {
+    public String summaryPage(@RequestParam(value = "fileName", required = false) String fileName, @RequestParam("sessionId") String sessionId, Model model) {
+        log.debug("[summary debug] fileName={}, userId={}", fileName, sessionId);
+        if(fileName == null || fileName.isEmpty()) fileName = "summary.csv";
         model.addAttribute("fileName", fileName);
         model.addAttribute("sessionId", sessionId);
         return "summary";
