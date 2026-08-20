@@ -11,11 +11,11 @@
 
     var TYPES = ["CHAT", "DOCUMENT", "TEMPLATE", "PKB_SEARCH", "DIALOG", "AUDIO"];
     var TYPE_LABELS = {
-        CHAT:       "대화",
-        DOCUMENT:   "문서",
+        CHAT:       "챗봇-질문",
+        DOCUMENT:   "챗봇-내문서",
         TEMPLATE:   "양식",
         PKB_SEARCH: "첨부파일검색",
-        DIALOG:     "채팅요약",
+        DIALOG:     "메신저-대화요약",
         AUDIO:      "통화요약"
     };
 

@@ -136,11 +136,11 @@ public class AdminStatisticsService {
         if (!templateEnabled) typeList.remove("TEMPLATE");
         String[] TYPES = typeList.toArray(new String[0]);
         java.util.Map<String, String> TYPE_LABELS = new java.util.HashMap<>();
-        TYPE_LABELS.put("CHAT", "대화");
-        TYPE_LABELS.put("DOCUMENT", "문서");
+        TYPE_LABELS.put("CHAT", "챗봇-질문");
+        TYPE_LABELS.put("DOCUMENT", "챗봇-내문서");
         TYPE_LABELS.put("TEMPLATE", "양식");
         TYPE_LABELS.put("PKB_SEARCH", "첨부파일검색");
-        TYPE_LABELS.put("DIALOG", "채팅요약");
+        TYPE_LABELS.put("DIALOG", "메신저-대화요약");
         TYPE_LABELS.put("AUDIO", "통화요약");
 
         // 시트1: 일별 통계
