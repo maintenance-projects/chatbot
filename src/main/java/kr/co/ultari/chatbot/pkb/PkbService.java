@@ -74,7 +74,8 @@ public class PkbService {
 
     /** 8.5 자연어 검색 (SSE, intent별 응답) */
     public SseEmitter search(String ownerId, String message) {
-        aiUsageService.increase(ownerId, ownerId, "PKB");
+        // 통계 '첨부파일검색'은 질문(search)만 집계 — ingest("PKB")와 별도 타입으로 기록
+        aiUsageService.increase(ownerId, ownerId, "PKB_SEARCH");
         MultipartBodyBuilder b = new MultipartBodyBuilder();
         b.part("message", message);
         return sseRelay.relay(() -> gateway.stream(null, "/pkb/" + seg(ownerId) + "/search", b));

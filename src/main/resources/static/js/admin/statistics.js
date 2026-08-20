@@ -9,21 +9,23 @@
     let dailyLabels = [];
     let selectedTypes = [];
 
-    var TYPES = ["CHAT", "DOCUMENT", "TEMPLATE", "DIALOG", "AUDIO"];
+    var TYPES = ["CHAT", "DOCUMENT", "TEMPLATE", "PKB_SEARCH", "DIALOG", "AUDIO"];
     var TYPE_LABELS = {
-        CHAT:     "대화",
-        DOCUMENT: "문서",
-        TEMPLATE: "양식",
-        DIALOG:   "채팅요약",
-        AUDIO:    "통화요약"
+        CHAT:       "대화",
+        DOCUMENT:   "문서",
+        TEMPLATE:   "양식",
+        PKB_SEARCH: "첨부파일검색",
+        DIALOG:     "채팅요약",
+        AUDIO:      "통화요약"
     };
 
     var TYPE_COLORS = {
-        CHAT:     { border: "#30364F", bg: "rgba(48,54,79,0.1)",  bar: "rgba(48,54,79,0.7)",  dot: "#30364F" },
-        DOCUMENT: { border: "#27ae60", bg: "rgba(39,174,96,0.1)", bar: "rgba(39,174,96,0.7)", dot: "#27ae60" },
-        TEMPLATE: { border: "#2980b9", bg: "rgba(41,128,185,0.1)",bar: "rgba(41,128,185,0.7)",dot: "#2980b9" },
-        DIALOG:   { border: "#8e44ad", bg: "rgba(142,68,173,0.1)",bar: "rgba(142,68,173,0.7)",dot: "#8e44ad" },
-        AUDIO:    { border: "#d35400", bg: "rgba(211,84,0,0.1)",  bar: "rgba(211,84,0,0.7)",  dot: "#d35400" }
+        CHAT:       { border: "#30364F", bg: "rgba(48,54,79,0.1)",  bar: "rgba(48,54,79,0.7)",  dot: "#30364F" },
+        DOCUMENT:   { border: "#27ae60", bg: "rgba(39,174,96,0.1)", bar: "rgba(39,174,96,0.7)", dot: "#27ae60" },
+        TEMPLATE:   { border: "#2980b9", bg: "rgba(41,128,185,0.1)",bar: "rgba(41,128,185,0.7)",dot: "#2980b9" },
+        PKB_SEARCH: { border: "#6d28d9", bg: "rgba(109,40,217,0.1)",bar: "rgba(109,40,217,0.7)",dot: "#6d28d9" },
+        DIALOG:     { border: "#8e44ad", bg: "rgba(142,68,173,0.1)",bar: "rgba(142,68,173,0.7)",dot: "#8e44ad" },
+        AUDIO:      { border: "#d35400", bg: "rgba(211,84,0,0.1)",  bar: "rgba(211,84,0,0.7)",  dot: "#d35400" }
     };
 
     // 통화요약(AUDIO) 표시 옵션 — 서버 설정(ultari.statistics.audio-enabled)이 false면 통계에서 제외

@@ -123,11 +123,12 @@ public class AdminStatisticsService {
         headerStyle.setBorderBottom(BorderStyle.THIN);
 
         // 타입 목록
-        String[] TYPES = {"CHAT", "DOCUMENT", "TEMPLATE", "DIALOG", "AUDIO"};
+        String[] TYPES = {"CHAT", "DOCUMENT", "TEMPLATE", "PKB_SEARCH", "DIALOG", "AUDIO"};
         java.util.Map<String, String> TYPE_LABELS = new java.util.HashMap<>();
         TYPE_LABELS.put("CHAT", "대화");
         TYPE_LABELS.put("DOCUMENT", "문서");
         TYPE_LABELS.put("TEMPLATE", "양식");
+        TYPE_LABELS.put("PKB_SEARCH", "첨부파일검색");
         TYPE_LABELS.put("DIALOG", "채팅요약");
         TYPE_LABELS.put("AUDIO", "통화요약");
 
