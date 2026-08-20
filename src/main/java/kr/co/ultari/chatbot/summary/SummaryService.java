@@ -2,6 +2,7 @@ package kr.co.ultari.chatbot.summary;
 
 import kr.co.ultari.chatbot.common.gateway.AiGatewayClient;
 import kr.co.ultari.chatbot.common.sse.SseRelay;
+import kr.co.ultari.chatbot.database.service.AIUsageService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.core.io.FileSystemResource;
@@ -24,6 +25,7 @@ public class SummaryService {
 
     private final AiGatewayClient gateway;
     private final SseRelay sseRelay;
+    private final AIUsageService aiUsageService;
 
     /** 6.1 CSV 채팅 로그 → 대화록 변환 (text/plain) */
     public ResponseEntity<String> dialogue(MultipartFile csvFile) {
@@ -43,7 +45,9 @@ public class SummaryService {
      * 6.2 변형: 서버에 이미 저장된 CSV(대화요약 화면 흐름)를 읽어 요약 스트림으로 중계한다.
      * 기존 /chatbot/csv/upload로 저장된 파일을 fileName+sessionId 경로로 참조.
      */
-    public SseEmitter dialogueSummaryFromFile(Path csvPath) {
+    public SseEmitter dialogueSummaryFromFile(Path csvPath, String userId) {
+        // 메신저 대화요약 사용량 집계(통계 '메신저-대화요약' = DIALOG)
+        aiUsageService.increase(userId, userId, "DIALOG");
         MultipartBodyBuilder b = new MultipartBodyBuilder();
         b.part("csv_file", new FileSystemResource(csvPath)).filename(csvPath.getFileName().toString());
         return sseRelay.relay(() -> gateway.stream(null, "/convert/dialogue-summary", b));

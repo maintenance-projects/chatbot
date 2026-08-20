@@ -59,6 +59,6 @@ public class SummaryController {
         if (!csv.startsWith(base)) {
             throw new IllegalArgumentException("잘못된 파일 경로");
         }
-        return service.dialogueSummaryFromFile(csv);
+        return service.dialogueSummaryFromFile(csv, sessionId);
     }
 }
