@@ -52,7 +52,15 @@ public class GenerateController {
     }
 
     @GetMapping("")
-    public String loginPage(@RequestParam(value = "error", required = false) String error, Model model) {
+    public String loginPage(@RequestParam(value = "key", required = false) String key,
+                            @RequestParam(value = "error", required = false) String error,
+                            Model model, HttpServletRequest request,
+                            jakarta.servlet.http.HttpServletResponse response) {
+        // 암호화 진입: /chatbot?key=... (쿼리 파라미터). 표준 Base64의 '/'(%2F)가 경로에선 톰캣에
+        // 400으로 막히므로, key를 경로 대신 쿼리로 받는다. 로직은 /{key} 핸들러와 동일하게 재사용.
+        if (StringUtils.hasText(key)) {
+            return login(model, key, request, response);
+        }
         model.addAttribute("error", error);
         return "chatbot-login";
     }
