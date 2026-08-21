@@ -6,7 +6,9 @@ import kr.co.ultari.chatbot.database.service.AIUsageService;
 import kr.co.ultari.chatbot.generate.service.CachedService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.cache.annotation.Cacheable;
+import org.springframework.core.io.FileSystemResource;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.MultipartBodyBuilder;
@@ -14,6 +16,10 @@ import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 
 /**
  * 챗봇 도메인: AI 서버 챗봇 API(명세서 2·3장)로의 릴레이.
@@ -30,20 +36,55 @@ public class ChatService {
     private final AIUsageService aiUsageService;
     private final CachedService cachedService;
 
+    /** PDF 페이지 보기(/document/view) 로컬 사본 저장 경로. */
+    @Value("${ultari.ai.temp.path:tmp}")
+    private String tempPath;
+
     /** 2.1 문서 업로드 및 인덱싱 (SSE) */
     public SseEmitter upload(String dept, String userId, String invokeId, String attachFileName, MultipartFile file) {
         aiUsageService.increase(userId, invokeId, "DOCUMENT");
         String filename = file.getOriginalFilename();
+        String safeName = Paths.get(filename == null ? "file" : filename).getFileName().toString();
+
         MultipartBodyBuilder b = new MultipartBodyBuilder();
         b.part("attachFile_name", StringUtils.hasText(attachFileName) ? attachFileName : filename);
-        b.part("attachFile_bin", file.getResource())
-                .filename(filename)
-                .contentType(MediaType.APPLICATION_OCTET_STREAM);
+
+        // PDF는 페이지 보기(/document/view/{sessionId}/{fileName})용 로컬 사본을 저장하고,
+        // 게이트웨이엔 그 사본에서 스트리밍한다. (다른 타입은 로컬 미리보기가 없어 원본 스트리밍)
+        Path local = savePdfCopyForPreview(invokeId, safeName, file);
+        if (local != null) {
+            b.part("attachFile_bin", new FileSystemResource(local))
+                    .filename(safeName)
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM);
+        } else {
+            b.part("attachFile_bin", file.getResource())
+                    .filename(filename)
+                    .contentType(MediaType.APPLICATION_OCTET_STREAM);
+        }
         // 새 문서 인덱싱 완료 시 파일목록 캐시 무효화
         return sseRelay.relay(
                 () -> gateway.stream(null, "/upload/" + invokeId, b), // 개인 업로드: 파티션 무관
                 () -> cachedService.FilesCacheClear(invokeId)
         );
+    }
+
+    /**
+     * PDF면 {@code tmp/{invokeId}/document/{fileName}}에 로컬 사본 저장(페이지 보기용) 후 그 경로 반환,
+     * 아니거나 실패하면 null. 경로는 DefaultController.viewDocument와 동일 규칙(단일 세그먼트)으로 맞춘다.
+     */
+    private Path savePdfCopyForPreview(String invokeId, String safeName, MultipartFile file) {
+        if (!safeName.toLowerCase().endsWith(".pdf")) return null;
+        try {
+            String safeSid = Paths.get(invokeId == null ? "" : invokeId).getFileName().toString();
+            Path dir = Paths.get(tempPath, safeSid, "document");
+            Files.createDirectories(dir);
+            Path local = dir.resolve(safeName);
+            Files.copy(file.getInputStream(), local, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
+            return local;
+        } catch (Exception e) {
+            log.warn("[upload] PDF 미리보기용 로컬 사본 저장 실패(원본 스트리밍으로 대체): {}", e.getMessage());
+            return null;
+        }
     }
 
     /** 3.1 통합 챗봇 — target_filename 유무로 private/open 라우팅 (SSE) */
