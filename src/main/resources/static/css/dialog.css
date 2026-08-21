@@ -1528,7 +1528,14 @@ textarea {
     color: #0f172a;
 }
 
-.cb-viewer__close {
+.cb-viewer__acts {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.cb-viewer__close,
+.cb-viewer__expand {
     width: 34px;
     height: 34px;
     border-radius: 12px;
@@ -1539,6 +1546,35 @@ textarea {
     place-items: center;
     font-weight: 900;
     color: #334155;
+}
+
+.cb-viewer__expand:hover {
+    background: #f1f5f9;
+}
+
+/* 아이콘 스왑: 평상시 확장 아이콘, 확장(is-max) 시 축소 아이콘 */
+.cb-viewer__expand .ico-compress {
+    display: none;
+}
+
+.cb-viewer.is-max .cb-viewer__expand .ico-expand {
+    display: none;
+}
+
+.cb-viewer.is-max .cb-viewer__expand .ico-compress {
+    display: block;
+}
+
+/* 확장 상태: 브라우저 창 전체를 덮는 오버레이(그리드 분할과 무관) */
+.cb-viewer.is-max {
+    position: fixed;
+    inset: 0;
+    width: 100vw;
+    height: 100dvh;
+    z-index: 1000;
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
 }
 
 .cb-viewer__frame {

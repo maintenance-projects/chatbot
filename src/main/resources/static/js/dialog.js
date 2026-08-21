@@ -9,6 +9,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const viewer = document.getElementById("cbViewer");
     const viewerFrame = document.getElementById("cbViewerFrame");
     const viewerClose = document.getElementById("cbViewerClose");
+    const viewerExpand = document.getElementById("cbViewerExpand");
 
     if (!body || !input || !sendBtn || !inputWrap) return;
 
@@ -412,8 +413,19 @@ document.addEventListener("DOMContentLoaded", () => {
         window.open(url, "_blank", "noopener");
     }
 
+    function setViewerMax(on) {
+        if (!viewer) return;
+        viewer.classList.toggle("is-max", !!on);
+        if (viewerExpand) {
+            const label = on ? "축소" : "확장";
+            viewerExpand.setAttribute("aria-label", label);
+            viewerExpand.setAttribute("title", label);
+        }
+    }
+
     function closeViewer() {
         if (!shell || !viewer || !viewerFrame) return;
+        setViewerMax(false); // 다음에 열 때 기본 분할 모드로
         shell.classList.remove("has-viewer");
         viewer.classList.remove("is-open");
         viewer.setAttribute("aria-hidden", "true");
@@ -430,6 +442,21 @@ document.addEventListener("DOMContentLoaded", () => {
             closeViewer();
         });
     }
+
+    if (viewerExpand) {
+        viewerExpand.addEventListener("click", (e) => {
+            e.preventDefault();
+            setViewerMax(!viewer.classList.contains("is-max"));
+        });
+    }
+
+    // ESC: 확장 상태에서만 축소(뷰어는 닫지 않음)
+    document.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && viewer && viewer.classList.contains("is-max")) {
+            e.preventDefault();
+            setViewerMax(false);
+        }
+    });
 
     function actionsHtml(opts) {
         const canCopy = !!(opts && opts.copy);
