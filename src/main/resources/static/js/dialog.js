@@ -899,7 +899,7 @@ document.addEventListener("DOMContentLoaded", () => {
             type="button"
             data-action="download"
             data-url="${escapeHtml(d.url || "")}"
-            data-filename="${escapeHtml((d.source || "document") + (d.ext ? "." + d.ext : ""))}"
+            data-filename="${escapeHtml(buildDownloadName(d.source, d.ext))}"
             data-tooltip="다운로드"
           >
             <img src="/img/ic-view-down.svg" alt="다운로드"/>
@@ -966,6 +966,20 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         scrollToBottom();
         return { msgEl, preEl, metaEl, progressEl, progressTextEl, refsEl, clarifyEl, started: false, done: false, pendingRefs: [], hasProgress: false };
+    }
+
+    // 다운로드 파일명: source에 이미 확장자가 있으면 ext를 덧붙이지 않음(xxxx.xlsx.xlsx 방지)
+    function buildDownloadName(source, ext) {
+        var s = String(source == null ? "" : source).trim() || "document";
+        var e = String(ext == null ? "" : ext).trim();
+        if (e) {
+            var suffix = "." + e.toLowerCase();
+            var lower = s.toLowerCase();
+            if (lower.length < suffix.length || lower.slice(lower.length - suffix.length) !== suffix) {
+                s += "." + e;
+            }
+        }
+        return s;
     }
 
     async function forceDownloadFile(url, filename) {
