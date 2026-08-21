@@ -10,7 +10,6 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
-import java.io.File;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 
@@ -34,9 +33,21 @@ public class DefaultController {
 
         log.debug(fileName);
         log.debug(sessionId);
-        String ext = fileName.substring(fileName.lastIndexOf(".")+1).toLowerCase();
 
-        Path path = Paths.get(tempPath + File.separator + sessionId + File.separator + "document", fileName);
+        // 경로 탈출 방지: 파일명/세션ID는 단일 세그먼트만 허용(디렉터리 구분자·상위경로 제거) + base 하위 확인
+        String safeName = Paths.get(fileName).getFileName().toString();
+        String safeSid = Paths.get(sessionId).getFileName().toString();
+        Path base = Paths.get(tempPath).toAbsolutePath().normalize();
+        Path path = base.resolve(safeSid).resolve("document").resolve(safeName).normalize();
+        if (!path.startsWith(base)) {
+            log.debug("[document view] 잘못된 경로 접근: sessionId={}, fileName={}", sessionId, fileName);
+            return ResponseEntity.badRequest().build();
+        }
+        if (!java.nio.file.Files.isRegularFile(path)) {
+            return ResponseEntity.notFound().build();
+        }
+
+        String ext = safeName.substring(safeName.lastIndexOf(".") + 1).toLowerCase();
         Resource resource = new FileSystemResource(path);
 
         MediaType mediaType;
@@ -85,7 +96,7 @@ public class DefaultController {
         return ResponseEntity.ok()
                 .contentType(mediaType)
                 .header(HttpHeaders.CONTENT_DISPOSITION,
-                        disposition + "; filename=\"" + fileName + "\"")
+                        disposition + "; filename=\"" + safeName + "\"")
                 .body(resource);
     }
 }
