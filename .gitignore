@@ -40,4 +40,5 @@ out/
 .claude/
 logs/
 tmp/
+documents/
 nul

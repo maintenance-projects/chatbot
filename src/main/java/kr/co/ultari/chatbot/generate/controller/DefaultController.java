@@ -17,8 +17,9 @@ import java.nio.file.Paths;
 @Controller
 public class DefaultController {
 
-    @Value("${ultari.ai.temp.path:tmp}")
-    String tempPath;
+    /** 업로드 문서 보관 경로(PDF 페이지 보기용). ChatService.upload와 동일 경로. */
+    @Value("${ultari.ai.document.path:documents}")
+    String documentPath;
 
     @RequestMapping("favicon.ico")
     @ResponseBody
@@ -37,8 +38,8 @@ public class DefaultController {
         // 경로 탈출 방지: 파일명/세션ID는 단일 세그먼트만 허용(디렉터리 구분자·상위경로 제거) + base 하위 확인
         String safeName = Paths.get(fileName).getFileName().toString();
         String safeSid = Paths.get(sessionId).getFileName().toString();
-        Path base = Paths.get(tempPath).toAbsolutePath().normalize();
-        Path path = base.resolve(safeSid).resolve("document").resolve(safeName).normalize();
+        Path base = Paths.get(documentPath).toAbsolutePath().normalize();
+        Path path = base.resolve(safeSid).resolve(safeName).normalize();
         if (!path.startsWith(base)) {
             log.debug("[document view] 잘못된 경로 접근: sessionId={}, fileName={}", sessionId, fileName);
             return ResponseEntity.badRequest().build();

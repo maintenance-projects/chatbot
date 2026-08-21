@@ -29,18 +29,32 @@ public class TempFileCleanupScheduler {
     @Value("${ultari.ai.temp.path:tmp}")
     private String tempPath;
 
+    /** 업로드 문서 보관 경로(temp와 분리, 긴 보존기간). */
+    @Value("${ultari.ai.document.path:documents}")
+    private String documentPath;
+
     @Value("${ultari.ai.temp.cleanup.enabled:true}")
     private boolean enabled;
 
-    /** 이 시간(시간 단위)보다 오래된(최종수정) 파일을 삭제. 기본 24h. */
+    /** temp 임시파일 보존시간(시간). 기본 24h. */
     @Value("${ultari.ai.temp.cleanup.retention-hours:24}")
     private long retentionHours;
 
-    /** 정리 주기(cron). 기본 매일 03:30. */
+    /** 업로드 문서 보존시간(시간). 기본 168h(=7일). */
+    @Value("${ultari.ai.document.cleanup.retention-hours:168}")
+    private long documentRetentionHours;
+
+    /** 정리 주기(cron). 기본 매일 03:30. temp와 업로드 문서를 각자 보존기간으로 정리. */
     @Scheduled(cron = "${ultari.ai.temp.cleanup.cron:0 30 3 * * *}")
     public void cleanup() {
         if (!enabled) return;
-        Path root = Paths.get(tempPath).toAbsolutePath().normalize();
+        cleanupDir(tempPath, retentionHours);
+        cleanupDir(documentPath, documentRetentionHours);
+    }
+
+    /** 지정 디렉터리에서 보존시간 지난 파일 삭제 + 빈 디렉터리 정리. 루트는 보존. */
+    private void cleanupDir(String pathStr, long retentionHours) {
+        Path root = Paths.get(pathStr).toAbsolutePath().normalize();
         if (!Files.isDirectory(root)) return;
 
         long cutoff = System.currentTimeMillis() - retentionHours * 3_600_000L;

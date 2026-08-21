@@ -36,9 +36,9 @@ public class ChatService {
     private final AIUsageService aiUsageService;
     private final CachedService cachedService;
 
-    /** PDF 페이지 보기(/document/view) 로컬 사본 저장 경로. */
-    @Value("${ultari.ai.temp.path:tmp}")
-    private String tempPath;
+    /** PDF 페이지 보기(/document/view) 로컬 사본 저장 경로. temp와 분리(별도 보존기간 관리). */
+    @Value("${ultari.ai.document.path:documents}")
+    private String documentPath;
 
     /** 2.1 문서 업로드 및 인덱싱 (SSE) */
     public SseEmitter upload(String dept, String userId, String invokeId, String attachFileName, MultipartFile file) {
@@ -69,14 +69,15 @@ public class ChatService {
     }
 
     /**
-     * PDF면 {@code tmp/{invokeId}/document/{fileName}}에 로컬 사본 저장(페이지 보기용) 후 그 경로 반환,
+     * PDF면 {@code {document.path}/{invokeId}/{fileName}}에 로컬 사본 저장(페이지 보기용) 후 그 경로 반환,
      * 아니거나 실패하면 null. 경로는 DefaultController.viewDocument와 동일 규칙(단일 세그먼트)으로 맞춘다.
+     * temp와 분리된 디렉터리라 별도 보존기간(기본 7일)으로 관리된다.
      */
     private Path savePdfCopyForPreview(String invokeId, String safeName, MultipartFile file) {
         if (!safeName.toLowerCase().endsWith(".pdf")) return null;
         try {
             String safeSid = Paths.get(invokeId == null ? "" : invokeId).getFileName().toString();
-            Path dir = Paths.get(tempPath, safeSid, "document");
+            Path dir = Paths.get(documentPath, safeSid);
             Files.createDirectories(dir);
             Path local = dir.resolve(safeName);
             Files.copy(file.getInputStream(), local, java.nio.file.StandardCopyOption.REPLACE_EXISTING);
