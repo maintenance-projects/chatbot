@@ -109,9 +109,10 @@ public final class LenientMultipartParser {
         int i = start;
         while (i < end) {
             int nl = indexOfByte(d, (byte) '\n', i, end);
-            if (nl < 0) return null;
-            int contentEnd = (nl > i && d[nl - 1] == '\r') ? nl - 1 : nl;
-            int nextLine = nl + 1;
+            // 마지막 줄에 개행이 없을 수 있다(경계 앞 CRLF는 이미 제거됨). 그 경우 파트 끝을 줄 끝으로 본다.
+            int lineEnd = (nl < 0) ? end : nl;
+            int contentEnd = (lineEnd > i && d[lineEnd - 1] == '\r') ? lineEnd - 1 : lineEnd;
+            int nextLine = (nl < 0) ? end : nl + 1;
             if (contentEnd == i) {
                 return new int[]{i, nextLine};        // 빈 줄 → 바디는 다음 줄부터
             }
