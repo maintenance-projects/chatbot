@@ -133,20 +133,21 @@ textarea {
 }
 
 .cb-page {
-    min-height: 93dvh;
+    /* 웹뷰 풀스크린: 여백 없이 뷰포트를 꽉 채운다 */
+    min-height: 100dvh;
     display: grid;
-    place-items: center;
-    padding: 28px 16px;
+    place-items: stretch;
+    padding: 0;
 }
 
 .cb-shell {
-    width: min(var(--cb-maxw), 100%);
+    width: 100%;
     display: grid;
     place-items: center;
 }
 
 .cb-shell.has-viewer {
-    width: min(var(--cb-shell-wide), 100%);
+    width: 100%;
     place-items: stretch;
     gap: 14px;
 }
@@ -161,12 +162,13 @@ textarea {
 .cb-widget {
     display: flex;
     flex-direction: column;
-    width: clamp(var(--cb-minw), 72vw, var(--cb-maxw));
-    height: clamp(720px, 88dvh, 920px);
+    /* 웹뷰 풀스크린: 뷰포트 전체를 채우고 카드 테두리/그림자 제거 */
+    width: 100%;
+    height: 100dvh;
     background: var(--cb-bg);
-    border: 1px solid var(--cb-line);
-    border-radius: 5px;
-    box-shadow: var(--cb-shadow);
+    border: none;
+    border-radius: 0;
+    box-shadow: none;
     overflow: hidden;
     position: relative;
 }
