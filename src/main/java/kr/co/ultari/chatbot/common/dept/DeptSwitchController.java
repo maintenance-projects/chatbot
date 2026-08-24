@@ -33,7 +33,8 @@ public class DeptSwitchController {
         Set<String> allowed = deptContext.allowed(request);
         JSONObject o = new JSONObject();
         o.put("depts", new JSONArray(allowed));
-        o.put("current", deptContext.resolve(request));
+        // allowed를 재사용해 현재 dept 결정 — allowedDepts(HR 조회) 중복 계산 방지
+        o.put("current", deptContext.resolveFrom(allowed, request));
         o.put("labels", new JSONObject(labelService.labels()));
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(o.toString());
     }

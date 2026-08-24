@@ -66,7 +66,14 @@ public class DeptResolver {
      * 요청값이 허용되면 그대로, 아니면 허용이 1개면 자동, 그 외엔 default-dept.
      */
     public String resolve(String userId, String requestedDept) {
-        Set<String> allowed = allowedDepts(userId);
+        return resolveFrom(allowedDepts(userId), requestedDept);
+    }
+
+    /**
+     * 이미 계산된 허용 dept 집합으로 라우팅 부서를 결정한다(allowedDepts 재조회 방지).
+     * 요청값이 허용되면 그대로, 아니면 허용이 1개면 자동, 그 외엔 default-dept.
+     */
+    public String resolveFrom(Set<String> allowed, String requestedDept) {
         if (StringUtils.hasText(requestedDept) && allowed.contains(requestedDept)) {
             return requestedDept;
         }

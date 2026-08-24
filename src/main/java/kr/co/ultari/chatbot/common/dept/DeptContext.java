@@ -37,6 +37,11 @@ public class DeptContext {
         return resolver.allowedDepts(sessionUserId(request));
     }
 
+    /** 이미 조회한 허용집합으로 현재 dept를 결정한다(allowed와 함께 쓰면 재조회 없음). */
+    public String resolveFrom(Set<String> allowed, HttpServletRequest request) {
+        return resolver.resolveFrom(allowed, selectedDept(request));
+    }
+
     /**
      * 페이지가 아는 사용자 id(챗봇 URL key·PKB ownerId)로 세션 신원을 확립한다.
      * 로그인 세션이 만료·소실(재기동 등)돼도 화면 로드만으로 dept 스위처/라우팅이 복구되게 한다.
