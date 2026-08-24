@@ -2,8 +2,6 @@ package kr.co.ultari.chatbot.common.dept;
 
 import kr.co.ultari.chatbot.database.entity.AiDeptGrant;
 import kr.co.ultari.chatbot.database.repository.AiDeptGrantRepository;
-import kr.co.ultari.chatbot.hr.dto.HrPart;
-import kr.co.ultari.chatbot.hr.mapper.HrPartMapper;
 import kr.co.ultari.chatbot.hr.mapper.HrUserMapper;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
@@ -12,7 +10,6 @@ import org.springframework.util.StringUtils;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -31,7 +28,7 @@ public class DeptResolver {
     private final DeptProperties props;
     private final AiDeptGrantRepository grantRepository;
     private final HrUserMapper hrUserMapper;
-    private final HrPartMapper hrPartMapper;
+    private final HrPartParentCache hrPartParentCache;
 
     /** 사용자가 접근 가능한 부서 집합. */
     public Set<String> allowedDepts(String userId) {
@@ -89,10 +86,8 @@ public class DeptResolver {
         Set<String> result = new HashSet<>();
         if (parts == null || parts.isEmpty()) return result;
 
-        Map<String, String> parent = new HashMap<>();
-        for (HrPart p : hrPartMapper.selectAll()) {
-            parent.put(p.getPartId(), p.getPartHigh());
-        }
+        // 조직도 부모맵은 캐시 사용(요청마다 인사DB 전체조회 방지)
+        Map<String, String> parent = hrPartParentCache.parentMap();
         for (String start : new ArrayList<>(parts)) {
             String cur = start;
             int guard = 0;

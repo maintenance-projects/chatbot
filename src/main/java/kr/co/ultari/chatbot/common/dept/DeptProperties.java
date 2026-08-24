@@ -29,4 +29,10 @@ public class DeptProperties {
 
     /** 관리자 화면 부서 드롭다운에 표시할 부서코드 목록 */
     private List<String> codes = new ArrayList<>();
+
+    /**
+     * 조직도 부모맵(msg_part) 캐시 TTL(초). 챗봇 진입/요청마다 인사DB 전체조회를 피하기 위한 캐시.
+     * 조직도는 자주 안 바뀌므로 짧은 TTL로 충분. {@code 0 이하}면 캐시 비활성(매번 조회, 구버전 동작).
+     */
+    private long partCacheTtlSeconds = 300;
 }
