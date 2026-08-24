@@ -42,7 +42,8 @@
         return sessionStorage.getItem("userId") || sessionStorage.getItem("adminId") || "";
     }
     function notify(m, t) { if (typeof window.toast === "function") window.toast(m, t || "success"); }
-    function showLoading(on) { if (dom.loading) dom.loading.style.display = on ? "flex" : "none"; }
+    // 오버레이 가시성은 .show 클래스로 제어(CSS .loading-overlay는 기본 opacity:0/visibility:hidden)
+    function showLoading(on) { if (dom.loading) dom.loading.classList.toggle("show", !!on); }
     function esc(s) {
         return String(s == null ? "" : s).replace(/[&<>"']/g, function (c) {
             return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c];
