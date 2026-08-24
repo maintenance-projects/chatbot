@@ -242,15 +242,28 @@
     }
 
     // ── 권한 적용 ─────────────────────────────────────────────
+    // 서버 grant 액션을 로컬 상태(grantedParts/usersAllow/usersDeny)에 그대로 반영
+    function mutateLocal(type, id, action) {
+        if (type === "PART") {
+            if (action === "ALLOW") grantedParts.add(id); else grantedParts.delete(id); // REMOVE
+        } else { // USER
+            if (action === "ALLOW") { usersAllow.add(id); usersDeny.delete(id); }
+            else if (action === "DENY") { usersDeny.add(id); usersAllow.delete(id); }
+            else { usersAllow.delete(id); usersDeny.delete(id); } // REMOVE
+        }
+    }
+
+    // 낙관적 갱신: 로컬 상태 즉시 반영·재렌더(로딩/서버조회 없음), 저장은 백그라운드.
+    // 저장 실패 시에만 loadTree()로 서버 상태와 재동기화.
     function applyGrant(type, id, action) {
-        showLoading(true);
+        mutateLocal(type, id, action);
+        renderTree();
         postForm("/at-i/users/grant", { adminId: adminId(), dept: currentDept, targetType: type, targetId: id, action: action })
             .then(function (r) { return r.text(); })
             .then(function (t) {
-                if (String(t || "").trim() === "ok") { notify("저장됨", "success"); loadTree(); }
-                else { notify("저장 실패", "error"); showLoading(false); }
+                if (String(t || "").trim() !== "ok") { notify("저장 실패 — 서버 상태로 되돌립니다.", "error"); loadTree(); }
             })
-            .catch(function () { notify("저장 중 오류", "error"); showLoading(false); });
+            .catch(function () { notify("저장 중 오류 — 서버 상태로 되돌립니다.", "error"); loadTree(); });
     }
 
     // ── 검색/펼침 ─────────────────────────────────────────────
