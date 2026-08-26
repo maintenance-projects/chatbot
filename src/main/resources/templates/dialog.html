@@ -33,6 +33,8 @@
                 <nav class="cb-modetabs" id="cbModeTabs" th:if="${menuPkb}">
                     <button class="cb-modetab is-active" type="button" data-mode="chat">AI 챗봇</button>
                     <button class="cb-modetab" type="button" data-mode="pkb">AI 첨부파일 검색</button>
+                    <button class="cb-modetab" type="button" data-mode="doc"
+                        th:if="${menuUpload or menuDocs}">개인문서 AI 분석</button>
                 </nav>
                 <header class="cb-header">
                     <div class="cb-header__left">
@@ -50,7 +52,14 @@
                         <div class="cb-brand cb-brand--pkb">
                             <div class="cb-brand__logo">AI</div>
                             <div class="cb-brand__text">
-                                <div class="cb-brand__title">AI 첨부파일 검색</div>
+                                <div class="cb-brand__title">메신저로 수신한 첨부파일 AI 검색</div>
+                            </div>
+                        </div>
+                        <!-- 개인문서 AI 분석 모드 전용 브랜드 — is-doc-mode에서만 표시 -->
+                        <div class="cb-brand cb-brand--doc">
+                            <div class="cb-brand__logo">AI</div>
+                            <div class="cb-brand__text">
+                                <div class="cb-brand__title">개인문서 AI 분석</div>
                             </div>
                         </div>
                     </div>
@@ -139,7 +148,28 @@
                     <div class="cb-msg cb-msg--bot">
                         <div class="cb-bubble">
                             <div class="cb-bubble__text">
-                                <pre data-rawtext="안녕하세요! 무엇을 도와드릴까요?">안녕하세요! 무엇을 도와드릴까요?</pre>
+                                <pre data-rawtext="안녕하세요! 군인공제회 “전자법규집 안내 챗봇”입니다.
+찾으시는 법규나 규정에 대해서 물어보세요. ex) 병가신청에 대해 알려줘">안녕하세요! 군인공제회 “전자법규집 안내 챗봇”입니다.
+찾으시는 법규나 규정에 대해서 물어보세요. ex) 병가신청에 대해 알려줘</pre>
+                            </div>
+                            <div class="cb-meta"></div>
+                            <div class="cb-actionsbar" aria-hidden="true">
+                                <button class="cb-actbtn cb-actbtn--copy" type="button" aria-label="복사"
+                                    data-tooltip="복사">
+                                    <img src="/img/ic-copy.png" alt="복사" />
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                <!-- 개인문서 AI 분석 전용 대화영역 — is-doc-mode에서만 표시(dialog.js가 body 참조 스왑) -->
+                <section class="cb-body" id="cbBodyDoc" hidden>
+                    <div class="cb-divider"><span>오늘</span></div>
+
+                    <div class="cb-msg cb-msg--bot">
+                        <div class="cb-bubble">
+                            <div class="cb-bubble__text">
+                                <pre data-rawtext="개인 문서를 올리고 그 내용에 대해 질문해보세요.">개인 문서를 올리고 그 내용에 대해 질문해보세요.</pre>
                             </div>
                             <div class="cb-meta"></div>
                             <div class="cb-actionsbar" aria-hidden="true">
@@ -160,24 +190,18 @@
                     </div>
                     <div class="cb-guide-body">
                         <div class="cb-guide-section">
-                            <h3>📘 문서 기반 AI 이용 안내</h3>
+                            <h3>📘 AI 챗봇 이용 안내</h3>
 
                             <h4>👋 이렇게 사용하세요</h4>
-                            <p>채팅창에 궁금한 내용을 입력하세요.<br>AI가 업로드된 문서를 분석해 답변을 제공합니다.</p>
+                            <p>채팅창에 궁금한 내용을 입력하세요.<br>AI가 등록된 문서를 분석해 답변을 제공합니다.</p>
                             <div class="cb-guide-note">
-                                <strong>만약 “관련된 자료를 찾을 수 없습니다”라는 답변이 나오면,</strong><br>
-                                해당 내용의 문서가 아직 업로드되지 않은 상태입니다.<br>
-                                👉 관련 문서를 업로드한 뒤 다시 질문해 주세요.
+                                <strong>“관련된 자료를 찾을 수 없습니다”라는 답변이 나오면,</strong><br>
+                                해당 내용이 아직 등록되지 않은 상태입니다.<br>
+                                👉 내가 가진 파일로 질문하려면 상단 <strong>개인문서 AI 분석</strong> 탭에서 파일을 올린 뒤 질문해 주세요.
                             </div>
 
                             <h4>🔍 검색 방식 안내</h4>
-                            <p>AI는 상황에 따라 아래 두 가지 방식으로 문서를 검색합니다.</p>
-                            <ul>
-                                <li><strong>전체 문서 검색</strong> : 업로드된 모든 문서를 대상으로 답변을 찾습니다. 별도의 설정이 없으면 기본으로 적용됩니다.
-                                </li>
-                                <li><strong>특정 문서 검색</strong> : 선택한 문서 안에서만 답변을 찾습니다. 특정 문서를 업로드하거나 선택하면 자동으로 전환됩니다.
-                                </li>
-                            </ul>
+                            <p>AI는 <strong>등록된 전체 문서</strong>를 대상으로 관련 내용을 찾아 답변합니다.</p>
 
                             <h4>💡 이렇게 질문하면 더 좋아요</h4>
                             <p>질문이 구체적일수록 답변이 더 정확해집니다.</p>
@@ -200,49 +224,27 @@
 
                             <h4>ℹ️ 이용 시 참고해 주세요</h4>
                             <ul>
-                                <li>AI는 업로드된 문서 내용을 기준으로 답변합니다.</li>
+                                <li>AI는 등록된 문서 내용을 기준으로 답변합니다.</li>
                                 <li>문서에 없는 내용은 답변이 어려울 수 있습니다.</li>
                                 <li>중요한 수치나 날짜 정보는 원본 문서와 함께 확인하시는 것을 권장합니다.</li>
-                                <li>대화 기록과 업로드된 파일은 7일간 보관됩니다.</li>
+                                <li>대화 기록은 7일간 보관됩니다.</li>
                                 <li>AI가 되물은 후 10분 이내에 응답하지 않으면 대화가 초기화됩니다.</li>
                                 <li>질문 분석에 따라 답변까지 약간의 시간이 걸릴 수 있습니다.</li>
-                                <li>이전에 업로드한 문서는 하단의 <strong>문서함(#)</strong>에서 확인할 수 있습니다.</li>
                             </ul>
                         </div>
 
                         <div class="cb-guide-divider"></div>
 
                         <div class="cb-guide-section">
-                            <h3>📝 문서 요약 안내</h3>
+                            <h3>🗂️ 다른 기능은 이 탭에서</h3>
 
-                            <h4>👀 요약은 이렇게 진행돼요</h4>
-                            <ol>
-                                <li>요약할 문서를 업로드하세요.</li>
-                                <li>문서를 선택하면 AI가 자동으로 요약을 시작합니다.</li>
-                                <li>요약 진행 상황이 실시간으로 표시됩니다.</li>
-                            </ol>
+                            <h4>📄 개인문서 AI 분석</h4>
+                            <p>내가 가진 파일을 직접 올리고, 그 문서 내용에 대해 질문하거나 요약할 수 있습니다.<br>
+                                상단 <strong>개인문서 AI 분석</strong> 탭에서 파일을 올린 뒤 이용해 주세요.</p>
 
-                            <h4>📄 요약 결과 구성</h4>
-                            <p>요약 결과는 아래와 같이 제공됩니다.</p>
-                            <ul>
-                                <li>문서 요약: 핵심 내용을 간결하게 정리</li>
-                                <li>문서의 목적: 문서가 작성된 이유와 배경</li>
-                                <li>주요 내용: 중요한 항목을 목록으로 안내</li>
-                            </ul>
-
-                            <h4>💡 요약 활용 팁</h4>
-                            <ul>
-                                <li>긴 문서는 요약부터 확인하면 전체 내용을 빠르게 파악할 수 있어요.</li>
-                                <li>요약 후 궁금한 부분은 질문 기능으로 자세히 확인해 보세요.</li>
-                            </ul>
-
-                            <h4>ℹ️ 요약 관련 안내</h4>
-                            <ul>
-                                <li>지원 파일 형식: PDF, HWP, HWPX, Word, Excel, PowerPoint 등</li>
-                                <li>분량이 많은 문서는 요약에 시간이 더 걸릴 수 있습니다.</li>
-                                <li>요약은 주요 내용 중심으로 제공되며, 세부 내용은 질문 기능을 활용해 주세요.</li>
-                                <li>이미지 위주의 PDF는 내용 인식이 어려울 수 있습니다.</li>
-                            </ul>
+                            <h4>📎 AI 첨부파일 검색</h4>
+                            <p>메신저로 받은 첨부파일은 자동으로 등록되어, 자연어로 검색·요약할 수 있습니다.<br>
+                                상단 <strong>AI 첨부파일 검색</strong> 탭에서 이용해 주세요.</p>
                         </div>
                     </div>
                 </div>

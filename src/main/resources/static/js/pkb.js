@@ -542,11 +542,15 @@ document.addEventListener("DOMContentLoaded", function () {
     document.addEventListener("click", function (e) {
         if (dom.menu.classList.contains("open") && !dom.menu.contains(e.target) && e.target !== dom.plusBtn) toggleMenu(false);
     });
-    dom.ingestBtn.addEventListener("click", function () { toggleMenu(false); dom.fileInput.click(); });
-    dom.fileInput.addEventListener("change", function () {
-        if (dom.fileInput.files && dom.fileInput.files[0]) ingest(dom.fileInput.files[0]);
-        dom.fileInput.value = "";
-    });
+    // 첨부파일 추가(수동 인제스트) 제거: 메신저 자동 업로드분만 검색 대상.
+    // 버튼/파일입력이 있는 배포에서만 동작하도록 방어(요소가 없으면 무시).
+    if (dom.ingestBtn && dom.fileInput) {
+        dom.ingestBtn.addEventListener("click", function () { toggleMenu(false); dom.fileInput.click(); });
+        dom.fileInput.addEventListener("change", function () {
+            if (dom.fileInput.files && dom.fileInput.files[0]) ingest(dom.fileInput.files[0]);
+            dom.fileInput.value = "";
+        });
+    }
     dom.filesBtn.addEventListener("click", function () { toggleMenu(false); openFiles(); });
     dom.filesClose.addEventListener("click", closeFiles);
     if (dom.moreBtn) dom.moreBtn.addEventListener("click", function () { shownCount += PAGE_SIZE; renderCards(); });
@@ -566,20 +570,12 @@ document.addEventListener("DOMContentLoaded", function () {
     dom.confirmOk.addEventListener("click", function () { var cb = confirmCb; closeConfirm(); if (cb) cb(); });
     dom.confirm.addEventListener("click", function (e) { if (e.target === dom.confirm) closeConfirm(); });
 
-    // 드래그앤드롭: PKB 영역에 파일을 놓으면 인제스트(AI 분석). 챗봇으로 넘어가지 않게 격리
+    // 드래그앤드롭 업로드 제거(첨부파일 수동 등록 폐지). 파일을 놓아도 인제스트하지 않으며,
+    // 브라우저 기본 동작(파일 열림)만 막아 검색 화면이 흐트러지지 않게 한다.
     var shell = dom.chat.closest(".p-shell");
     if (shell) {
-        var dragDepth = 0;
-        function setDrag(on) { shell.classList.toggle("p-dragover", !!on); }
-        shell.addEventListener("dragenter", function (e) { e.preventDefault(); e.stopPropagation(); dragDepth++; setDrag(true); });
-        shell.addEventListener("dragover", function (e) { e.preventDefault(); e.stopPropagation(); setDrag(true); });
-        shell.addEventListener("dragleave", function (e) { e.preventDefault(); e.stopPropagation(); dragDepth = Math.max(0, dragDepth - 1); if (dragDepth === 0) setDrag(false); });
-        shell.addEventListener("drop", function (e) {
-            e.preventDefault(); e.stopPropagation();
-            dragDepth = 0; setDrag(false);
-            var files = (e.dataTransfer && e.dataTransfer.files) ? Array.prototype.slice.call(e.dataTransfer.files) : [];
-            if (files.length) ingest(files[0]);
-        });
+        shell.addEventListener("dragover", function (e) { e.preventDefault(); e.stopPropagation(); });
+        shell.addEventListener("drop", function (e) { e.preventDefault(); e.stopPropagation(); });
     }
 
     // ── 헤더 도구: 이용안내 / 인쇄 / 대화검색 (PKB 영역 대상) ──
@@ -689,9 +685,8 @@ document.addEventListener("DOMContentLoaded", function () {
 
     // 첫 진입 안내(시간·복사 포함 말풍선)
     addAiMsg().innerHTML =
-        '안녕하세요! 업로드한 첨부파일을 AI가 분석·검색해 드립니다.<br>' +
-        '· 하단 입력창에 자연어로 물어보세요. 예) "x월 x일 회의록 내용이 뭐야?"<br>' +
-        '· <b>＋</b> 버튼으로 첨부파일을 추가하거나 <b>내 파일</b> 목록을 볼 수 있어요.';
+        '안녕하세요! “메신저로 수신한 첨부파일”을 AI가 분석·검색해 드립니다.<br>' +
+        '· 하단 입력창에 물어보세요. 예) X월 X일 회의록 내용이 뭐야?';
 
     // 첨부파일 보관일수(TTL) 조회 — 내 파일 안내/남은일수 표시용
     fetchTtl();

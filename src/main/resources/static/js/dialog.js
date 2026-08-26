@@ -1,7 +1,11 @@
 document.addEventListener("DOMContentLoaded", () => {
     const shell = document.getElementById("cbShell");
     const widget = document.getElementById("cbWidget");
-    const body = document.getElementById("cbBody");
+    // body는 활성 모드(챗봇/개인문서)의 대화영역을 가리키는 가변 참조.
+    // 모드 전환 시 bodyChat/bodyDoc 사이를 스왑하여 대화 이력을 물리적으로 분리한다.
+    let body = document.getElementById("cbBody");
+    const bodyChat = body;
+    const bodyDoc = document.getElementById("cbBodyDoc");
     const input = document.getElementById("cbInput");
     const sendBtn = document.getElementById("cbSend");
     const inputWrap = document.getElementById("cbInputWrap");
@@ -188,7 +192,9 @@ document.addEventListener("DOMContentLoaded", () => {
             .catch(() => {});
     })();
 
-    // 모드 탭(챗봇 / 내 지식함=PKB). PKB는 dialog에 네이티브 임베드(pkb.js가 로드시 초기화).
+    // 모드 탭(챗봇 / AI 첨부파일 검색=PKB / 개인문서 AI 분석=doc).
+    // - PKB는 dialog에 네이티브 임베드(pkb.js가 로드시 초기화).
+    // - doc은 챗봇 엔진(백엔드/footer)을 재사용하되 전용 대화영역(#cbBodyDoc)으로 분리.
     (function initModeTabs() {
         const tabs = document.getElementById("cbModeTabs");
         if (!tabs || !widget) return;
@@ -196,8 +202,27 @@ document.addEventListener("DOMContentLoaded", () => {
             const btn = e.target.closest(".cb-modetab");
             if (!btn) return;
             const mode = btn.getAttribute("data-mode");
+            // 스트리밍(전송) 중에는 대화영역 스왑이 노드 참조를 깨뜨릴 수 있어 전환 차단
+            if (widget.classList.contains("is-sending")) return;
+
             tabs.querySelectorAll(".cb-modetab").forEach((t) => t.classList.toggle("is-active", t === btn));
             widget.classList.toggle("is-pkb-mode", mode === "pkb");
+            widget.classList.toggle("is-doc-mode", mode === "doc");
+
+            // 챗봇/개인문서 대화영역 스왑: 각 영역은 독립 DOM이라 이력이 물리적으로 분리됨
+            if (mode !== "pkb" && bodyDoc) {
+                const useDoc = mode === "doc";
+                body = useDoc ? bodyDoc : bodyChat;
+                bodyChat.hidden = useDoc;
+                bodyDoc.hidden = !useDoc;
+                // 모드 간 파일 선택/입력 상태가 새지 않도록 정리
+                if (typeof setSelectedDocument === "function") setSelectedDocument(null);
+                input.value = "";
+                autoResizeInput();
+                input.placeholder = useDoc ? "올린 문서에 대해 질문해보세요." : defaultPlaceholder;
+                scrollToBottom();
+                input.focus();
+            }
         });
     })();
 
@@ -936,47 +961,31 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const maxPreview = 3;
 
+        // 참조당 한 줄 텍스트 링크. PDF는 클릭 시 미리보기(뷰어), 그 외 문서는 다운로드.
         const itemHtml = (d) => {
-            const isPdf = String(d.ext || "").toLowerCase().trim() === "pdf";
-            const disCls = isPdf ? "" : " is-disabled";
-            const tip = isPdf ? "미리보기" : "PDF 파일만 미리보기가 제공됩니다.";
+            const ext = String(d.ext || "").toLowerCase().trim();
+            const isPdf = ext === "pdf";
+            const action = isPdf ? "preview" : "download";
+            const icon = isPdf ? "📄" : "📎";
+            const tip = isPdf ? "미리보기" : "다운로드";
 
             const metaParts = [];
-            if (d.page) metaParts.push(`${d.page} p.`);
+            if (d.page) metaParts.push(`${d.page}p`);
             if (d.sectionTitle) metaParts.push(d.sectionTitle);
-            const meta = metaParts.join(" · ") || (d.ext ? d.ext.toUpperCase() : "FILE");
+            const meta = metaParts.join(" · ");
+            const metaHtml = meta ? ` <span class="cb-refline__meta">· ${escapeHtml(meta)}</span>` : "";
 
             return `
-      <div class="cb-refrow" data-url="${escapeHtml(d.url || "")}" data-ext="${escapeHtml(d.ext || "")}" data-name="${escapeHtml(d.source || "문서")}">
-        <button class="cb-refmain" type="button" aria-label="출처">
-          <div class="cb-ref__name">${escapeHtml(d.source || "문서")}</div>
-          <div class="cb-ref__meta" title="${escapeHtml(meta)}">${escapeHtml(meta)}</div>
-        </button>
-
-        <div class="cb-refacts" aria-hidden="false">
-          <span class="cb-tipwrap" data-tooltip="${escapeHtml(tip)}">
-            <button
-              class="cb-refact cb-actbtn cb-refact--preview${disCls}"
-              type="button"
-              data-action="preview"
-              ${isPdf ? "" : 'aria-disabled="true" disabled'}
-            >
-              <img src="/img/ic-view.svg" alt="미리보기"/>
-            </button>
-          </span>
-
-          <button
-            class="cb-refact cb-actbtn"
-            type="button"
-            data-action="download"
-            data-url="${escapeHtml(d.url || "")}"
-            data-filename="${escapeHtml(buildDownloadName(d.source, d.ext))}"
-            data-tooltip="다운로드"
-          >
-            <img src="/img/ic-view-down.svg" alt="다운로드"/>
-          </button>
-        </div>
-      </div>
+      <button class="cb-refline" type="button"
+        data-action="${action}"
+        data-url="${escapeHtml(d.url || "")}"
+        data-ext="${escapeHtml(ext)}"
+        data-name="${escapeHtml(d.source || "문서")}"
+        data-filename="${escapeHtml(buildDownloadName(d.source, d.ext))}"
+        title="${escapeHtml(tip)}">
+        <span class="cb-refline__ico" aria-hidden="true">${icon}</span>
+        <span class="cb-refline__name">${escapeHtml(d.source || "문서")}</span>${metaHtml}
+      </button>
     `;
         };
 
@@ -2172,8 +2181,9 @@ document.addEventListener("DOMContentLoaded", () => {
         }
 
         if (docName) {
+            // 파일 선택은 질문 후에도 유지 → 같은 문서로 연속 질문 가능.
+            // 해제는 사용자가 문서 칩(#cbDocumentTag)의 ×를 눌러야만 이뤄진다.
             addUserDocMessageByName(docName);
-            setSelectedDocument(null);
             sendTextMessage(msg, docName, translateTo);
             return;
         }
@@ -2248,27 +2258,28 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (widget) {
         let dragDepth = 0;
-        // PKB(내 지식함) 모드에선 챗봇 드롭 처리를 하지 않음(PKB가 자체 처리)
-        const inPkbMode = () => widget.classList.contains("is-pkb-mode");
+        // 드래그앤드롭 업로드는 '개인문서 AI 분석' 모드에서만 허용.
+        // (챗봇 모드는 파일기능 제거, PKB 모드는 pkb.js가 자체 처리)
+        const inDocMode = () => widget.classList.contains("is-doc-mode");
         widget.addEventListener("dragenter", (e) => {
-            if (inPkbMode()) return;
+            if (!inDocMode()) return;
             e.preventDefault();
             dragDepth += 1;
             setDragOver(true);
         });
         widget.addEventListener("dragover", (e) => {
-            if (inPkbMode()) return;
+            if (!inDocMode()) return;
             e.preventDefault();
             setDragOver(true);
         });
         widget.addEventListener("dragleave", (e) => {
-            if (inPkbMode()) return;
+            if (!inDocMode()) return;
             e.preventDefault();
             dragDepth = Math.max(0, dragDepth - 1);
             if (dragDepth === 0) setDragOver(false);
         });
         widget.addEventListener("drop", (e) => {
-            if (inPkbMode()) return;
+            if (!inDocMode()) return;
             e.preventDefault();
             dragDepth = 0;
             setDragOver(false);
@@ -2674,60 +2685,29 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        const refMainBtn = e.target && e.target.closest ? e.target.closest(".cb-refmain") : null;
-        if (refMainBtn) {
+        // 출처 한 줄 링크: PDF는 미리보기(뷰어), 그 외 문서는 다운로드
+        const refLine = e.target && e.target.closest ? e.target.closest(".cb-refline") : null;
+        if (refLine) {
             e.preventDefault();
             e.stopPropagation();
 
-            const row = refMainBtn.closest(".cb-refrow");
-            if (!row) return;
+            const url = refLine.getAttribute("data-url") || "";
+            const ext = String(refLine.getAttribute("data-ext") || "").toLowerCase().trim();
+            const name = refLine.getAttribute("data-name") || "미리보기";
+            const filename = refLine.getAttribute("data-filename") || name;
 
-            const url = row.getAttribute("data-url") || "";
-            const ext = row.getAttribute("data-ext") || "";
-            const name = row.getAttribute("data-name") || "미리보기";
-
-            if (String(ext || "").toLowerCase().trim() !== "pdf") return;
             if (!url) return;
 
-            openViewer(url, name);
-            return;
-        }
-
-        const refActBtn = e.target && e.target.closest ? e.target.closest(".cb-refact") : null;
-        if (refActBtn) {
-            e.preventDefault();
-            e.stopPropagation();
-            const action = refActBtn.getAttribute("data-action") || "";
-            const row = refActBtn.closest(".cb-refrow");
-
-            if (action === "preview") {
-                if (!row) return;
-                const url = row.getAttribute("data-url") || "";
-                const ext = row.getAttribute("data-ext") || "";
-                const name = row.getAttribute("data-name") || "미리보기";
-
-                if (!ensurePdfPreviewOrWarn(ext)) return;
-                if (!url) return;
-
+            if (ext === "pdf") {
                 openViewer(url, name);
-                return;
-            }
-
-            if (action === "download") {
-                const url = refActBtn.getAttribute("data-url") || (row ? row.getAttribute("data-url") : "") || "";
-                const filename = refActBtn.getAttribute("data-filename") || (row ? row.getAttribute("data-name") : "") || "document.pdf";
-
-                if (!url) return;
-
+            } else {
                 try {
                     await forceDownloadFile(url, filename);
                 } catch (err) {
                     addBotMessage(err && err.message ? String(err.message) : "다운로드 중 오류가 발생했습니다.");
                 }
-                return;
             }
-
-
+            return;
         }
 
         const refsToggle = e.target && e.target.closest ? e.target.closest(".cb-refs__toggle") : null;
