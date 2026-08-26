@@ -918,6 +918,13 @@ textarea {
 .cb-widget:not(.is-doc-mode) #cbDocsBtn {
     display: none;
 }
+/* 도움말 내용: 모드별 분기(챗봇 / 개인문서 AI 분석) */
+.cb-widget:not(.is-doc-mode) .cb-guide-mode[data-guide="doc"] {
+    display: none;
+}
+.cb-widget.is-doc-mode .cb-guide-mode[data-guide="chat"] {
+    display: none;
+}
 
 /* PKB 전용 헤더 도구(안내/인쇄/검색) — PKB 모드에서만 표시 */
 .cb-header__pkbtools {

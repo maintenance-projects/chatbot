@@ -189,6 +189,8 @@
                         <button class="cb-guide-close" id="cbGuideClose" type="button">×</button>
                     </div>
                     <div class="cb-guide-body">
+                      <!-- AI 챗봇 탭 도움말 (is-doc-mode 아닐 때 표시) -->
+                      <div class="cb-guide-mode" data-guide="chat">
                         <div class="cb-guide-section">
                             <h3>📘 AI 챗봇 이용 안내</h3>
 
@@ -246,6 +248,49 @@
                             <p>메신저로 받은 첨부파일은 자동으로 등록되어, 자연어로 검색·요약할 수 있습니다.<br>
                                 상단 <strong>AI 첨부파일 검색</strong> 탭에서 이용해 주세요.</p>
                         </div>
+                      </div>
+
+                      <!-- 개인문서 AI 분석 탭 도움말 (is-doc-mode일 때 표시) -->
+                      <div class="cb-guide-mode" data-guide="doc">
+                        <div class="cb-guide-section">
+                            <h3>📄 개인문서 AI 분석 이용 안내</h3>
+
+                            <h4>👋 이렇게 사용하세요</h4>
+                            <p>내가 가진 파일을 올리고, 그 문서 내용에 대해 질문하거나 요약할 수 있습니다.</p>
+                            <ol>
+                                <li>하단 도구의 <strong>문서 업로드</strong>를 누르거나, 대화창에 파일을 <strong>끌어다 놓아</strong> 올립니다.</li>
+                                <li><strong>개인 문서함(#)</strong>에서 올린 파일을 선택합니다.</li>
+                                <li>선택한 문서를 기준으로 질문하면 그 문서 내용으로 답변합니다.</li>
+                            </ol>
+
+                            <h4>📌 문서 선택은 유지됩니다</h4>
+                            <p>문서를 선택하면 입력창 위에 문서 칩이 표시되고, 같은 문서로 <strong>연속 질문</strong>할 수 있습니다.<br>
+                                다른 문서로 바꾸거나 선택을 해제하려면 문서 칩의 <strong>×</strong>를 눌러 주세요.</p>
+
+                            <h4>📝 문서 요약</h4>
+                            <p>개인 문서함에서 문서의 <strong>요약</strong>을 실행하면 핵심 내용·목적·주요 항목을 정리해 드립니다.</p>
+
+                            <h4>💡 이렇게 질문하면 더 좋아요</h4>
+                            <p>질문이 구체적일수록 답변이 더 정확해집니다.</p>
+                            <ul class="cb-guide-check">
+                                <li>✔️ “이 계약서의 계약 기간은?”</li>
+                                <li>✔️ “3페이지 표 내용을 요약해줘”</li>
+                                <li>✔️ 한 번에 하나의 주제씩 질문하기</li>
+                            </ul>
+
+                            <h4>📌 답변 출처 확인</h4>
+                            <p>답변 하단에서 참고한 문서와 페이지 정보를 확인할 수 있습니다.<br>
+                                PDF 출처는 눌러서 미리보기, 그 외 문서는 눌러서 다운로드됩니다.</p>
+
+                            <h4>ℹ️ 이용 시 참고해 주세요</h4>
+                            <ul>
+                                <li>지원 파일 형식: PDF, HWP, HWPX, Word, Excel, PowerPoint 등</li>
+                                <li>업로드한 파일과 대화 기록은 7일간 보관됩니다.</li>
+                                <li>이미지 위주의 PDF는 내용 인식이 어려울 수 있습니다.</li>
+                                <li>메신저로 받은 첨부파일 검색은 상단 <strong>AI 첨부파일 검색</strong> 탭을 이용해 주세요.</li>
+                            </ul>
+                        </div>
+                      </div>
                     </div>
                 </div>
 

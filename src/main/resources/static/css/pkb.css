@@ -34,11 +34,11 @@
 .p-divider span { font-size: 12px; color: var(--p-sub); background: rgba(255, 255, 255, 0.8);
     border: 1px solid var(--p-line); padding: 1px 10px 5px 10px; border-radius: 999px; }
 
-/* 말풍선(챗봇 .cb-bubble과 동일 형태, user=보라) */
+/* 말풍선(챗봇 .cb-bubble과 동일 형태, user=회색 #474747로 3탭 통일) */
 .p-msg { position: relative; max-width: 82%; padding: 11px 13px; border: 1px solid var(--p-line);
     border-radius: 16px; font-size: 12px; line-height: 1.55; word-break: break-word; }
 .p-msg--ai { align-self: flex-start; background: var(--p-ai-bg); color: var(--p-text); border-top-left-radius: 6px; }
-.p-msg--user { align-self: flex-end; background: var(--p-primary); color: #fff;
+.p-msg--user { align-self: flex-end; background: #474747; color: #fff;
     border-color: rgba(255, 255, 255, 0.08); border-top-right-radius: 6px; }
 .p-msg--ai p { margin: 0 0 6px; }
 .p-msg--ai p:last-child { margin-bottom: 0; }
@@ -213,10 +213,11 @@
 .p-guide__close { width: 34px; height: 34px; border: none; background: var(--p-bg); border-radius: 10px;
     cursor: pointer; font-size: 20px; line-height: 1; color: var(--p-sub); display: grid; place-items: center; }
 .p-guide__body { flex: 1 1 auto; min-height: 0; overflow-y: auto; padding: 20px; }
-.p-guide__section h3 { font-size: 16px; margin: 0 0 12px; }
-.p-guide__section h4 { font-size: 14px; margin: 18px 0 6px; color: var(--p-primary); }
-.p-guide__section p { font-size: 13px; line-height: 1.65; margin: 0 0 8px; color: var(--p-text); }
-.p-guide__section ul { margin: 6px 0 8px; padding-left: 18px; }
-.p-guide__section li { font-size: 13px; line-height: 1.65; margin: 3px 0; color: var(--p-text); }
+/* 도움말 타이포는 챗봇/개인문서(.cb-guide-section)와 동일하게 통일 */
+.p-guide__section h3 { font-size: 18px; font-weight: 800; color: #2563eb; margin: 0 0 16px; padding-bottom: 8px; border-bottom: 2px solid #eff6ff; }
+.p-guide__section h4 { font-size: 15px; font-weight: 700; color: #1e293b; margin: 24px 0 8px; }
+.p-guide__section p { font-size: 14px; line-height: 1.6; margin: 0 0 8px; color: #475569; }
+.p-guide__section ul { margin: 0 0 12px; padding-left: 20px; }
+.p-guide__section li { font-size: 14px; line-height: 1.6; margin: 0 0 4px; color: #475569; }
 
 .p-shell .hidden { display: none; }
