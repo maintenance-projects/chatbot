@@ -219,7 +219,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 if (typeof setSelectedDocument === "function") setSelectedDocument(null);
                 input.value = "";
                 autoResizeInput();
-                input.placeholder = useDoc ? "올린 문서에 대해 질문해보세요." : defaultPlaceholder;
+                refreshComposerState(); // doc 모드 진입 시 미선택이면 전송 비활성 + 안내문구
                 scrollToBottom();
                 input.focus();
             }
@@ -237,6 +237,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let selectedDocument = null;
     let documentTag = null;
+    let docGateHinted = false; // 개인문서 미선택 안내 중복 표시 방지
 
     let continueNext = false;
     let continueThreadId = null;
@@ -1419,6 +1420,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function setSelectedDocument(doc) {
         selectedDocument = doc ? { ...doc } : null;
+        if (selectedDocument) docGateHinted = false;
+        refreshComposerState();
 
         const tag = ensureDocTag();
         if (!tag) return;
@@ -1999,6 +2002,11 @@ document.addEventListener("DOMContentLoaded", () => {
                 updateUploadProgress(uploadHandle, 100, doneMessage || uploadHandle._lastDoneMessage || "완료");
                 finalizeUploadProgress(uploadHandle);
 
+                // 개인문서 AI 분석 탭: 업로드한 문서를 자동 선택 → 바로 질문 가능(전송 활성화)
+                if (widget && widget.classList.contains("is-doc-mode") && !templateKey && file && file.name) {
+                    setSelectedDocument({ name: file.name });
+                }
+
                 if (!botHandle) {
                     if (msg) addBotMessage("파일이 정상적으로 업로드 되었습니다.");
                     return;
@@ -2135,9 +2143,27 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     function setSending(isSending) {
-        sendBtn.disabled = isSending;
-        input.disabled = isSending;
         if (widget) widget.classList.toggle("is-sending", isSending);
+        input.disabled = isSending;
+        refreshComposerState();
+    }
+
+    // 개인문서 AI 분석 탭: 분석할 문서를 반드시 선택해야 질문 가능 → 미선택이면 전송 차단
+    function isDocGateBlocked() {
+        return !!widget && widget.classList.contains("is-doc-mode") && !selectedDocument;
+    }
+
+    // 모드·선택·전송중 상태를 종합해 전송버튼 활성/입력창 안내문구를 갱신
+    function refreshComposerState() {
+        const sending = !!widget && widget.classList.contains("is-sending");
+        sendBtn.disabled = sending || isDocGateBlocked();
+        if (isDocGateBlocked()) {
+            input.placeholder = "먼저 개인 문서를 선택해 주세요.";
+        } else if (widget && widget.classList.contains("is-doc-mode")) {
+            input.placeholder = "올린 문서에 대해 질문해보세요.";
+        } else {
+            input.placeholder = defaultPlaceholder;
+        }
     }
 
     function startImmediateUpload(file) {
@@ -2161,6 +2187,18 @@ document.addEventListener("DOMContentLoaded", () => {
         const translateTo = selectedTranslate || "";
 
         if (!msg && !tplKey) return;
+
+        // 개인문서 AI 분석 탭: 문서 미선택이면 일반 질문으로 보내지 않고 문서함을 열어 선택 유도.
+        // (입력한 질문은 지우지 않고 유지)
+        if (isDocGateBlocked()) {
+            if (typeof openDocPopup === "function") openDocPopup();
+            if (!docGateHinted) {
+                addBotMessage("먼저 분석할 개인 문서를 선택해 주세요. 하단 도구의 ‘개인 문서함’에서 선택하거나 파일을 업로드하면 됩니다.");
+                docGateHinted = true;
+            }
+            input.focus();
+            return;
+        }
 
         if (tpl) {
             setTemplate(null);
