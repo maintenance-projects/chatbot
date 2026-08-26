@@ -4,9 +4,12 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
+import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+
+import java.nio.charset.StandardCharsets;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
@@ -94,10 +97,17 @@ public class DefaultController {
                 mediaType = MediaType.APPLICATION_OCTET_STREAM;
         }
 
+        // 한글 등 non-ASCII 파일명은 RFC 5987(filename*=UTF-8'')로 인코딩.
+        // 원문 그대로 넣으면 Tomcat이 헤더를 ISO-8859-1로 인코딩하지 못해(UnmappableCharacterException)
+        // Content-Disposition 헤더를 통째로 제거(WARN)하므로 반드시 인코딩해야 한다.
+        ContentDisposition contentDisposition = ContentDisposition
+                .builder(disposition)
+                .filename(safeName, StandardCharsets.UTF_8)
+                .build();
+
         return ResponseEntity.ok()
                 .contentType(mediaType)
-                .header(HttpHeaders.CONTENT_DISPOSITION,
-                        disposition + "; filename=\"" + safeName + "\"")
+                .header(HttpHeaders.CONTENT_DISPOSITION, contentDisposition.toString())
                 .body(resource);
     }
 }
