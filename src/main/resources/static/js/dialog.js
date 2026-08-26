@@ -2761,8 +2761,12 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    const firstMeta = body.querySelector(".cb-msg--bot .cb-meta");
-    if (firstMeta && !firstMeta.textContent) firstMeta.textContent = formatTime(new Date());
+    // 첫 인사말 시간 표기: 챗봇/개인문서 두 대화영역(각각 독립 body) 모두 대상
+    [bodyChat, bodyDoc].forEach((b) => {
+        if (!b) return;
+        const firstMeta = b.querySelector(".cb-msg--bot .cb-meta");
+        if (firstMeta && !firstMeta.textContent) firstMeta.textContent = formatTime(new Date());
+    });
 
     ensureResearchTag();
     ensureTemplateTag();
