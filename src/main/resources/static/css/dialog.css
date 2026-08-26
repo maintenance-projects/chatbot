@@ -828,6 +828,17 @@ textarea {
     display: flex;
 }
 
+/* 좌측 브랜드: PKB 모드에서 챗봇 브랜드(로고+dept 셀렉트) 숨기고 PKB 전용 브랜드 표시 */
+.cb-brand--pkb {
+    display: none;
+}
+.cb-widget.is-pkb-mode .cb-brand:not(.cb-brand--pkb) {
+    display: none;
+}
+.cb-widget.is-pkb-mode .cb-brand--pkb {
+    display: flex;
+}
+
 /* PKB 전용 헤더 도구(안내/인쇄/검색) — PKB 모드에서만 표시 */
 .cb-header__pkbtools {
     display: none;
