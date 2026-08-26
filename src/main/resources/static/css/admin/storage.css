@@ -1156,12 +1156,18 @@ tbody td.center {
 
 .file-preview {
     display: flex;
-    align-items: center;
-    gap: 10px;
+    flex-direction: column;
+    gap: 8px;
     padding: 10px;
     background: var(--base);
     border-radius: var(--radius);
     margin-top: 10px;
+}
+
+.file-preview-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
 }
 
 .file-preview-name {
@@ -1198,6 +1204,94 @@ tbody td.center {
 .file-preview-remove svg {
     width: 16px;
     height: 16px;
+}
+
+/* 업로드 중에는 파일 제거/재선택 차단 */
+.is-uploading .file-preview-remove {
+    display: none;
+}
+
+.file-upload-area.is-disabled {
+    pointer-events: none;
+    opacity: 0.55;
+}
+
+/* 파일별 진행 표시 */
+.file-preview-progress {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.file-preview-bar {
+    flex: 1;
+    height: 6px;
+    border-radius: 999px;
+    background: var(--border, #e5e7eb);
+    overflow: hidden;
+}
+
+.file-preview-bar-fill {
+    display: block;
+    height: 100%;
+    width: 0;
+    border-radius: 999px;
+    background: var(--primary, #4f6ef7);
+    transition: width 0.2s ease;
+}
+
+.file-preview-status {
+    font-size: 0.72rem;
+    color: var(--text-light);
+    flex-shrink: 0;
+    min-width: 68px;
+    text-align: right;
+}
+
+/* 상태별 색상 */
+.file-preview[data-state="idle"] .file-preview-bar-fill {
+    background: var(--border, #e5e7eb);
+}
+
+.file-preview[data-state="done"] .file-preview-bar-fill {
+    background: var(--success, #22c55e);
+}
+
+.file-preview[data-state="done"] .file-preview-status {
+    color: var(--success, #22c55e);
+}
+
+.file-preview[data-state="error"] .file-preview-bar-fill {
+    background: var(--danger, #ef4444);
+    width: 100% !important;
+}
+
+.file-preview[data-state="error"] .file-preview-status {
+    color: var(--danger, #ef4444);
+}
+
+.file-preview[data-state="canceled"] .file-preview-bar-fill {
+    background: var(--text-light, #9ca3af);
+}
+
+.file-preview[data-state="canceled"] .file-preview-status {
+    color: var(--text-light, #9ca3af);
+}
+
+/* 처리 중(서버 인덱싱): 진행률을 알 수 없어 줄무늬 애니메이션 */
+.file-preview[data-state="processing"] .file-preview-bar-fill {
+    width: 100%;
+    background-image: linear-gradient(45deg,
+            rgba(255, 255, 255, 0.35) 25%, transparent 25%,
+            transparent 50%, rgba(255, 255, 255, 0.35) 50%,
+            rgba(255, 255, 255, 0.35) 75%, transparent 75%, transparent);
+    background-size: 20px 20px;
+    animation: filePreviewStripes 0.7s linear infinite;
+}
+
+@keyframes filePreviewStripes {
+    from { background-position: 0 0; }
+    to { background-position: 20px 0; }
 }
 
 .confirm-icon {

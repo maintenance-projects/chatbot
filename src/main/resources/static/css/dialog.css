@@ -686,6 +686,9 @@ textarea {
 .cb-ref__meta {
     font-size: 11px;
     color: #64748b;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .cb-cardstack {

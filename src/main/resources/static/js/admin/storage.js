@@ -9,6 +9,13 @@
     var sortField = "registDate";
     var sortOrder = "desc";
     var pendingFiles = [];
+    var fileStatus = [];       // pendingFiles와 인덱스 정렬. {state,pct,msg}
+    var isUploading = false;   // 업로드 진행 중 모달 잠금 플래그
+    var activeXhr = null;      // 진행 중 XHR(취소용)
+    var uploadCancelled = false; // 취소 요청 플래그(순차 큐 중단)
+    var uploadSuccess = 0;
+    var uploadFail = 0;
+    var uploadPos = 0;         // 순차 업로드 커서
     var confirmCallback = null;
     var isSearchMode = false;
     var activeStatusPopup = null;
@@ -1071,16 +1078,23 @@
         dom.docModalTitle.textContent = "문서 추가";
         dom.docUploader.value = getAdminId();
         pendingFiles = [];
+        fileStatus = [];
         dom.fileInput.value = "";
         dom.filePreviewWrap.innerHTML = "";
+        setUploading(false);
         dom.docModal.classList.add("show");
     }
 
     function closeDocModal() {
+        if (isUploading) return; // 업로드 중에는 닫기 금지
         dom.docModal.classList.remove("show");
         pendingFiles = [];
+        fileStatus = [];
         if (dom.fileInput) dom.fileInput.value = "";
-        if (dom.filePreviewWrap) dom.filePreviewWrap.innerHTML = "";
+        if (dom.filePreviewWrap) {
+            dom.filePreviewWrap.innerHTML = "";
+            dom.filePreviewWrap.classList.remove("is-uploading");
+        }
     }
 
     function openConfirm(title, msg, cb) {
@@ -1095,6 +1109,18 @@
         confirmCallback = null;
     }
 
+    function statusLabel(st) {
+        if (!st) return "대기";
+        switch (st.state) {
+            case "uploading": return "업로드 중 " + (st.pct || 0) + "%";
+            case "processing": return "처리 중…";
+            case "done": return "완료";
+            case "error": return st.msg || "실패";
+            case "canceled": return "취소됨";
+            default: return "대기";
+        }
+    }
+
     function renderPendingFiles() {
         if (!dom.filePreviewWrap) return;
         if (!pendingFiles.length) {
@@ -1105,19 +1131,59 @@
         var html = "";
         for (var i = 0; i < pendingFiles.length; i++) {
             var file = pendingFiles[i];
+            var st = fileStatus[i] || { state: "idle", pct: 0, msg: "" };
+            var fillPct = st.state === "processing" || st.state === "done" ? 100 : (st.pct || 0);
             html +=
-                '<div class="file-preview">' +
-                '<span class="file-preview-name">' +
-                escapeHtml(file.name) +
-                "</span>" +
-                '<span class="file-preview-size">' +
-                formatBytes(file.size) +
-                "</span>" +
+                '<div class="file-preview" data-file-index="' + i + '" data-state="' + st.state + '">' +
+                '<div class="file-preview-head">' +
+                '<span class="file-preview-name">' + escapeHtml(file.name) + "</span>" +
+                '<span class="file-preview-size">' + formatBytes(file.size) + "</span>" +
                 '<button class="file-preview-remove" type="button" data-remove-index="' + i + '">' +
                 '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>' +
-                "</button></div>";
+                "</button></div>" +
+                '<div class="file-preview-progress">' +
+                '<div class="file-preview-bar"><span class="file-preview-bar-fill" style="width:' + fillPct + '%"></span></div>' +
+                '<span class="file-preview-status">' + escapeHtml(statusLabel(st)) + "</span>" +
+                "</div>" +
+                "</div>";
         }
         dom.filePreviewWrap.innerHTML = html;
+    }
+
+    // 전체 재렌더 없이 해당 행만 갱신(업로드 중 깜빡임 방지)
+    function setFileState(i, state, pct, msg) {
+        fileStatus[i] = { state: state, pct: pct || 0, msg: msg || "" };
+        if (!dom.filePreviewWrap) return;
+        var row = dom.filePreviewWrap.querySelector('.file-preview[data-file-index="' + i + '"]');
+        if (!row) return;
+        row.setAttribute("data-state", state);
+        var fill = row.querySelector(".file-preview-bar-fill");
+        var label = row.querySelector(".file-preview-status");
+        var fillPct = state === "processing" || state === "done" ? 100 : (pct || 0);
+        if (fill) fill.style.width = fillPct + "%";
+        if (label) label.textContent = statusLabel(fileStatus[i]);
+    }
+
+    function hasFailed() {
+        for (var i = 0; i < fileStatus.length; i++) {
+            if (fileStatus[i] && fileStatus[i].state === "error") return true;
+        }
+        return false;
+    }
+
+    // 업로드 중 모달 잠금 + 저장 버튼 라벨 갱신
+    function setUploading(on) {
+        isUploading = on;
+        if (dom.filePreviewWrap) dom.filePreviewWrap.classList.toggle("is-uploading", on);
+        if (dom.fileUploadArea) dom.fileUploadArea.classList.toggle("is-disabled", on);
+        updateSaveButton();
+    }
+
+    function updateSaveButton() {
+        if (!dom.docModalSave) return;
+        dom.docModalSave.disabled = isUploading;
+        if (isUploading) dom.docModalSave.textContent = "업로드 중…";
+        else dom.docModalSave.textContent = hasFailed() ? "실패한 파일 재시도" : "업로드";
     }
 
     function fileKey(file) {
@@ -1125,9 +1191,11 @@
     }
 
     function handleFileSelect(files, append) {
+        if (isUploading) return; // 업로드 중에는 목록 변경 금지
         if (!files || !files.length) return;
 
         var next = append ? pendingFiles.slice() : [];
+        var nextStatus = append ? fileStatus.slice() : [];
         var seen = {};
         for (var i = 0; i < next.length; i++) seen[fileKey(next[i])] = true;
 
@@ -1138,10 +1206,13 @@
             if (seen[key]) continue;
             seen[key] = true;
             next.push(f);
+            nextStatus.push({ state: "idle", pct: 0, msg: "" });
         }
 
         pendingFiles = next;
+        fileStatus = nextStatus;
         renderPendingFiles();
+        updateSaveButton();
     }
 
     function showStatusPopup(badgeEl, key, currentIsUse) {
@@ -1253,62 +1324,156 @@
         });
     }
 
+    // 단일 파일 업로드(XHR). 업로드 진행률은 xhr.upload.onprogress로, 서버 인덱싱은 "처리 중"으로 표시.
+    function uploadOne(i, file, done) {
+        var id = getAdminId();
+        var formData = new FormData();
+        formData.append("adminId", id);
+        formData.append("dept", currentDept);
+        formData.append("file", file);
+        // key/adminName은 서버가 채움 (adminId+file만 전송)
+
+        setFileState(i, "uploading", 0, "");
+
+        var xhr = new XMLHttpRequest();
+        activeXhr = xhr;
+        xhr.open("POST", "/at-i/documents");
+
+        xhr.upload.onprogress = function (e) {
+            if (!e.lengthComputable) return;
+            var pct = Math.round((e.loaded / e.total) * 100);
+            if (pct >= 100) setFileState(i, "processing", 100, "");
+            else setFileState(i, "uploading", pct, "");
+        };
+        // 전송 완료 → 서버 인덱싱 대기(응답 오기 전까지 "처리 중")
+        xhr.upload.onload = function () { setFileState(i, "processing", 100, ""); };
+
+        xhr.onload = function () {
+            activeXhr = null;
+            var data = {};
+            try { data = JSON.parse(xhr.responseText); } catch (e) { data = {}; }
+            if (xhr.status >= 200 && xhr.status < 300 && data && data.code === "0000") {
+                setFileState(i, "done", 100, "");
+                done(true);
+            } else {
+                var msg = (data && data.message) ? data.message : ("업로드 실패 (" + xhr.status + ")");
+                setFileState(i, "error", 0, msg);
+                done(false);
+            }
+        };
+        xhr.onerror = function () {
+            activeXhr = null;
+            setFileState(i, "error", 0, "네트워크 오류");
+            done(false);
+        };
+        xhr.ontimeout = function () {
+            activeXhr = null;
+            setFileState(i, "error", 0, "시간 초과");
+            done(false);
+        };
+        // 사용자 취소: 클라이언트 연결만 끊김(서버 인덱싱은 계속될 수 있음). 큐는 done을 거치지 않고 즉시 종료.
+        xhr.onabort = function () {
+            activeXhr = null;
+            setFileState(i, "canceled", 0, "취소됨");
+            finishUpload();
+        };
+
+        xhr.send(formData);
+    }
+
     function uploadFile() {
+        if (isUploading) return;
         if (!pendingFiles.length) {
             toast("파일을 선택해주세요.", "error");
             return;
         }
 
-        showLoading(true);
-        dom.docModalSave.disabled = true;
+        setUploading(true);
+        uploadCancelled = false;
+        uploadSuccess = 0;
+        uploadFail = 0;
+        uploadPos = 0;
 
-        var id = getAdminId();
-        var files = pendingFiles.slice();
-        var successCount = 0;
-        var failCount = 0;
-        var chain = Promise.resolve();
+        runNextUpload();
+    }
 
-        files.forEach(function (file) {
-            chain = chain.then(function () {
-                var formData = new FormData();
-                formData.append("adminId", id);
-                formData.append("dept", currentDept);
-                formData.append("file", file);
+    function runNextUpload() {
+        if (uploadCancelled) { finishUpload(); return; }
 
-                // key/at-iName은 서버가 채움 (adminId+file만 전송)
-                return fetch("/at-i/documents", { method: "POST", body: formData })
-                    .then(function (res) { return res.json().catch(function () { return {}; }); })
-                    .then(function (data) {
-                        if (data && data.code === "0000") successCount++;
-                        else failCount++;
-                    })
-                    .catch(function () {
-                        failCount++;
-                    });
-            });
+        // 이미 성공(done)한 파일은 건너뜀 → 부분 성공 후 재시도 시 실패분만 재업로드
+        while (uploadPos < pendingFiles.length && fileStatus[uploadPos] && fileStatus[uploadPos].state === "done") uploadPos++;
+        if (uploadPos >= pendingFiles.length) { finishUpload(); return; }
+
+        var idx = uploadPos;
+        uploadOne(idx, pendingFiles[idx], function (ok) {
+            if (ok) uploadSuccess++; else uploadFail++;
+            uploadPos++;
+            runNextUpload();
         });
+    }
 
-        chain.then(function () {
-            dom.docModalSave.disabled = false;
+    function finishUpload() {
+        if (!isUploading) return; // 중복 호출 방지(abort 경로와 정상 완료 경로)
+        setUploading(false);
 
-            if (failCount === 0) {
-                toast(successCount + "개 문서가 추가되었습니다.", "success");
-            } else if (successCount === 0) {
-                toast("문서 추가에 실패했습니다.", "error");
-                showLoading(false);
-                return;
-            } else {
-                toast("일부 문서만 추가되었습니다. 성공 " + successCount + "건, 실패 " + failCount + "건", "error");
-            }
-
-            closeDocModal();
-            resetPaging();
+        // 성공분을 목록에 반영(부분 성공/취소 시에도 최신화)
+        if (uploadSuccess > 0) {
             clearAllCaches();
+            resetPaging();
             ui.pageBlockStart = 1;
             currentPage = 1;
             if (isSearchMode) fetchSearchPage(1);
             else fetchListPage(1);
-        });
+        }
+
+        if (uploadCancelled) {
+            toast("업로드를 취소했습니다. 진행 중이던 파일은 목록에서 확인 후 삭제해 주세요.", "error");
+            // 취소 시 모달은 열어둠 → 사용자가 상태 확인 후 직접 닫기
+        } else if (uploadFail === 0) {
+            toast(uploadSuccess + "개 문서가 추가되었습니다.", "success");
+            closeDocModal();
+        } else if (uploadSuccess === 0) {
+            toast("문서 추가에 실패했습니다. 실패한 파일을 확인 후 재시도하세요.", "error");
+        } else {
+            toast("일부만 추가되었습니다. 성공 " + uploadSuccess + "건, 실패 " + uploadFail + "건. 실패 파일 재시도 가능.", "error");
+        }
+    }
+
+    // 업로드 중 닫기/취소 시도 → 확인 모달, 그 외에는 즉시 닫기
+    function attemptCloseDocModal() {
+        if (isUploading) {
+            requestCancelUpload();
+            return;
+        }
+        closeDocModal();
+    }
+
+    function requestCancelUpload() {
+        openConfirm(
+            "업로드 취소",
+            "업로드를 취소하시겠습니까? 현재 업로드 중인 파일은 취소되지 않을 수 있으니, 목록에서 확인 후 필요하면 개별 삭제해 주세요.",
+            function () {
+                closeConfirm();
+                performCancelUpload();
+            }
+        );
+    }
+
+    function performCancelUpload() {
+        if (!isUploading) return;
+        uploadCancelled = true;
+
+        // 아직 시작하지 않은(대기) 파일은 취소 표시
+        for (var k = 0; k < fileStatus.length; k++) {
+            if (fileStatus[k] && fileStatus[k].state === "idle") setFileState(k, "canceled", 0, "취소됨");
+        }
+
+        // 진행 중 요청은 abort → onabort에서 finishUpload 호출. 없으면 직접 종료.
+        if (activeXhr) {
+            try { activeXhr.abort(); } catch (e) { finishUpload(); }
+        } else {
+            finishUpload();
+        }
     }
 
     function bindEvents() {
@@ -1444,12 +1609,12 @@
 
         if (dom.btnAddDoc) dom.btnAddDoc.addEventListener("click", openDocModal);
         if (dom.btnReloadProfanity) dom.btnReloadProfanity.addEventListener("click", reloadProfanity);
-        if (dom.docModalClose) dom.docModalClose.addEventListener("click", closeDocModal);
-        if (dom.docModalCancel) dom.docModalCancel.addEventListener("click", closeDocModal);
+        if (dom.docModalClose) dom.docModalClose.addEventListener("click", attemptCloseDocModal);
+        if (dom.docModalCancel) dom.docModalCancel.addEventListener("click", attemptCloseDocModal);
 
         if (dom.docModal) {
             dom.docModal.addEventListener("click", function (e) {
-                if (e.target === dom.docModal) closeDocModal();
+                if (e.target === dom.docModal) attemptCloseDocModal();
             });
         }
 
@@ -1479,10 +1644,13 @@
             dom.filePreviewWrap.addEventListener("click", function (e) {
                 var removeBtn = e.target.closest("[data-remove-index]");
                 if (!removeBtn) return;
+                if (isUploading) return; // 업로드 중에는 제거 금지
                 var idx = parseInt(removeBtn.getAttribute("data-remove-index"), 10);
                 if (isNaN(idx) || idx < 0 || idx >= pendingFiles.length) return;
                 pendingFiles.splice(idx, 1);
+                fileStatus.splice(idx, 1);
                 renderPendingFiles();
+                updateSaveButton();
             });
         }
 
@@ -1512,7 +1680,7 @@
                     return;
                 }
                 if (dom.docModal && dom.docModal.classList.contains("show")) {
-                    closeDocModal();
+                    attemptCloseDocModal();
                     return;
                 }
             }

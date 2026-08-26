@@ -390,6 +390,10 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!url) return;
 
         const desktop = isDesktopViewerMode();
+        const { hash } = splitHash(String(url)); // #page=N 보존
+
+        // 모바일 새 탭은 사용자 제스처 안에서 동기적으로 열어둬야 팝업 차단을 피함.
+        let popup = null;
 
         if (desktop && shell && viewer && viewerFrame) {
             shell.classList.add("has-viewer");
@@ -398,19 +402,46 @@ document.addEventListener("DOMContentLoaded", () => {
 
             setViewerTitle(title || "미리보기");
 
-            viewerFrame.src = "about:blank";
-
             try { viewerFrame.removeAttribute("srcdoc"); } catch (e) { }
 
-            revokeViewerBlob();
-
-            viewerFrame.src = withCacheBuster(url);
-
+            viewerFrame.src = "about:blank"; // 로딩 중 표시(blob 준비 후 교체)
             scrollToBottom();
-            return;
+        } else {
+            popup = window.open("about:blank", "_blank");
         }
 
-        window.open(url, "_blank", "noopener");
+        // 서버가 Content-Disposition: attachment로 응답해도 인라인 렌더되도록 blob으로 로드한다.
+        // (미리보기/다운로드가 동일 URL을 공유하므로, 헤더에 의존하지 않고 클라이언트에서 강제 인라인)
+        try {
+            const res = await fetch(withCacheBuster(String(url)), { method: "GET", credentials: "same-origin" });
+            if (!res.ok) throw new Error("preview load failed: " + res.status);
+
+            const raw = await res.blob();
+            const blob = raw.type === "application/pdf" ? raw : new Blob([raw], { type: "application/pdf" });
+
+            revokeViewerBlob();
+            const objUrl = URL.createObjectURL(blob);
+            activeViewerBlobUrl = objUrl + hash;
+
+            if (desktop && shell && viewer && viewerFrame) {
+                viewerFrame.src = activeViewerBlobUrl;
+                scrollToBottom();
+            } else if (popup) {
+                popup.location.href = activeViewerBlobUrl;
+            } else {
+                window.open(activeViewerBlobUrl, "_blank", "noopener");
+            }
+        } catch (e) {
+            // 실패 시 기존 방식(직접 URL 열기)으로 폴백 — 최소한 다운로드라도 되게.
+            revokeViewerBlob();
+            if (desktop && shell && viewer && viewerFrame) {
+                viewerFrame.src = withCacheBuster(String(url));
+            } else if (popup) {
+                popup.location.href = String(url);
+            } else {
+                window.open(String(url), "_blank", "noopener");
+            }
+        }
     }
 
     function setViewerMax(on) {
@@ -872,9 +903,18 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             }
 
+            // 게이트웨이가 url을 직접 준 PDF에도 페이지 앵커 반영(로컬 buildDocViewUrl은 이미 포함).
+            // page가 없으면 그대로 두어 문서 첫 페이지로 열림.
+            const pn = normalizePageValue(page);
+            if (url && ext === "pdf" && pn != null && !/[#&]page=/i.test(url)) {
+                url += (url.indexOf("#") >= 0 ? "&" : "#") + "page=" + pn;
+            }
+
             if (!url) continue;
 
-            const key = `${source}|${url}|${ext}|${page || ""}`;
+            const sectionTitle = String(r.section_title || r.sectionTitle || r.section || "").trim();
+
+            const key = `${source}|${url}|${ext}|${page || ""}|${sectionTitle}`;
             if (seen.has(key)) continue;
             seen.add(key);
 
@@ -883,6 +923,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 url,
                 ext,
                 page,
+                sectionTitle,
             });
         }
 
@@ -900,13 +941,16 @@ document.addEventListener("DOMContentLoaded", () => {
             const disCls = isPdf ? "" : " is-disabled";
             const tip = isPdf ? "미리보기" : "PDF 파일만 미리보기가 제공됩니다.";
 
-            const meta = d.page ? `${d.page} p.` : (d.ext ? d.ext.toUpperCase() : "FILE");
+            const metaParts = [];
+            if (d.page) metaParts.push(`${d.page} p.`);
+            if (d.sectionTitle) metaParts.push(d.sectionTitle);
+            const meta = metaParts.join(" · ") || (d.ext ? d.ext.toUpperCase() : "FILE");
 
             return `
       <div class="cb-refrow" data-url="${escapeHtml(d.url || "")}" data-ext="${escapeHtml(d.ext || "")}" data-name="${escapeHtml(d.source || "문서")}">
         <button class="cb-refmain" type="button" aria-label="출처">
           <div class="cb-ref__name">${escapeHtml(d.source || "문서")}</div>
-          <div class="cb-ref__meta">${escapeHtml(meta)}</div>
+          <div class="cb-ref__meta" title="${escapeHtml(meta)}">${escapeHtml(meta)}</div>
         </button>
 
         <div class="cb-refacts" aria-hidden="false">
