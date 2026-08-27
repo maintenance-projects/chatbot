@@ -785,8 +785,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (isSearchOpen() && searchInput && searchInput.value.trim()) rebuildHighlights(searchInput.value);
     }
 
-    // 통합 요약: 여러 파일명을 하나의 말풍선(카드)에 목록으로 표시
-    function addUserDocsMessage(names) {
+    // 요약 요청 말풍선: 파일명 목록 카드. merged=true면 '통합 요약', 아니면 단일 '문서 요약'.
+    function addUserDocsMessage(names, merged) {
         const list = (Array.isArray(names) ? names : [])
             .map((n) => String(n || "").trim())
             .filter(Boolean);
@@ -794,8 +794,9 @@ document.addEventListener("DOMContentLoaded", () => {
         resumeStickToBottom();
         endUserCardStack();
         const itemsHtml = list
-            .map((n) => `<div class="cb-docscard__item">${escapeHtml(n)}</div>`)
+            .map((n) => `<div class="cb-docscard__item" title="${escapeHtml(n)}">${escapeHtml(n)}</div>`)
             .join("");
+        const headText = merged ? `${list.length}개 문서 통합 요약` : "문서 요약";
         const copytext = list.join(", ");
         const html = `
       <div class="cb-msg cb-msg--user cb-msg--card" data-copytext="${escapeHtml(copytext)}">
@@ -804,7 +805,7 @@ document.addEventListener("DOMContentLoaded", () => {
             <div class="cb-docscard">
               <div class="cb-docscard__head">
                 <img src="/img/ic-file-w.png" class="cb-docscard__icon" alt="" />
-                <span>${list.length}개 문서 통합 요약</span>
+                <span>${escapeHtml(headText)}</span>
               </div>
               ${itemsHtml}
             </div>
@@ -1825,12 +1826,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
         summaryBusy = true;
 
-        // 요약 대상 파일 말풍선: 단일은 파일 카드, 다중(통합)은 하나의 목록 말풍선
-        if (list.length > 1) {
-            addUserDocsMessage(list);
-        } else {
-            addUserDocMessageByName(list[0]);
-        }
+        // 요약 요청 말풍선: 파일명 목록 카드 형태(개별/통합 동일). 다중은 '통합 요약' 표기.
+        addUserDocsMessage(list, list.length > 1);
 
         const handle = addBotStreamLoadingMessage(true);
 
