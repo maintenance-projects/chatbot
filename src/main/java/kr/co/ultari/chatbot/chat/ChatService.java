@@ -88,12 +88,13 @@ public class ChatService {
         }
     }
 
-    /** 3.1 통합 챗봇 — target_filename 유무로 private/open 라우팅 (SSE) */
-    public SseEmitter message(String dept, String userId, String invokeId, String message, String targetFilename, String translateTo) {
+    /** 3.1 통합 챗봇 — target_filename(다중) 유무로 private/open 라우팅 (SSE) */
+    public SseEmitter message(String dept, String userId, String invokeId, String message, java.util.List<String> targetFilenames, String translateTo) {
         // 개인 업로드 문서 질문(target_filename 있음)은 파티션 무관 private로 라우팅해야 한다.
         // (업로드가 dept-less /upload에 저장되므로 dept-scoped /message로 물으면 파일을 못 찾음)
-        if (StringUtils.hasText(targetFilename)) {
-            return messagePrivate(dept, userId, invokeId, message, targetFilename, translateTo);
+        java.util.List<String> names = cleanNames(targetFilenames);
+        if (!names.isEmpty()) {
+            return messagePrivate(dept, userId, invokeId, message, names, translateTo);
         }
         aiUsageService.increase(userId, invokeId, "CHAT");
         MultipartBodyBuilder b = new MultipartBodyBuilder();
@@ -102,12 +103,14 @@ public class ChatService {
         return sseRelay.relay(() -> gateway.stream(dept, "/message/" + invokeId, b));
     }
 
-    /** 2.2 Private 대화 — 특정 문서 검색 (SSE) */
-    public SseEmitter messagePrivate(String dept, String userId, String invokeId, String message, String targetFilename, String translateTo) {
+    /** 2.2 Private 대화 — 특정 문서(다중) 검색 (SSE) */
+    public SseEmitter messagePrivate(String dept, String userId, String invokeId, String message, java.util.List<String> targetFilenames, String translateTo) {
         aiUsageService.increase(userId, invokeId, "CHAT");
         MultipartBodyBuilder b = new MultipartBodyBuilder();
         b.part("message", message);
-        b.part("target_filename", targetFilename);
+        // 선택 문서를 각각 target_filename part로 전달(멀티값).
+        // TODO: 게이트웨이의 다중 target_filename 수용 형식(반복 파트 vs 배열/CSV)은 AI API 확정 후 조정.
+        for (String n : cleanNames(targetFilenames)) b.part("target_filename", n);
         if (StringUtils.hasText(translateTo)) b.part("translate_to", translateTo);
         return sseRelay.relay(() -> gateway.stream(null, "/message/private/" + invokeId, b)); // 개인 문서 대화: 파티션 무관
     }
@@ -121,12 +124,23 @@ public class ChatService {
         return sseRelay.relay(() -> gateway.stream(dept, "/message/open/" + invokeId, b));
     }
 
-    /** 2.6 문서 체계적 요약 (SSE) */
-    public SseEmitter documentSummary(String dept, String userId, String invokeId, String targetFilename) {
+    /** 2.6 문서 체계적 요약 (SSE) — 다중 파일 통합 요약 지원(단일 파일은 1개 리스트) */
+    public SseEmitter documentSummary(String dept, String userId, String invokeId, java.util.List<String> targetFilenames) {
         aiUsageService.increase(userId, invokeId, "SUMMARY");
         MultipartBodyBuilder b = new MultipartBodyBuilder();
-        b.part("target_filename", targetFilename);
+        // TODO: 게이트웨이의 다중 target_filename 수용 형식은 AI API 확정 후 조정.
+        for (String n : cleanNames(targetFilenames)) b.part("target_filename", n);
         return sseRelay.relay(() -> gateway.stream(null, "/message/document-summary/" + invokeId, b)); // 개인 업로드 문서 요약: 파티션 무관
+    }
+
+    /** null/공백 제거 + 순서 유지 중복 제거한 파일명 리스트 */
+    private java.util.List<String> cleanNames(java.util.List<String> names) {
+        if (names == null) return java.util.Collections.emptyList();
+        java.util.LinkedHashSet<String> set = new java.util.LinkedHashSet<>();
+        for (String n : names) {
+            if (StringUtils.hasText(n)) set.add(n.trim());
+        }
+        return new java.util.ArrayList<>(set);
     }
 
     /** 2.4 업로드 파일 목록 조회 (JSON). 성공 응답만 FILES 캐시. */

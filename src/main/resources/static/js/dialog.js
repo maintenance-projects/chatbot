@@ -216,7 +216,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 bodyChat.hidden = useDoc;
                 bodyDoc.hidden = !useDoc;
                 // 모드 간 파일 선택/입력 상태가 새지 않도록 정리
-                if (typeof setSelectedDocument === "function") setSelectedDocument(null);
+                clearSelectedDocuments();
                 input.value = "";
                 autoResizeInput();
                 refreshComposerState(); // doc 모드 진입 시 미선택이면 전송 비활성 + 안내문구
@@ -250,8 +250,8 @@ document.addEventListener("DOMContentLoaded", () => {
     let selectedTemplateFile = null;
     let templateFileTag = null;
 
-    let selectedDocument = null;
-    let documentTag = null;
+    let selectedDocuments = []; // 선택된 개인문서 파일명 배열(다중 선택)
+    let docChipsWrap = null;    // 선택 문서 칩들을 담는 컨테이너
     let docGateHinted = false; // 개인문서 미선택 안내 중복 표시 방지
     let docRetentionDays = 7;  // 개인문서 보관일수(관리자 환경설정값). /me/doc-retention에서 갱신
 
@@ -639,7 +639,8 @@ document.addEventListener("DOMContentLoaded", () => {
         return stack;
     }
 
-    function addUserMessage(text, translateTo) {
+    // docNames: 질문 대상 개인문서 파일명(들). 있으면 질문 말풍선 상단에 파일명 칩으로 표시.
+    function addUserMessage(text, translateTo, docNames) {
         resumeStickToBottom(); // 내가 보낸 메시지와 응답은 항상 바닥 추종
         endUserCardStack();
         const now = formatTime(new Date());
@@ -647,10 +648,19 @@ document.addEventListener("DOMContentLoaded", () => {
         const transBadge = translateTo
             ? `<div class="cb-translate-badge">${escapeHtml(TRANSLATE.getLabel(translateTo))} 번역</div>`
             : "";
+        const names = (Array.isArray(docNames) ? docNames : (docNames ? [docNames] : []))
+            .map((n) => String(n || "").trim())
+            .filter(Boolean);
+        const docsHtml = names.length
+            ? `<div class="cb-msgdocs">${names
+                .map((n) => `<span class="cb-msgdoc" title="${escapeHtml(n)}"><img src="/img/ic-file-w.png" class="cb-msgdoc__ico" alt="" /><span class="cb-msgdoc__name">${escapeHtml(n)}</span></span>`)
+                .join("")}</div>`
+            : "";
         const html = `
       <div class="cb-msg cb-msg--user">
         <div class="cb-bubble">
           ${transBadge}
+          ${docsHtml}
           <div class="cb-bubble__text">
             <pre data-rawtext="${escapeHtml(raw)}">${escapeHtml(raw)}</pre>
           </div>
@@ -765,13 +775,45 @@ document.addEventListener("DOMContentLoaded", () => {
               </div>
             </div>
           </div>
-          ${fileQuickActionsHtml(false)}
           ${actionsHtml({ copy: false })}
         </div>
       </div>
     `;
         const stack = ensureUserCardStack();
         stack.insertAdjacentHTML("beforeend", html);
+        scrollToBottom();
+        if (isSearchOpen() && searchInput && searchInput.value.trim()) rebuildHighlights(searchInput.value);
+    }
+
+    // 통합 요약: 여러 파일명을 하나의 말풍선(카드)에 목록으로 표시
+    function addUserDocsMessage(names) {
+        const list = (Array.isArray(names) ? names : [])
+            .map((n) => String(n || "").trim())
+            .filter(Boolean);
+        if (!list.length) return;
+        resumeStickToBottom();
+        endUserCardStack();
+        const itemsHtml = list
+            .map((n) => `<div class="cb-docscard__item">${escapeHtml(n)}</div>`)
+            .join("");
+        const copytext = list.join(", ");
+        const html = `
+      <div class="cb-msg cb-msg--user cb-msg--card" data-copytext="${escapeHtml(copytext)}">
+        <div class="cb-bubble cb-bubble--card">
+          <div class="cb-bubble__text">
+            <div class="cb-docscard">
+              <div class="cb-docscard__head">
+                <img src="/img/ic-file-w.png" class="cb-docscard__icon" alt="" />
+                <span>${list.length}개 문서 통합 요약</span>
+              </div>
+              ${itemsHtml}
+            </div>
+          </div>
+          ${actionsHtml({ copy: false })}
+        </div>
+      </div>
+    `;
+        body.insertAdjacentHTML("beforeend", html);
         scrollToBottom();
         if (isSearchOpen() && searchInput && searchInput.value.trim()) rebuildHighlights(searchInput.value);
     }
@@ -1351,7 +1393,7 @@ document.addEventListener("DOMContentLoaded", () => {
             (researchTag && researchTag.style.display !== "none") ||
             (templateTag && templateTag.style.display !== "none") ||
             (templateFileTag && templateFileTag.style.display !== "none") ||
-            (documentTag && documentTag.style.display !== "none") ||
+            (docChipsWrap && docChipsWrap.style.display !== "none") ||
             (translateTag && translateTag.style.display !== "none");
 
         chipRow.classList.toggle("is-open", !!hasAny);
@@ -1411,50 +1453,71 @@ document.addEventListener("DOMContentLoaded", () => {
         return templateTag;
     }
 
-    function ensureDocTag() {
-        if (documentTag) return documentTag;
-        documentTag = document.createElement("button");
-        documentTag.type = "button";
-        documentTag.id = "cbDocumentTag";
-        documentTag.setAttribute("aria-pressed", "false");
-        documentTag.innerHTML = `
-      <span class="cb-taghash" aria-hidden="true">#</span>
-      <span class="cb-doctag__label"></span>
-      <span class="cb-doctag__x" aria-hidden="true">×</span>
-    `;
-        documentTag.addEventListener("click", (e) => {
+    // 선택 문서 칩 컨테이너. 파일별 칩(개별 × 로 제거)을 담는다.
+    function ensureDocChipsWrap() {
+        if (docChipsWrap) return docChipsWrap;
+        docChipsWrap = document.createElement("span");
+        docChipsWrap.id = "cbDocChips";
+        docChipsWrap.className = "cb-docchips";
+        // 칩의 × 클릭 → 해당 문서만 선택 해제(위임)
+        docChipsWrap.addEventListener("click", (e) => {
+            const chip = e.target && e.target.closest ? e.target.closest(".cb-doctag[data-name]") : null;
+            if (!chip) return;
             e.preventDefault();
-            setSelectedDocument(null);
+            removeSelectedDocument(chip.getAttribute("data-name") || "");
             input.focus();
         });
         ensureTemplateTag();
-        mountChip(documentTag);
-        documentTag.style.display = "none";
+        mountChip(docChipsWrap);
+        docChipsWrap.style.display = "none";
         updateChipRow();
-        return documentTag;
+        return docChipsWrap;
     }
 
-    function setSelectedDocument(doc) {
-        selectedDocument = doc ? { ...doc } : null;
-        if (selectedDocument) docGateHinted = false;
+    // selectedDocuments를 칩으로 렌더 + 컴포저 상태 갱신
+    function renderDocChips() {
+        const wrap = ensureDocChipsWrap();
+        wrap.innerHTML = selectedDocuments
+            .map((name) => `
+      <button type="button" class="cb-doctag" data-name="${escapeHtml(name)}" aria-pressed="true">
+        <span class="cb-taghash" aria-hidden="true">#</span>
+        <span class="cb-doctag__label">${escapeHtml(name)}</span>
+        <span class="cb-doctag__x" aria-hidden="true">×</span>
+      </button>`)
+            .join("");
+        wrap.style.display = selectedDocuments.length ? "" : "none";
+        if (selectedDocuments.length) docGateHinted = false;
         refreshComposerState();
-
-        const tag = ensureDocTag();
-        if (!tag) return;
-        if (!selectedDocument) {
-            tag.style.display = "none";
-            tag.setAttribute("aria-pressed", "false");
-            const labelEl = tag.querySelector(".cb-doctag__label");
-            if (labelEl) labelEl.textContent = "";
-            updateChipRow();
-            return;
-        }
-
-        tag.style.display = "";
-        tag.setAttribute("aria-pressed", "true");
-        const labelEl = tag.querySelector(".cb-doctag__label");
-        if (labelEl) labelEl.textContent = selectedDocument.name || "문서";
         updateChipRow();
+    }
+
+    function addSelectedDocument(name) {
+        const n = String(name || "").trim();
+        if (!n || selectedDocuments.includes(n)) return;
+        selectedDocuments.push(n);
+        renderDocChips();
+    }
+
+    function removeSelectedDocument(name) {
+        const n = String(name || "").trim();
+        selectedDocuments = selectedDocuments.filter((x) => x !== n);
+        renderDocChips();
+    }
+
+    // 선택셋 교체(문서함 체크박스 '선택 완료' 등). 순서 유지 중복 제거.
+    function setSelectedDocuments(names) {
+        const seen = new Set();
+        selectedDocuments = [];
+        (Array.isArray(names) ? names : []).forEach((name) => {
+            const n = String(name || "").trim();
+            if (n && !seen.has(n)) { seen.add(n); selectedDocuments.push(n); }
+        });
+        renderDocChips();
+    }
+
+    function clearSelectedDocuments() {
+        selectedDocuments = [];
+        renderDocChips();
     }
 
     function ensureTemplateFileTag() {
@@ -1669,23 +1732,40 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
+        // 다중 선택: 파일별 체크박스. 이미 선택된 문서는 체크 상태로 표시.
         const items = shown
             .map((name) => {
                 const safe = escapeHtml(name);
+                const checked = selectedDocuments.includes(name) ? " checked" : "";
                 return `
-          <div class="cb-tpl" role="option" data-doc-name="${safe}" aria-selected="false">
-            <div class="cb-tpl__top">
-              <div class="cb-tpl__name">${safe}</div>
-              <div class="cb-tpl__actions">
-                <button type="button" class="cb-tpl__btn" data-action="summary">요약</button>
-                <button type="button" class="cb-tpl__btn" data-action="question">질문</button>
-              </div>
-            </div>
-          </div>
+          <label class="cb-docitem" data-doc-name="${safe}">
+            <input type="checkbox" class="cb-docchk" data-name="${safe}"${checked} />
+            <span class="cb-docitem__name">${safe}</span>
+          </label>
         `;
             })
             .join("");
-        popup.innerHTML = `${head}<div class="cb-tray__body">${items}</div>`;
+        // 하단 액션바: 선택 개수 + 질문 / 개별 요약 / 통합 요약
+        const foot = `
+          <div class="cb-tray__foot">
+            <span class="cb-tray__count"><b class="cb-doc-selcount">0</b>개 선택</span>
+            <div class="cb-tray__acts">
+              <button type="button" class="cb-tray__act" data-action="ask">질문</button>
+              <button type="button" class="cb-tray__act" data-action="summary-each">개별 요약</button>
+              <button type="button" class="cb-tray__act cb-tray__act--primary" data-action="summary-merge">통합 요약</button>
+            </div>
+          </div>`;
+        popup.innerHTML = `${head}<div class="cb-tray__body">${items}</div>${foot}`;
+        updateDocSelCount(popup);
+    }
+
+    // 문서함 선택 개수 표시 + 액션버튼 활성/비활성 갱신
+    function updateDocSelCount(popup) {
+        if (!popup) return;
+        const n = popup.querySelectorAll(".cb-docchk:checked").length;
+        const el = popup.querySelector(".cb-doc-selcount");
+        if (el) el.textContent = String(n);
+        popup.querySelectorAll(".cb-tray__act").forEach((b) => { b.disabled = n === 0; });
     }
 
     async function openDocsPopupFromButton() {
@@ -1735,12 +1815,22 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    function startSummaryToChat(docName) {
-        const name = String(docName || "").trim();
-        if (!name) return;
-        if (summaryBusy) return;
+    // 통합 요약: 여러 문서를 한 요청으로 요약(단일도 1개 리스트). Promise 반환(개별요약 순차용).
+    function startSummaryToChat(docNames) {
+        const list = (Array.isArray(docNames) ? docNames : [docNames])
+            .map((n) => String(n || "").trim())
+            .filter(Boolean);
+        if (!list.length) return Promise.resolve();
+        if (summaryBusy) return Promise.resolve();
 
         summaryBusy = true;
+
+        // 요약 대상 파일 말풍선: 단일은 파일 카드, 다중(통합)은 하나의 목록 말풍선
+        if (list.length > 1) {
+            addUserDocsMessage(list);
+        } else {
+            addUserDocMessageByName(list[0]);
+        }
 
         const handle = addBotStreamLoadingMessage(true);
 
@@ -1748,9 +1838,9 @@ document.addEventListener("DOMContentLoaded", () => {
         let prefixInjected = false;
 
         const fd = new FormData();
-        fd.append("target_filename", name);
+        list.forEach((n) => fd.append("target_filename", n));
 
-        streamEventText(
+        return streamEventText(
             "/chat/message/document-summary/" + encodeURIComponent(String(sessionId || "")),
             {
                 method: "POST",
@@ -1805,6 +1895,26 @@ document.addEventListener("DOMContentLoaded", () => {
             });
     }
 
+    // 통합 요약: 선택 문서 전체를 한 요청으로
+    function summarizeMerged(names) {
+        startSummaryToChat(names);
+    }
+
+    // 개별 요약: 각 문서를 순차로 요약(summaryBusy가 겹치지 않게 await 체인)
+    async function summarizeEach(names) {
+        const list = (Array.isArray(names) ? names : []).filter(Boolean);
+        for (const n of list) {
+            await startSummaryToChat([n]);
+        }
+    }
+
+    // 체크박스 변경 → 선택 개수/버튼 상태 갱신
+    documentListPopup.addEventListener("change", (e) => {
+        if (e.target && e.target.closest && e.target.closest(".cb-docchk")) {
+            updateDocSelCount(documentListPopup);
+        }
+    });
+
     documentListPopup.addEventListener("click", (e) => {
         const closeBtn = e.target && e.target.closest ? e.target.closest('[data-action="close"]') : null;
         if (closeBtn) {
@@ -1814,48 +1924,56 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        const btn = e.target && e.target.closest ? e.target.closest(".cb-tpl__btn") : null;
-        const item = e.target && e.target.closest ? e.target.closest(".cb-tpl[data-doc-name]") : null;
-        if (!item) return;
+        const act = e.target && e.target.closest ? e.target.closest(".cb-tray__act") : null;
+        if (!act) return;
+        e.preventDefault();
 
-        const name = item.getAttribute("data-doc-name") || "";
-        if (!name) return;
-
-        if (btn) {
-            const action = btn.getAttribute("data-action") || "";
-            if (action === "summary") {
-                input.value = removeHashToken(input.value);
-                autoResizeInput();
-                closeDocPopup();
-
-                setSelectedDocument(null);
-
-                addUserDocMessageByName(name);
-                startSummaryToChat(name);
-                return;
-            }
-            if (action === "question") {
-                setSelectedDocument({ name });
-                input.value = removeHashToken(input.value);
-                autoResizeInput();
-                closeDocPopup();
-                input.focus();
-                return;
-            }
+        // 응답 대기(질문 전송/요약) 중에는 문서함 액션(질문·개별요약·통합요약) 차단
+        if ((widget && widget.classList.contains("is-sending")) || summaryBusy) {
+            return;
         }
 
-        setSelectedDocument({ name });
-        input.value = removeHashToken(input.value);
-        autoResizeInput();
-        input.focus();
-        closeDocPopup();
+        const names = Array.from(documentListPopup.querySelectorAll(".cb-docchk:checked"))
+            .map((c) => c.getAttribute("data-name") || "")
+            .filter(Boolean);
+        if (!names.length) return;
+
+        const action = act.getAttribute("data-action") || "";
+        if (action === "ask") {
+            // 선택 문서를 칩으로 반영 → 입력창에서 질문(전송 시 다중 target_filename)
+            setSelectedDocuments(names);
+            input.value = removeHashToken(input.value);
+            autoResizeInput();
+            closeDocPopup();
+            input.focus();
+            return;
+        }
+        if (action === "summary-each") {
+            input.value = removeHashToken(input.value);
+            autoResizeInput();
+            closeDocPopup();
+            summarizeEach(names);
+            return;
+        }
+        if (action === "summary-merge") {
+            input.value = removeHashToken(input.value);
+            autoResizeInput();
+            closeDocPopup();
+            summarizeMerged(names);
+            return;
+        }
     });
 
     function sendTextMessage(msg, targetNameOverride, translateTo) {
         closeTray();
         closeGuideModal();
+        // targetNameOverride: 문자열(단일) 또는 배열(다중) 모두 허용
+        const targetNames = (Array.isArray(targetNameOverride) ? targetNameOverride : [targetNameOverride])
+            .map((n) => String(n || "").trim())
+            .filter(Boolean);
         const m = String(msg || "").trim();
-        if (m) addUserMessage(m, translateTo);
+        // 질문 말풍선 상단에 대상 파일명 칩 표시(별도 파일 카드 없음)
+        if (m) addUserMessage(m, translateTo, targetNames);
 
         input.value = "";
         autoResizeInput();
@@ -1864,13 +1982,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
         const handle = addBotStreamLoadingMessage(true);
         const cont = consumeContinueFlag();
-
-        const targetName = String(targetNameOverride || "").trim();
-        // 신규 통합 챗봇: target_filename 유무로 서버가 private/open 자동 라우팅.
+        // 신규 통합 챗봇: target_filename(다중) 유무로 서버가 private/open 자동 라우팅.
         // 이어쓰기(continue)는 동일 invokeId(sessionId) 재전송으로 처리되어 threadId 불필요.
         const fd = new FormData();
         fd.append("message", m);
-        if (targetName) fd.append("target_filename", targetName);
+        targetNames.forEach((n) => fd.append("target_filename", n));
         if (translateTo) fd.append("translate_to", translateTo);
 
         streamEventText(
@@ -2020,7 +2136,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 // 개인문서 AI 분석 탭: 업로드한 문서를 자동 선택 → 바로 질문 가능(전송 활성화)
                 if (widget && widget.classList.contains("is-doc-mode") && !templateKey && file && file.name) {
-                    setSelectedDocument({ name: file.name });
+                    addSelectedDocument(file.name);
                 }
 
                 if (!botHandle) {
@@ -2166,7 +2282,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // 개인문서 AI 분석 탭: 분석할 문서를 반드시 선택해야 질문 가능 → 미선택이면 전송 차단
     function isDocGateBlocked() {
-        return !!widget && widget.classList.contains("is-doc-mode") && !selectedDocument;
+        return !!widget && widget.classList.contains("is-doc-mode") && selectedDocuments.length === 0;
     }
 
     // 모드·선택·전송중 상태를 종합해 전송버튼 활성/입력창 안내문구를 갱신
@@ -2199,7 +2315,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const tpl = selectedTemplate ? { ...selectedTemplate } : null;
         const tplKey = tpl ? tpl.key || "" : "";
         const attachedFile = selectedTemplateFile || null;
-        const docName = selectedDocument && selectedDocument.name ? String(selectedDocument.name) : "";
+        const docNames = selectedDocuments.slice(); // 선택 문서(다중)
         const translateTo = selectedTranslate || "";
 
         if (!msg && !tplKey) return;
@@ -2234,15 +2350,15 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
 
-        if (docName) {
+        if (docNames.length) {
             // 파일 선택은 질문 후에도 유지 → 같은 문서로 연속 질문 가능.
-            // 해제는 사용자가 문서 칩(#cbDocumentTag)의 ×를 눌러야만 이뤄진다.
-            addUserDocMessageByName(docName);
-            sendTextMessage(msg, docName, translateTo);
+            // 해제는 사용자가 문서 칩의 ×를 눌러야만 이뤄진다.
+            // 별도 파일 카드는 만들지 않고, 질문 말풍선 상단에 파일명 칩으로 표시(sendTextMessage 내부).
+            sendTextMessage(msg, docNames, translateTo);
             return;
         }
 
-        sendTextMessage(msg, "", translateTo);
+        sendTextMessage(msg, [], translateTo);
     }
 
     sendBtn.addEventListener("click", (e) => {
@@ -2276,14 +2392,14 @@ document.addEventListener("DOMContentLoaded", () => {
             fileInput.value = "";
             if (!files.length) return;
 
-            const first = files.find(isAllowedFile);
-            if (!first) return;
+            const allowed = files.filter(isAllowedFile);
+            if (!allowed.length) return;
 
             closePop();
             closeTray();
             closeDocPopup();
             closeGuideModal();
-            startImmediateUpload(first);
+            uploadFilesSequentially(allowed);
         });
     }
 
@@ -2303,11 +2419,22 @@ document.addEventListener("DOMContentLoaded", () => {
         widget.classList.toggle("is-dragover", !!on);
     }
 
-    function pickDroppedFile(dt) {
-        if (!dt) return null;
+    function pickDroppedFiles(dt) {
+        if (!dt) return [];
         const files = dt.files ? Array.from(dt.files) : [];
-        if (!files.length) return null;
-        return files.find(isAllowedFile) || null;
+        return files.filter(isAllowedFile);
+    }
+
+    // 여러 파일을 순차 업로드(동시 SSE 충돌 방지). 각 완료 후 다음 파일.
+    function uploadFilesSequentially(files) {
+        const list = (Array.isArray(files) ? files : []).filter(isAllowedFile);
+        if (!list.length) return;
+        let i = 0;
+        const next = () => {
+            if (i >= list.length) { input.focus(); autoResizeInput(); return; }
+            uploadFile(list[i++], "", "", next);
+        };
+        next();
     }
 
     if (widget) {
@@ -2338,14 +2465,14 @@ document.addEventListener("DOMContentLoaded", () => {
             dragDepth = 0;
             setDragOver(false);
 
-            const f = pickDroppedFile(e.dataTransfer);
-            if (!f) return;
+            const files = pickDroppedFiles(e.dataTransfer);
+            if (!files.length) return;
 
             closePop();
             closeTray();
             closeDocPopup();
             closeGuideModal();
-            startImmediateUpload(f);
+            uploadFilesSequentially(files);
         });
     }
 
@@ -2808,7 +2935,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 return;
             }
             if (action === "question") {
-                setSelectedDocument({ name });
+                addSelectedDocument(name);
                 input.focus();
                 return;
             }
@@ -2824,11 +2951,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
     ensureResearchTag();
     ensureTemplateTag();
-    ensureDocTag();
+    ensureDocChipsWrap();
 
     setResearchMode(false);
     setTemplate(null);
-    setSelectedDocument(null);
+    clearSelectedDocuments();
 
     input.focus();
     scrollToBottom();

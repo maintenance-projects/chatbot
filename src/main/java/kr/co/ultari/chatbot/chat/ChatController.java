@@ -33,24 +33,24 @@ public class ChatController {
         return chatService.upload(dept(request), userId(request), invokeId, attachFileName, file);
     }
 
-    /** 3.1 통합 챗봇 (private/open 자동 라우팅) */
+    /** 3.1 통합 챗봇 (private/open 자동 라우팅) — target_filename 다중 지원 */
     @PostMapping(value = "/message/{invokeId}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter message(@PathVariable String invokeId,
                               @RequestParam("message") String message,
-                              @RequestParam(value = "target_filename", required = false) String targetFilename,
+                              @RequestParam(value = "target_filename", required = false) java.util.List<String> targetFilenames,
                               @RequestParam(value = "translate_to", required = false) String translateTo,
                               HttpServletRequest request) {
-        return chatService.message(dept(request), userId(request), invokeId, message, targetFilename, translateTo);
+        return chatService.message(dept(request), userId(request), invokeId, message, targetFilenames, translateTo);
     }
 
-    /** 2.2 Private 대화 */
+    /** 2.2 Private 대화 — target_filename 다중 지원 */
     @PostMapping(value = "/message/private/{invokeId}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter messagePrivate(@PathVariable String invokeId,
                                      @RequestParam("message") String message,
-                                     @RequestParam("target_filename") String targetFilename,
+                                     @RequestParam("target_filename") java.util.List<String> targetFilenames,
                                      @RequestParam(value = "translate_to", required = false) String translateTo,
                                      HttpServletRequest request) {
-        return chatService.messagePrivate(dept(request), userId(request), invokeId, message, targetFilename, translateTo);
+        return chatService.messagePrivate(dept(request), userId(request), invokeId, message, targetFilenames, translateTo);
     }
 
     /** 2.3 Open 대화 */
@@ -62,12 +62,12 @@ public class ChatController {
         return chatService.messageOpen(dept(request), userId(request), invokeId, message, translateTo);
     }
 
-    /** 2.6 문서 체계적 요약 */
+    /** 2.6 문서 체계적 요약 — target_filename 다중(통합 요약) 지원 */
     @PostMapping(value = "/message/document-summary/{invokeId}", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter documentSummary(@PathVariable String invokeId,
-                                      @RequestParam("target_filename") String targetFilename,
+                                      @RequestParam("target_filename") java.util.List<String> targetFilenames,
                                       HttpServletRequest request) {
-        return chatService.documentSummary(dept(request), userId(request), invokeId, targetFilename);
+        return chatService.documentSummary(dept(request), userId(request), invokeId, targetFilenames);
     }
 
     /** 2.4 업로드 파일 목록 조회 */
