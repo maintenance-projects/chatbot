@@ -714,6 +714,7 @@ textarea {
 }
 
 .cb-refline__name {
+    flex: 1 1 auto;        /* 파일명이 우선 공간 확보 */
     font-weight: 700;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -722,7 +723,12 @@ textarea {
 }
 
 .cb-refline__meta {
-    flex: 0 0 auto;
+    flex: 0 1 auto;        /* section_title이 길면 줄어들며 말줄임 */
+    min-width: 0;
+    max-width: 50%;        /* 파일명 공간을 뺏지 않도록 상한 */
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
     color: #64748b;
     font-weight: 500;
 }
