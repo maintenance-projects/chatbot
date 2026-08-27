@@ -1761,12 +1761,14 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // 문서함 선택 개수 표시 + 액션버튼 활성/비활성 갱신
+    // 응답 대기(질문 전송/요약) 중에는 선택이 있어도 비활성(완료 시 재호출로 자동 활성화).
     function updateDocSelCount(popup) {
         if (!popup) return;
         const n = popup.querySelectorAll(".cb-docchk:checked").length;
         const el = popup.querySelector(".cb-doc-selcount");
         if (el) el.textContent = String(n);
-        popup.querySelectorAll(".cb-tray__act").forEach((b) => { b.disabled = n === 0; });
+        const busy = (widget && widget.classList.contains("is-sending")) || summaryBusy;
+        popup.querySelectorAll(".cb-tray__act").forEach((b) => { b.disabled = busy || n === 0; });
     }
 
     async function openDocsPopupFromButton() {
@@ -1889,6 +1891,9 @@ document.addEventListener("DOMContentLoaded", () => {
                 summaryBusy = false;
                 input.focus();
                 autoResizeInput();
+                if (documentListPopup && documentListPopup.classList.contains("is-open")) {
+                    updateDocSelCount(documentListPopup);
+                }
             });
     }
 
@@ -2275,6 +2280,10 @@ document.addEventListener("DOMContentLoaded", () => {
         if (widget) widget.classList.toggle("is-sending", isSending);
         input.disabled = isSending;
         refreshComposerState();
+        // 문서함이 열린 상태로 전송이 끝나면 액션버튼 상태를 재동기화(자동 재활성화)
+        if (documentListPopup && documentListPopup.classList.contains("is-open")) {
+            updateDocSelCount(documentListPopup);
+        }
     }
 
     // 개인문서 AI 분석 탭: 분석할 문서를 반드시 선택해야 질문 가능 → 미선택이면 전송 차단
