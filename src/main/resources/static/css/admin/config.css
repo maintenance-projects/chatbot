@@ -1,0 +1,187 @@
+/* 관리자 환경설정 화면 전용 스타일 */
+
+.config-card {
+    background: #fff;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 28px 28px 24px;
+    max-width: 760px;
+}
+
+.config-section {
+    padding: 8px 0;
+}
+
+.config-section-head {
+    margin-bottom: 16px;
+}
+
+.config-title {
+    font-size: 1.05rem;
+    font-weight: 700;
+    color: var(--text-dark);
+    margin: 0 0 4px;
+}
+
+.config-desc {
+    font-size: 0.85rem;
+    color: var(--text-light);
+    margin: 0;
+    line-height: 1.5;
+}
+
+.config-divider {
+    height: 1px;
+    background: var(--border);
+    margin: 12px 0;
+}
+
+/* ── Temperature 슬라이더(감도조절기) ── */
+.slider-block {
+    padding: 4px 4px 0;
+}
+
+.slider-readout {
+    text-align: center;
+    font-size: 2.2rem;
+    font-weight: 800;
+    color: var(--primary);
+    line-height: 1;
+    margin-bottom: 14px;
+}
+
+.slider-readout small {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--text-light);
+    margin-left: 4px;
+}
+
+.config-slider {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 100%;
+    height: 8px;
+    border-radius: 999px;
+    background: linear-gradient(90deg, #b9c0d6 0%, var(--primary) 100%);
+    outline: none;
+    cursor: pointer;
+}
+
+.config-slider::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    appearance: none;
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: #fff;
+    border: 3px solid var(--primary);
+    box-shadow: 0 2px 6px rgba(var(--primary-rgb), 0.35);
+    cursor: pointer;
+    transition: transform 0.1s ease;
+}
+
+.config-slider::-webkit-slider-thumb:active {
+    transform: scale(1.12);
+}
+
+.config-slider::-moz-range-thumb {
+    width: 26px;
+    height: 26px;
+    border-radius: 50%;
+    background: #fff;
+    border: 3px solid var(--primary);
+    box-shadow: 0 2px 6px rgba(var(--primary-rgb), 0.35);
+    cursor: pointer;
+}
+
+.slider-scale {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 10px;
+    font-size: 0.8rem;
+    font-weight: 700;
+    color: var(--text-mid);
+}
+
+.slider-scale span {
+    text-align: center;
+    flex: 1;
+}
+
+.slider-scale span:first-child {
+    text-align: left;
+}
+
+.slider-scale span:last-child {
+    text-align: right;
+}
+
+.slider-scale em {
+    display: inline-block;
+    margin-top: 2px;
+    font-style: normal;
+    font-size: 0.72rem;
+    font-weight: 500;
+    color: var(--text-light);
+}
+
+/* ── 사용자 프롬프트 ── */
+.config-textarea {
+    width: 100%;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 12px 14px;
+    font-size: 0.9rem;
+    line-height: 1.6;
+    color: var(--text-dark);
+    resize: vertical;
+    font-family: inherit;
+    box-sizing: border-box;
+}
+
+.config-textarea:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+/* ── 보관 기간 ── */
+.config-inline {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.config-number {
+    width: 120px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 10px 12px;
+    font-size: 0.95rem;
+    color: var(--text-dark);
+    box-sizing: border-box;
+}
+
+.config-number:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+.config-unit {
+    font-size: 0.9rem;
+    color: var(--text-mid);
+    font-weight: 600;
+}
+
+/* ── 저장 버튼 ── */
+.config-actions {
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    display: flex;
+    justify-content: flex-end;
+}
+
+.config-actions .btn {
+    min-width: 120px;
+}

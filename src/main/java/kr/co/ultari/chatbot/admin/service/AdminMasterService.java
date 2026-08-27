@@ -38,7 +38,7 @@ public class AdminMasterService {
     }
 
     public String addAdmin(String adminId, String adminName, String password,
-                           String ip, String authStorage, String authStatistics, String authMaster, String authPartition) {
+                           String ip, String authStorage, String authStatistics, String authMaster, String authPartition, String authConfig) {
         if (adminRepository.findById(adminId).isPresent()) {
             return "DuplicateId";
         }
@@ -51,6 +51,7 @@ public class AdminMasterService {
         admin.setAuthStatistics(authStatistics);
         admin.setAuthMaster(authMaster);
         admin.setAuthPartition(authPartition);
+        admin.setAuthConfig(authConfig);
         admin.setRegDate(new Date());
         admin.setUpdateDate(new Date());
         adminRepository.save(admin);
@@ -58,7 +59,7 @@ public class AdminMasterService {
     }
 
     public String updateAdmin(String adminId, String adminName, String ip,
-                              String authStorage, String authStatistics, String authMaster, String authPartition) {
+                              String authStorage, String authStatistics, String authMaster, String authPartition, String authConfig) {
         MsgAdmin admin = adminRepository.findById(adminId).orElse(null);
         if (admin == null) return "fail";
         admin.setAdminName(adminName);
@@ -67,6 +68,7 @@ public class AdminMasterService {
         admin.setAuthStatistics(authStatistics);
         admin.setAuthMaster(authMaster);
         admin.setAuthPartition(authPartition);
+        admin.setAuthConfig(authConfig);
         admin.setUpdateDate(new Date());
         adminRepository.save(admin);
         return "ok";
@@ -89,6 +91,9 @@ public class AdminMasterService {
             obj.put("authStatistics", a.getAuthStatistics() != null ? a.getAuthStatistics() : "0");
             obj.put("authMaster", a.getAuthMaster() != null ? a.getAuthMaster() : "0");
             obj.put("authPartition", a.getAuthPartition() != null ? a.getAuthPartition() : "0");
+            // AUTH_CONFIG 미설정(NULL=기존 관리자)은 마스터 권한을 따르므로 authMaster 값으로 표시(세션 폴백과 일치)
+            obj.put("authConfig", a.getAuthConfig() != null ? a.getAuthConfig()
+                    : (a.getAuthMaster() != null ? a.getAuthMaster() : "0"));
             obj.put("regDate", a.getRegDate() != null ? SDF.format(a.getRegDate()) : "");
             obj.put("updateDate", a.getUpdateDate() != null ? SDF.format(a.getUpdateDate()) : "");
             arr.put(obj);

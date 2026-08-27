@@ -30,11 +30,18 @@
     <main class="cb-page">
         <section class="cb-shell" id="cbShell" aria-label="챗봇 상담">
             <aside class="cb-widget is-open" id="cbWidget" aria-hidden="false">
-                <nav class="cb-modetabs" id="cbModeTabs" th:if="${menuPkb}">
-                    <button class="cb-modetab is-active" type="button" data-mode="chat">AI 챗봇</button>
-                    <button class="cb-modetab" type="button" data-mode="pkb">AI 첨부파일 검색</button>
-                    <button class="cb-modetab" type="button" data-mode="doc"
-                        th:if="${menuUpload or menuDocs}">개인문서 AI 분석</button>
+                <nav class="cb-modetabs" id="cbModeTabs">
+                    <!-- 좌측: 로고 자리(추후 이미지 삽입) -->
+                    <div class="cb-modetabs__logo" id="cbTabLogo" aria-hidden="true">LOGO</div>
+                    <!-- 우측: 탭 선택 영역 -->
+                    <div class="cb-modetabs__tabs">
+                        <button class="cb-modetab is-active" type="button" data-mode="chat">AI 챗봇</button>
+                        <!--/* AI 첨부파일 검색(pkb) 탭 숨김 — 되살리려면 아래를 주석 밖으로 꺼내기
+                        <button class="cb-modetab" type="button" data-mode="pkb" th:if="${menuPkb}">AI 첨부파일 검색</button>
+                        */-->
+                        <button class="cb-modetab" type="button" data-mode="doc"
+                            th:if="${menuUpload or menuDocs}">개인문서 AI 분석</button>
+                    </div>
                 </nav>
                 <header class="cb-header">
                     <div class="cb-header__left">
@@ -287,7 +294,7 @@
                             <h4>ℹ️ 이용 시 참고해 주세요</h4>
                             <ul>
                                 <li>지원 파일 형식: PDF, HWP, HWPX, Word, Excel, PowerPoint 등</li>
-                                <li>업로드한 파일과 대화 기록은 7일간 보관됩니다.</li>
+                                <li>업로드한 파일과 대화 기록은 <span class="js-doc-retention-days">7</span>일간 보관됩니다.</li>
                                 <li>이미지 위주의 PDF는 내용 인식이 어려울 수 있습니다.</li>
                                 <li>메신저로 받은 첨부파일 검색은 상단 <strong>AI 첨부파일 검색</strong> 탭을 이용해 주세요.</li>
                             </ul>

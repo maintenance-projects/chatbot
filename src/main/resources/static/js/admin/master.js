@@ -32,6 +32,7 @@
         chkStatistics: null,
         chkMaster: null,
         chkPartition: null,
+        chkConfig: null,
         formError: null,
         confirmModal: null,
         confirmTitle: null,
@@ -292,6 +293,7 @@
                 + "<td>" + authBadge(a.authStatistics) + "</td>"
                 + "<td>" + authBadge(a.authMaster) + "</td>"
                 + "<td>" + authBadge(a.authPartition) + "</td>"
+                + "<td>" + authBadge(a.authConfig) + "</td>"
                 + "<td>" + escapeHtml(a.regDate || "") + "</td>"
                 + '<td><div class="action-btns">'
                 + '<button class="btn-icon" title="수정" data-action="edit" data-id="' + escapeHtml(a.adminId) + '">'
@@ -365,6 +367,7 @@
         dom.chkStatistics.checked = false;
         dom.chkMaster.checked = false;
         dom.chkPartition.checked = false;
+        dom.chkConfig.checked = false;
         hideFormError();
         dom.adminModalSave.textContent = "추가";
         dom.adminModal.classList.add("show");
@@ -386,6 +389,7 @@
         dom.chkStatistics.checked = admin.authStatistics === "1";
         dom.chkMaster.checked = admin.authMaster === "1";
         dom.chkPartition.checked = admin.authPartition === "1";
+        dom.chkConfig.checked = admin.authConfig === "1";
         hideFormError();
         dom.adminModalSave.textContent = "수정";
         dom.adminModal.classList.add("show");
@@ -434,7 +438,8 @@
                 authStorage: dom.chkStorage.checked ? "1" : "0",
                 authStatistics: dom.chkStatistics.checked ? "1" : "0",
                 authMaster: dom.chkMaster.checked ? "1" : "0",
-                authPartition: dom.chkPartition.checked ? "1" : "0"
+                authPartition: dom.chkPartition.checked ? "1" : "0",
+                authConfig: dom.chkConfig.checked ? "1" : "0"
             })
                 .then(function (result) {
                     var r = (result || "").trim();
@@ -464,7 +469,8 @@
                 authStorage: dom.chkStorage.checked ? "1" : "0",
                 authStatistics: dom.chkStatistics.checked ? "1" : "0",
                 authMaster: dom.chkMaster.checked ? "1" : "0",
-                authPartition: dom.chkPartition.checked ? "1" : "0"
+                authPartition: dom.chkPartition.checked ? "1" : "0",
+                authConfig: dom.chkConfig.checked ? "1" : "0"
             })
                 .then(function (result) {
                     var r = (result || "").trim();
@@ -616,6 +622,7 @@
         dom.chkStatistics = $("#chkStatistics");
         dom.chkMaster = $("#chkMaster");
         dom.chkPartition = $("#chkPartition");
+        dom.chkConfig = $("#chkConfig");
         dom.formError = $("#formError");
         dom.confirmModal = $("#confirmModal");
         dom.confirmTitle = $("#confirmTitle");

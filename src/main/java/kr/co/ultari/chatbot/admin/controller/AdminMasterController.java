@@ -50,9 +50,10 @@ public class AdminMasterController {
                            @RequestParam("authStorage") String authStorage,
                            @RequestParam("authStatistics") String authStatistics,
                            @RequestParam("authMaster") String authMaster,
-                           @RequestParam(value = "authPartition", defaultValue = "0") String authPartition) {
+                           @RequestParam(value = "authPartition", defaultValue = "0") String authPartition,
+                           @RequestParam(value = "authConfig", defaultValue = "0") String authConfig) {
         log.debug("[master add] adminId={}, targetId={}", adminId, targetId);
-        return masterService.addAdmin(targetId, targetName, password, ip, authStorage, authStatistics, authMaster, authPartition);
+        return masterService.addAdmin(targetId, targetName, password, ip, authStorage, authStatistics, authMaster, authPartition, authConfig);
     }
 
     @PostMapping("/update")
@@ -64,9 +65,10 @@ public class AdminMasterController {
                               @RequestParam("authStorage") String authStorage,
                               @RequestParam("authStatistics") String authStatistics,
                               @RequestParam("authMaster") String authMaster,
-                              @RequestParam(value = "authPartition", defaultValue = "0") String authPartition) {
+                              @RequestParam(value = "authPartition", defaultValue = "0") String authPartition,
+                              @RequestParam(value = "authConfig", defaultValue = "0") String authConfig) {
         log.debug("[master update] adminId={}, targetId={}", adminId, targetId);
-        return masterService.updateAdmin(targetId, targetName, ip, authStorage, authStatistics, authMaster, authPartition);
+        return masterService.updateAdmin(targetId, targetName, ip, authStorage, authStatistics, authMaster, authPartition, authConfig);
     }
 
     @PostMapping("/delete")

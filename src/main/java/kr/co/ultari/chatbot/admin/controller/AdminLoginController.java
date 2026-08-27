@@ -142,6 +142,7 @@ public class AdminLoginController {
         model.addAttribute("statistics", session.isAuthStatistics());
         model.addAttribute("master",session.isAuthMaster());
         model.addAttribute("partition", session.isAuthPartition());
+        model.addAttribute("config", session.isAuthConfig());
         model.addAttribute("sessionRemainingSeconds", sessionStore.refresh(sessionId)); // 활동(페이지 이동) 시 세션 연장
         model.addAttribute("deptCodes", deptProperties.getCodes());
         model.addAttribute("deptLabels", deptLabelService.labels());
@@ -166,6 +167,7 @@ public class AdminLoginController {
         model.addAttribute("statistics", session.isAuthStatistics());
         model.addAttribute("master",session.isAuthMaster());
         model.addAttribute("partition", session.isAuthPartition());
+        model.addAttribute("config", session.isAuthConfig());
         model.addAttribute("sessionRemainingSeconds", sessionStore.refresh(sessionId)); // 활동(페이지 이동) 시 세션 연장
         model.addAttribute("audioEnabled", statsAudioEnabled);
         model.addAttribute("templateEnabled", statsTemplateEnabled);
@@ -190,6 +192,7 @@ public class AdminLoginController {
         model.addAttribute("statistics", session.isAuthStatistics());
         model.addAttribute("master",session.isAuthMaster());
         model.addAttribute("partition", session.isAuthPartition());
+        model.addAttribute("config", session.isAuthConfig());
         model.addAttribute("sessionRemainingSeconds", sessionStore.refresh(sessionId)); // 활동(페이지 이동) 시 세션 연장
 
         return "admin/master";
@@ -212,6 +215,7 @@ public class AdminLoginController {
         model.addAttribute("statistics", session.isAuthStatistics());
         model.addAttribute("master",session.isAuthMaster());
         model.addAttribute("partition", session.isAuthPartition());
+        model.addAttribute("config", session.isAuthConfig());
         model.addAttribute("sessionRemainingSeconds", sessionStore.refresh(sessionId)); // 활동(페이지 이동) 시 세션 연장
 
         return "admin/guide";
@@ -233,11 +237,34 @@ public class AdminLoginController {
         model.addAttribute("statistics", session.isAuthStatistics());
         model.addAttribute("master", session.isAuthMaster());
         model.addAttribute("partition", session.isAuthPartition());
+        model.addAttribute("config", session.isAuthConfig());
         model.addAttribute("sessionRemainingSeconds", sessionStore.refresh(sessionId)); // 활동(페이지 이동) 시 세션 연장
         model.addAttribute("deptCodes", deptProperties.getCodes());
         model.addAttribute("deptLabels", deptLabelService.labels());
 
         return "admin/users";
+    }
+
+    @RequestMapping("/config")
+    public String configIndex(HttpServletRequest request, Model model) {
+        String sessionId = (String) request.getSession().getAttribute("sessionId");
+        if(!StringUtils.hasText(sessionId)) return buildSessionExpiredRedirect();
+
+        AdminSession session = sessionStore.get(sessionId);
+        if(session==null) return buildSessionExpiredRedirect();
+
+        log.debug("[config index] adminId={}, sessionId={}", session.getAdminId(), sessionId);
+
+        model.addAttribute("adminId", session.getAdminId());
+        model.addAttribute("adminName", session.getAdminName());
+        model.addAttribute("storage", session.isAuthStorage());
+        model.addAttribute("statistics", session.isAuthStatistics());
+        model.addAttribute("master", session.isAuthMaster());
+        model.addAttribute("partition", session.isAuthPartition());
+        model.addAttribute("config", session.isAuthConfig());
+        model.addAttribute("sessionRemainingSeconds", sessionStore.refresh(sessionId)); // 활동(페이지 이동) 시 세션 연장
+
+        return "admin/config";
     }
 
     private String getClientIp(HttpServletRequest request) {

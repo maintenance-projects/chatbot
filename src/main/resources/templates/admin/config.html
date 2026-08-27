@@ -1,95 +1,14 @@
 <!DOCTYPE html>
-<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+<html lang="ko">
 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>관리자 페이지 · AI 파티션 권한</title>
+    <title>관리자 페이지 - 환경설정</title>
     <link rel="stylesheet" th:href="@{/css/admin/base.css}" href="/css/admin/base.css" />
+    <!-- 공통 레이아웃(사이드바/톱바/페이지/모달/토스트)은 master.css에 정의돼 있어 재사용 -->
     <link rel="stylesheet" th:href="@{/css/admin/master.css}" href="/css/admin/master.css" />
-    <script th:inline="javascript">
-        window.deptCodes = /*[[${deptCodes}]]*/ [];
-        window.deptLabels = /*[[${deptLabels}]]*/ {};
-        window.adminName = /*[[${adminName}]]*/ "";
-    </script>
-    <style>
-        /* dept 탭 — 관리자 테마(네이비 언더라인) */
-        .dept-tabs { display: flex; gap: 2px; margin-bottom: 14px; border-bottom: 1px solid var(--color-border); }
-        .dept-tab { position: relative; padding: 11px 24px; border: none; background: none; cursor: pointer;
-            font-size: 0.9375rem; font-weight: 600; color: var(--color-text-light);
-            transition: color var(--transition-fast); }
-        .dept-tab:hover { color: var(--color-primary); }
-        .dept-tab.active { color: var(--color-primary); }
-        .dept-tab.active::after { content: ''; position: absolute; left: 14px; right: 14px; bottom: -1px;
-            height: 2.5px; background: var(--color-primary); border-radius: 3px; }
-
-        /* dept 표시 명칭 편집기 */
-        .dept-label-editor { display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-            width: 700px; max-width: 100%; margin-left: 18px; margin-bottom: 18px;
-            padding: 13px 16px; border-radius: var(--radius-md, 12px);
-            background: rgba(var(--primary-rgb), 0.045); border: 1px solid var(--color-border); }
-        .dle-cap { font-size: 0.8125rem; font-weight: 700; color: var(--color-primary-dark); }
-        .dept-label-editor .search-input { max-width: 240px; }
-        .dle-code { font-size: 0.75rem; font-weight: 600; color: var(--color-text-muted);
-            background: var(--base-dark); padding: 3px 10px; border-radius: 20px; }
-        .dle-hint { color: var(--color-text-muted); font-size: 0.8125rem; margin-left: auto; }
-
-        /* 툴바 */
-        .tree-toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
-        .tree-toolbar .search-input { max-width: 280px; }
-        .tsub { color: var(--color-text-muted); font-size: 0.8125rem; }
-
-        /* 조직도 트리 */
-        .tree { font-size: 0.9375rem; --tree-line: var(--color-border); min-height: 440px;
-            padding: 8px 4px 16px; }
-        .tree ul { list-style: none; margin: 0; padding-left: 26px; position: relative; }
-        .tree > ul { padding-left: 2px; }
-        .tree li { position: relative; }
-        /* 세로 연결선 */
-        .tree ul ul::before { content: ''; position: absolute; left: 12px; top: 0; bottom: 18px;
-            width: 1.5px; background: var(--tree-line); border-radius: 2px; }
-        /* 가로 연결선 */
-        .tree ul ul > li::before { content: ''; position: absolute; left: -14px; top: 20px;
-            width: 12px; height: 1.5px; background: var(--tree-line); }
-        .collapsed > ul { display: none; }
-
-        .tnode { position: relative; display: flex; align-items: center; gap: 9px; padding: 7px 12px;
-            border-radius: 9px; border: 1px solid transparent; transition: background var(--transition-fast),
-            border-color var(--transition-fast), box-shadow var(--transition-fast); }
-        .tnode:hover { background: rgba(var(--primary-rgb), 0.06); }
-        .tnode.hidden { display: none; }
-
-        /* 펼침 토글 */
-        .tw-toggle { width: 22px; height: 22px; display: inline-flex; align-items: center; justify-content: center;
-            cursor: pointer; color: var(--color-text-muted); border-radius: 6px; font-size: 10px; flex: 0 0 auto;
-            transition: all var(--transition-fast); }
-        .tw-toggle:not(.leaf):hover { background: var(--color-primary); color: #fff; }
-        .tw-toggle.leaf { visibility: hidden; }
-        .collapsed > .tnode .tw-toggle { transform: rotate(-90deg); }
-
-        /* 노드 아이콘(조직/사용자 구분) */
-        .ticon { width: 22px; height: 22px; flex: 0 0 auto; display: inline-flex; align-items: center;
-            justify-content: center; border-radius: 7px; }
-        .tnode.part .ticon { background: rgba(var(--primary-rgb), 0.12); color: var(--color-primary); }
-        .tnode.user .ticon { background: var(--base-dark); color: var(--color-text-light); }
-        .ticon svg { width: 13px; height: 13px; }
-
-        .tnode input[type=checkbox] { width: 17px; height: 17px; cursor: pointer; flex: 0 0 auto;
-            accent-color: var(--color-primary); margin: 0; }
-        .tnode .tlabel { color: var(--color-text); }
-        .tnode.part { padding-top: 8px; padding-bottom: 8px; }
-        .tnode.part .tlabel { font-weight: 700; color: var(--color-primary-dark); }
-        .tnode .tsub { color: var(--color-text-muted); font-size: 0.8125rem; font-weight: 500; }
-        .tnode .tbadge { font-size: 0.6875rem; font-weight: 700; padding: 2px 10px; border-radius: 20px;
-            letter-spacing: .02em; background: rgba(var(--primary-rgb), 0.1); color: var(--color-primary); }
-        .tnode .tbadge.deny { background: var(--color-error-light); color: var(--color-error); }
-
-        /* 부여 상태 강조 */
-        .tnode.granted { background: rgba(var(--primary-rgb), 0.075); border-color: rgba(var(--primary-rgb), 0.22); }
-        .tnode.granted::before { content: ''; position: absolute; left: 0; top: 6px; bottom: 6px; width: 3px;
-            border-radius: 3px; background: var(--color-primary); }
-        .tnode.denied { background: var(--color-error-light); border-color: rgba(var(--color-error-rgb, 220,38,38), 0.2); }
-    </style>
+    <link rel="stylesheet" th:href="@{/css/admin/config.css}" href="/css/admin/config.css" />
 </head>
 
 <body>
@@ -113,10 +32,11 @@
                         <polyline points="14 2 14 8 20 8" />
                         <line x1="16" y1="13" x2="8" y2="13" />
                         <line x1="16" y1="17" x2="8" y2="17" />
+                        <polyline points="10 9 9 9 8 9" />
                     </svg>
                     문서 관리
                 </a>
-                <a th:if="${partition}" href="/at-i/users" class="nav-item active" data-page="users">
+                <a th:if="${partition}" href="/at-i/users" class="nav-item" data-page="users">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                         stroke-linejoin="round">
                         <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
@@ -145,7 +65,7 @@
                     </svg>
                     관리자 관리
                 </a>
-                <a th:if="${config}" href="/at-i/config" class="nav-item" data-page="config">
+                <a th:if="${config}" href="#" class="nav-item active" data-page="config">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                         stroke-linejoin="round">
                         <circle cx="12" cy="12" r="3" />
@@ -205,14 +125,15 @@
                     <div class="breadcrumb">
                         <a href="#">홈</a>
                         <span class="breadcrumb-sep">›</span>
-                        <span class="breadcrumb-current">AI 파티션 권한</span>
+                        <span class="breadcrumb-current">환경설정</span>
                     </div>
                 </div>
                 <div class="topbar-right">
                     <div class="session-timer">
                         <span class="session-timer-label">세션 만료까지</span>
                         <span class="session-timer-value" id="sessionTimer"
-                            th:attr="data-remaining=${sessionRemainingSeconds}" data-remaining="0">00:00:00</span>
+                            th:attr="data-remaining=${sessionRemainingSeconds}"
+                            data-remaining="0">00:00:00</span>
                         <span class="session-timer-note" id="sessionTimerNote"></span>
                         <button type="button" class="session-timer-refresh" id="sessionTimerRefresh">연장</button>
                     </div>
@@ -220,28 +141,57 @@
             </header>
 
             <main class="page-body">
-                <section class="table-card" style="position:relative;">
-                    <div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div></div>
-
-                    <div class="dept-tabs" id="deptTabs"></div>
-
-                    <div class="dept-label-editor">
-                        <span class="dle-cap">표시 명칭</span>
-                        <input type="text" class="search-input" id="deptLabelInput" maxlength="30"
-                            placeholder="예) 영업본부">
-                        <span class="dle-code" id="deptLabelCode"></span>
-                        <button class="btn btn-primary btn-sm" id="btnSaveDeptLabel" type="button">저장</button>
-                        <span class="dle-hint">챗봇 화면 상단에 이 명칭으로 표시됩니다.</span>
+                <section class="config-card" style="position:relative;">
+                    <div class="loading-overlay" id="loadingOverlay">
+                        <div class="spinner"></div>
                     </div>
 
-                    <div class="tree-toolbar">
-                        <input type="text" class="search-input" id="treeSearch" placeholder="이름 / 아이디 검색…">
-                        <button class="btn btn-outline btn-sm" id="btnExpandAll" type="button">모두 펼치기</button>
-                        <button class="btn btn-outline btn-sm" id="btnCollapseAll" type="button">모두 접기</button>
-                        <span class="tsub" id="treeHint">조직·사용자에 체크하면 접근 권한이 부여됩니다 · 조직 부여는 하위 상속</span>
+                    <!-- 1. Temperature -->
+                    <div class="config-section">
+                        <div class="config-section-head">
+                            <h3 class="config-title">Temperature</h3>
+                            <p class="config-desc">AI 응답의 창의성 수준을 조절합니다. 낮을수록 일관적이고, 높을수록 창의적입니다.</p>
+                        </div>
+                        <div class="slider-block">
+                            <div class="slider-readout"><span id="temperatureValue">5</span><small>/ 10</small></div>
+                            <input type="range" id="temperature" class="config-slider" min="0" max="10" step="1" value="5" />
+                            <div class="slider-scale">
+                                <span>0<br><em>일관적</em></span>
+                                <span>5</span>
+                                <span>10<br><em>창의적</em></span>
+                            </div>
+                        </div>
                     </div>
 
-                    <div class="tree" id="treeRoot"></div>
+                    <div class="config-divider"></div>
+
+                    <!-- 2. 사용자 프롬프트 -->
+                    <div class="config-section">
+                        <div class="config-section-head">
+                            <h3 class="config-title">사용자 프롬프트</h3>
+                            <p class="config-desc">AI가 답변할 때 기준으로 삼을 시스템 프롬프트를 입력합니다.</p>
+                        </div>
+                        <textarea id="userPrompt" class="config-textarea" rows="6"
+                            placeholder="예) 당신은 사내 규정 안내 도우미입니다. 정중하고 간결하게 한국어로 답변하세요."></textarea>
+                    </div>
+
+                    <div class="config-divider"></div>
+
+                    <!-- 3. 개인문서 보관 기간 -->
+                    <div class="config-section">
+                        <div class="config-section-head">
+                            <h3 class="config-title">개인문서 보관 기간</h3>
+                            <p class="config-desc">개인문서 AI 분석 탭에서 사용자가 업로드한 파일의 보관 기간입니다. 사용자 화면에도 안내됩니다.</p>
+                        </div>
+                        <div class="config-inline">
+                            <input type="number" id="docRetentionDays" class="config-number" min="1" max="365" value="7" />
+                            <span class="config-unit">일</span>
+                        </div>
+                    </div>
+
+                    <div class="config-actions">
+                        <button class="btn btn-primary" id="btnSaveConfig" type="button">저장</button>
+                    </div>
                 </section>
             </main>
         </div>
@@ -287,7 +237,7 @@
     <div class="toast-container" id="toastContainer"></div>
 
     <script th:src="@{/js/admin/common.js}" src="/js/admin/common.js"></script>
-    <script th:src="@{/js/admin/users.js}" src="/js/admin/users.js"></script>
+    <script th:src="@{/js/admin/config.js}" src="/js/admin/config.js"></script>
 </body>
 
 </html>

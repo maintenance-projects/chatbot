@@ -809,13 +809,38 @@ textarea {
     flex: 0 0 auto;
     display: flex;
     align-items: flex-end;
+    justify-content: space-between;  /* 좌: 로고 / 우: 탭 */
     gap: 4px;
     padding: 3px 10px 0;   /* 상단 여백 최소, 하단 0 → 활성 탭이 헤더에 맞닿아 이어짐 */
     background: #fff;
 }
 
+/* 좌측 로고 자리(플레이스홀더). 추후 이미지로 교체 */
+.cb-modetabs__logo {
+    flex: 0 0 auto;
+    align-self: center;
+    display: flex;
+    align-items: center;
+    height: 28px;
+    padding: 0 6px;
+    font-size: 13px;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    color: #cbd5e1;
+    user-select: none;
+}
+
+/* 우측 탭 선택 영역 */
+.cb-modetabs__tabs {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: flex-end;
+    gap: 4px;
+}
+
 .cb-modetab {
-    flex: 1 1 auto;
+    flex: 0 0 auto;
+    min-width: 132px;      /* 두 탭 너비 통일(가장 긴 '개인문서 AI 분석' 기준) */
     margin-top: 3px;       /* 비활성: 살짝 내려앉은(뒤) 탭 */
     padding: 9px 12px 11px;
     border: 0;
@@ -824,6 +849,7 @@ textarea {
     border-radius: 10px 10px 0 0;
     font-size: 13px;
     font-weight: 700;
+    text-align: center;
     cursor: pointer;
     transition: background 0.18s ease, color 0.18s ease, margin-top 0.15s ease;
 }

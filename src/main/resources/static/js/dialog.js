@@ -226,6 +226,21 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     })();
 
+    // 개인문서 보관일수(관리자 환경설정) 조회 → 도움말/문서함 안내의 '7일'을 설정값으로 갱신
+    (function initDocRetention() {
+        fetch("/me/doc-retention", { credentials: "same-origin" })
+            .then((r) => r.json())
+            .then((d) => {
+                const days = d && Number(d.days);
+                if (!days || days < 1) return;
+                docRetentionDays = days;
+                document.querySelectorAll(".js-doc-retention-days").forEach((el) => {
+                    el.textContent = String(days);
+                });
+            })
+            .catch(() => {});
+    })();
+
     let isResearchMode = false;
     let researchTag = null;
 
@@ -238,6 +253,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let selectedDocument = null;
     let documentTag = null;
     let docGateHinted = false; // 개인문서 미선택 안내 중복 표시 방지
+    let docRetentionDays = 7;  // 개인문서 보관일수(관리자 환경설정값). /me/doc-retention에서 갱신
 
     let continueNext = false;
     let continueThreadId = null;
@@ -1624,7 +1640,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         <div class="cb-tray__head">
                             <div class="cb-tray__titlewrap">
                             <div class="cb-tray__title">업로드 파일 선택</div>
-                            <div class="cb-tray__subnote">※업로드된 파일은 7일간 보관되며,<br/>보관 기간 만료 시 시스템에 의해 자동 삭제됩니다.</div>
+                            <div class="cb-tray__subnote">※업로드된 파일은 ${docRetentionDays}일간 보관되며,<br/>보관 기간 만료 시 시스템에 의해 자동 삭제됩니다.</div>
                             </div>
                             <button type="button" class="cb-tray__close" data-action="close" aria-label="닫기">×</button>
                         </div>

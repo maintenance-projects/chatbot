@@ -32,6 +32,9 @@ public class MsgAdmin {
     @Column(name = "AUTH_PARTITION", columnDefinition = "CHAR", length = 1)
     private String authPartition;
 
+    @Column(name = "AUTH_CONFIG", columnDefinition = "CHAR", length = 1)
+    private String authConfig;
+
     @Column(name = "IP", length = 50)
     private String ip;
 

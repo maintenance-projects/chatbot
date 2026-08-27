@@ -23,6 +23,15 @@ public class DeptSwitchController {
 
     private final DeptContext deptContext;
     private final DeptLabelService labelService;
+    private final kr.co.ultari.chatbot.admin.service.AdminConfigService configService;
+
+    /** 개인문서 보관일수(사용자 화면 안내용). 관리자 환경설정값을 그대로 노출. */
+    @GetMapping("/me/doc-retention")
+    public ResponseEntity<String> docRetention() {
+        JSONObject o = new JSONObject();
+        o.put("days", configService.getDocRetentionDays());
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(o.toString());
+    }
 
     /** 허용 dept 목록 + 현재 선택 + 표시명. user=화면이 아는 사용자 id로 세션 신원 확립. */
     @GetMapping("/me/depts")
