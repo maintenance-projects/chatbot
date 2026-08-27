@@ -241,6 +241,23 @@ document.addEventListener("DOMContentLoaded", () => {
             .catch(() => {});
     })();
 
+    // 탭 좌측 로고 클릭 시 logo → logo2 … logo6 순환(표시 크기는 CSS로 동일 고정)
+    (function initLogoCycle() {
+        const logoImg = document.querySelector("#cbTabLogo .cb-modetabs__logo-img");
+        if (!logoImg) return;
+        const logos = [
+            "/img/logo.png", "/img/logo2.png", "/img/logo3.png",
+            "/img/logo4.png", "/img/logo5.png", "/img/logo6.png",
+            "/img/logo7.png", "/img/logo8.png", "/img/logo9.png",
+            "/img/logo10.png",
+        ];
+        let idx = 0;
+        logoImg.addEventListener("click", () => {
+            idx = (idx + 1) % logos.length;
+            logoImg.src = logos[idx];
+        });
+    })();
+
     let isResearchMode = false;
     let researchTag = null;
 
@@ -533,19 +550,30 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function actionsHtml(opts) {
         const canCopy = !!(opts && opts.copy);
+        const canEdit = !!(opts && opts.edit);
         const downloadUrl = opts && opts.downloadUrl ? String(opts.downloadUrl) : "";
         const showView = !!(opts && opts.view);
         const viewUrl = opts && opts.viewUrl ? String(opts.viewUrl) : "";
         const viewExt = opts && opts.viewExt ? String(opts.viewExt) : "";
         const viewName = opts && opts.viewName ? String(opts.viewName) : "";
 
-        if (!canCopy && !downloadUrl && !showView) return "";
+        if (!canCopy && !canEdit && !downloadUrl && !showView) return "";
 
         let html = `<div class="cb-actionsbar" aria-hidden="true">`;
         if (canCopy) {
             html += `
         <button class="cb-actbtn cb-actbtn--copy" type="button" aria-label="복사" data-tooltip="복사">
           <img src="/img/ic-copy.png" alt="복사" />
+        </button>
+      `;
+        }
+        if (canEdit) {
+            html += `
+        <button class="cb-actbtn cb-actbtn--edit" type="button" aria-label="편집" data-tooltip="편집">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7" />
+            <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z" />
+          </svg>
         </button>
       `;
         }
@@ -640,7 +668,8 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // docNames: 질문 대상 개인문서 파일명(들). 있으면 질문 말풍선 상단에 파일명 칩으로 표시.
-    function addUserMessage(text, translateTo, docNames) {
+    // editable: true면 복사 옆에 편집 버튼 노출(입력창으로 불러와 재편집). 순수 텍스트 질문에만 사용.
+    function addUserMessage(text, translateTo, docNames, editable) {
         resumeStickToBottom(); // 내가 보낸 메시지와 응답은 항상 바닥 추종
         endUserCardStack();
         const now = formatTime(new Date());
@@ -653,7 +682,7 @@ document.addEventListener("DOMContentLoaded", () => {
             .filter(Boolean);
         const docsHtml = names.length
             ? `<div class="cb-msgdocs">${names
-                .map((n) => `<span class="cb-msgdoc" title="${escapeHtml(n)}"><img src="/img/ic-file-w.png" class="cb-msgdoc__ico" alt="" /><span class="cb-msgdoc__name">${escapeHtml(n)}</span></span>`)
+                .map((n) => `<span class="cb-msgdoc" data-name="${escapeHtml(n)}" title="${escapeHtml(n)}"><img src="/img/ic-file-w.png" class="cb-msgdoc__ico" alt="" /><span class="cb-msgdoc__name">${escapeHtml(n)}</span></span>`)
                 .join("")}</div>`
             : "";
         const html = `
@@ -665,7 +694,7 @@ document.addEventListener("DOMContentLoaded", () => {
             <pre data-rawtext="${escapeHtml(raw)}">${escapeHtml(raw)}</pre>
           </div>
           <div class="cb-meta">${now}</div>
-          ${actionsHtml({ copy: true })}
+          ${actionsHtml({ copy: true, edit: !!editable })}
         </div>
       </div>
     `;
@@ -1974,8 +2003,8 @@ document.addEventListener("DOMContentLoaded", () => {
             .map((n) => String(n || "").trim())
             .filter(Boolean);
         const m = String(msg || "").trim();
-        // 질문 말풍선 상단에 대상 파일명 칩 표시(별도 파일 카드 없음)
-        if (m) addUserMessage(m, translateTo, targetNames);
+        // 질문 말풍선 상단에 대상 파일명 칩 표시(별도 파일 카드 없음). editable=true → 편집 버튼 노출
+        if (m) addUserMessage(m, translateTo, targetNames, true);
 
         input.value = "";
         autoResizeInput();
@@ -2842,6 +2871,29 @@ document.addEventListener("DOMContentLoaded", () => {
             const ok = await copyToClipboard(text);
             copyBtn.classList.toggle("is-done", ok);
             window.setTimeout(() => copyBtn.classList.remove("is-done"), 900);
+            return;
+        }
+
+        // 편집: 내 질문 말풍선 내용을 입력창으로 불러와 재편집(파일 선택도 함께 복원)
+        const editBtn = e.target && e.target.closest ? e.target.closest(".cb-actbtn--edit") : null;
+        if (editBtn) {
+            e.preventDefault();
+            const msgEl = editBtn.closest(".cb-msg");
+            if (!msgEl) return;
+            const text = getCopyTextFromMsg(msgEl);
+            // 질문에 딸린 개인문서 파일 선택 복원(있을 때만)
+            const names = Array.from(msgEl.querySelectorAll(".cb-msgdoc[data-name]"))
+                .map((el) => el.getAttribute("data-name") || "")
+                .filter(Boolean);
+            if (names.length && typeof setSelectedDocuments === "function") {
+                setSelectedDocuments(names);
+            }
+            input.value = text;
+            autoResizeInput();
+            input.focus();
+            const len = input.value.length;
+            try { input.setSelectionRange(len, len); } catch (_) { /* noop */ }
+            scrollToBottom();
             return;
         }
 

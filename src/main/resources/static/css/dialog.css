@@ -552,7 +552,9 @@ textarea {
 }
 
 .cb-msg--user .cb-actionsbar {
-    left: -44px;
+    left: auto;
+    right: 100%;
+    margin-right: 8px;
 }
 
 .cb-msg:hover .cb-actionsbar,
@@ -577,11 +579,16 @@ textarea {
     overflow: visible;
 }
 
-.cb-actbtn img {
+.cb-actbtn img,
+.cb-actbtn svg {
     width: 16px;
     height: 16px;
     display: block;
     opacity: 0.95;
+}
+
+.cb-actbtn--edit svg {
+    color: #30364F;
 }
 
 .cb-actbtn:active {
@@ -901,10 +908,11 @@ textarea {
 
 .cb-modetabs__logo-img {
     height: 40px;
-    width: auto;
-    max-width: 220px;
+    width: 120px;          /* 로고 순환 시에도 표시 크기 고정(종횡비 유지, 여백 처리) */
     object-fit: contain;
+    object-position: left center;
     display: block;
+    cursor: pointer;
 }
 
 /* 우측 탭 선택 영역 */
@@ -2127,7 +2135,9 @@ textarea {
     }
 
     .cb-msg--user .cb-actionsbar {
-        left: -40px;
+        left: auto;
+        right: 100%;
+        margin-right: 6px;
     }
 
     .document-list-popup {
