@@ -2831,7 +2831,10 @@ document.addEventListener("DOMContentLoaded", () => {
         return false;
     }
 
-    body.addEventListener("click", async (e) => {
+    // 대화영역 클릭 위임은 두 대화영역(챗봇 #cbBody / 개인문서 #cbBodyDoc)의 공통 부모에 건다.
+    // (body는 모드 전환 시 스왑되므로 body에 직접 걸면 개인문서 영역에서 복사·출처 등이 동작하지 않음)
+    const bodyEventHost = bodyChat.closest(".cb-bodywrap") || bodyChat.parentElement || bodyChat;
+    bodyEventHost.addEventListener("click", async (e) => {
         const copyBtn = e.target && e.target.closest ? e.target.closest(".cb-actbtn--copy") : null;
         if (copyBtn) {
             const msgEl = copyBtn.closest(".cb-msg");

@@ -897,11 +897,15 @@ textarea {
     align-items: center;
     height: 28px;
     padding: 0 6px;
-    font-size: 13px;
-    font-weight: 800;
-    letter-spacing: 0.08em;
-    color: #cbd5e1;
     user-select: none;
+}
+
+.cb-modetabs__logo-img {
+    height: 24px;
+    width: auto;
+    max-width: 160px;
+    object-fit: contain;
+    display: block;
 }
 
 /* 우측 탭 선택 영역 */
