@@ -1821,31 +1821,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    input.addEventListener("input", async (e) => {
-        const value = e && e.target ? String(e.target.value || "") : "";
-        const q = getHashQuery(value);
-
-        if (q == null) {
-            if (isDocPopOpen()) closeDocPopup();
-            return;
-        }
-
-        openDocPopup();
-        populateDocumentList(documentListPopup, [], q, true, "");
-
-        try {
-            const files = await fetchUploadedFiles(false);
-            populateDocumentList(documentListPopup, files, q, false, "");
-        } catch (err) {
-            populateDocumentList(
-                documentListPopup,
-                [],
-                q,
-                false,
-                err && err.message ? String(err.message) : "파일 목록을 불러오지 못했습니다."
-            );
-        }
-    });
+    // (제거) '#' 입력 시 문서함 자동 열림 기능 삭제 — 문서함은 하단 도구/문서함 버튼으로만 연다.
 
     // 통합 요약: 여러 문서를 한 요청으로 요약(단일도 1개 리스트). Promise 반환(개별요약 순차용).
     function startSummaryToChat(docNames) {
