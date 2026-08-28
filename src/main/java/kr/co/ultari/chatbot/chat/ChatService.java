@@ -103,16 +103,18 @@ public class ChatService {
         return sseRelay.relay(() -> gateway.stream(dept, "/message/" + invokeId, b));
     }
 
-    /** 2.2 Private 대화 — 특정 문서(다중) 검색 (SSE) */
+    /**
+     * 2.2 Private 대화 — 특정 문서(단일/다중) 검색 (SSE). 파티션 무관.
+     * <p>게이트웨이는 multipart form(message + target_filename 반복)을 받는다.
+     * (문서 명세는 다중을 JSON으로 표기했으나 실제 구현은 form이라, 단일/다중 모두 multipart로 통일.)
+     */
     public SseEmitter messagePrivate(String dept, String userId, String invokeId, String message, java.util.List<String> targetFilenames, String translateTo) {
         aiUsageService.increase(userId, invokeId, "CHAT");
         MultipartBodyBuilder b = new MultipartBodyBuilder();
         b.part("message", message);
-        // 선택 문서를 각각 target_filename part로 전달(멀티값).
-        // TODO: 게이트웨이의 다중 target_filename 수용 형식(반복 파트 vs 배열/CSV)은 AI API 확정 후 조정.
         for (String n : cleanNames(targetFilenames)) b.part("target_filename", n);
         if (StringUtils.hasText(translateTo)) b.part("translate_to", translateTo);
-        return sseRelay.relay(() -> gateway.stream(null, "/message/private/" + invokeId, b)); // 개인 문서 대화: 파티션 무관
+        return sseRelay.relay(() -> gateway.stream(null, "/message/private/" + invokeId, b));
     }
 
     /** 2.3 Open 대화 — 전체 문서 검색 (SSE) */
