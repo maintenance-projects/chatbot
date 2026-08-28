@@ -119,6 +119,9 @@
     }
 
     document.addEventListener("DOMContentLoaded", function () {
+        // 세션 검증 + 헤더 사용자 표시 + 세션 만료 카운트다운 시작(common.js)
+        if (typeof checkSession === "function" && !checkSession()) return;
+
         dom.temperature = $("#temperature");
         dom.temperatureValue = $("#temperatureValue");
         dom.userPrompt = $("#userPrompt");
