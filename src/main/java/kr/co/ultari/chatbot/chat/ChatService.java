@@ -110,9 +110,11 @@ public class ChatService {
      */
     public SseEmitter messagePrivate(String dept, String userId, String invokeId, String message, java.util.List<String> targetFilenames, String translateTo) {
         aiUsageService.increase(userId, invokeId, "CHAT");
+        java.util.List<String> names = cleanNames(targetFilenames);
+        log.info("[private] invokeId={}, target_filenames({})={}", invokeId, names.size(), names);
         MultipartBodyBuilder b = new MultipartBodyBuilder();
         b.part("message", message);
-        for (String n : cleanNames(targetFilenames)) b.part("target_filename", n);
+        for (String n : names) b.part("target_filename", n);
         if (StringUtils.hasText(translateTo)) b.part("translate_to", translateTo);
         return sseRelay.relay(() -> gateway.stream(null, "/message/private/" + invokeId, b));
     }
@@ -129,9 +131,10 @@ public class ChatService {
     /** 2.6 문서 체계적 요약 (SSE) — 다중 파일 통합 요약 지원(단일 파일은 1개 리스트) */
     public SseEmitter documentSummary(String dept, String userId, String invokeId, java.util.List<String> targetFilenames) {
         aiUsageService.increase(userId, invokeId, "SUMMARY");
+        java.util.List<String> names = cleanNames(targetFilenames);
+        log.info("[summary] invokeId={}, target_filenames({})={}", invokeId, names.size(), names);
         MultipartBodyBuilder b = new MultipartBodyBuilder();
-        // TODO: 게이트웨이의 다중 target_filename 수용 형식은 AI API 확정 후 조정.
-        for (String n : cleanNames(targetFilenames)) b.part("target_filename", n);
+        for (String n : names) b.part("target_filename", n);
         return sseRelay.relay(() -> gateway.stream(null, "/message/document-summary/" + invokeId, b)); // 개인 업로드 문서 요약: 파티션 무관
     }
 
