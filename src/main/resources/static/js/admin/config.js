@@ -35,19 +35,27 @@
 
     function syncSliderReadout() {
         if (dom.temperatureValue && dom.temperature) {
-            dom.temperatureValue.textContent = dom.temperature.value;
+            var v = parseFloat(dom.temperature.value);
+            dom.temperatureValue.textContent = isNaN(v) ? dom.temperature.value : v.toFixed(1);
         }
     }
 
+    // 게이트웨이 계약: { file_ttl_days, temperature(소수), system_prompt }
     function loadConfig() {
         showLoading(true);
-        fetch("/at-i/config/load", { method: "POST", headers: { "Content-Type": "application/x-www-form-urlencoded" } })
-            .then(function (r) { return r.json(); })
+        fetch("/at-i/config/load", { method: "POST" })
+            .then(function (r) {
+                if (!r.ok) throw new Error("load failed: " + r.status);
+                return r.json();
+            })
             .then(function (c) {
-                if (dom.temperature) dom.temperature.value = (c.temperature != null ? c.temperature : 5);
+                if (dom.temperature) dom.temperature.value = (c.temperature != null ? c.temperature : 0.3);
                 syncSliderReadout();
-                if (dom.userPrompt) dom.userPrompt.value = c.userPrompt || "";
-                if (dom.docRetentionDays) dom.docRetentionDays.value = (c.docRetentionDays != null ? c.docRetentionDays : 7);
+                if (dom.userPrompt) dom.userPrompt.value = c.system_prompt || "";
+                if (dom.docRetentionDays) {
+                    var ttl = c.file_ttl_days != null ? Math.round(Number(c.file_ttl_days)) : 7;
+                    dom.docRetentionDays.value = (isNaN(ttl) || ttl < 1) ? 7 : ttl;
+                }
             })
             .catch(function () { toast("설정을 불러오지 못했습니다.", "error"); })
             .finally(function () { showLoading(false); });
@@ -60,23 +68,24 @@
             dom.docRetentionDays.focus();
             return;
         }
+        var temp = parseFloat(dom.temperature.value);
 
-        var fd = new URLSearchParams();
-        fd.append("temperature", dom.temperature.value);
-        fd.append("userPrompt", dom.userPrompt.value);
-        fd.append("docRetentionDays", String(days));
+        var payload = {
+            file_ttl_days: days,
+            temperature: isNaN(temp) ? 0.3 : temp,
+            system_prompt: dom.userPrompt.value || "",
+        };
 
         dom.btnSave.disabled = true;
         dom.btnSave.textContent = "저장 중...";
 
         fetch("/at-i/config/save", {
             method: "POST",
-            headers: { "Content-Type": "application/x-www-form-urlencoded" },
-            body: fd.toString(),
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
         })
-            .then(function (r) { return r.text(); })
-            .then(function (result) {
-                if ((result || "").trim() === "ok") {
+            .then(function (res) {
+                if (res.ok) {
                     toast("설정이 저장되었습니다.", "success");
                 } else {
                     toast("저장에 실패했습니다.", "error");

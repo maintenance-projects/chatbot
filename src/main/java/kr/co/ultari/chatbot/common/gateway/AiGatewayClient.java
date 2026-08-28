@@ -85,6 +85,18 @@ public class AiGatewayClient {
                 .block();
     }
 
+    /** JSON 본문 POST(예: 환경설정 저장). 게이트웨이 상태코드·본문을 그대로 전달. */
+    public ResponseEntity<String> postJson(String dept, String path, String jsonBody) {
+        String uri = url(dept, path);
+        log.debug("gateway POST(json) {}", uri);
+        return webClient.post()
+                .uri(URI.create(uri))
+                .contentType(MediaType.APPLICATION_JSON)
+                .bodyValue(jsonBody == null ? "{}" : jsonBody)
+                .exchangeToMono(resp -> resp.toEntity(String.class))
+                .block();
+    }
+
     /** GET — 게이트웨이 상태코드·본문을 그대로 전달. */
     public ResponseEntity<String> get(String dept, String path) {
         String uri = url(dept, path);
