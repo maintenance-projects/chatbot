@@ -1,5 +1,7 @@
 package kr.co.ultari.chatbot.config;
 
+import kr.co.ultari.chatbot.admin.service.AdminConfigService;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -24,7 +26,11 @@ import java.util.stream.Stream;
  */
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class TempFileCleanupScheduler {
+
+    /** 개인문서 보관일수(file_ttl_days) 조회용. 로컬 사본은 게이트웨이 TTL + 1일까지 보관한다. */
+    private final AdminConfigService configService;
 
     @Value("${ultari.ai.temp.path:tmp}")
     private String tempPath;
@@ -40,15 +46,13 @@ public class TempFileCleanupScheduler {
     @Value("${ultari.ai.temp.cleanup.retention-hours:24}")
     private long retentionHours;
 
-    /** 업로드 문서 보존시간(시간). 기본 168h(=7일). */
-    @Value("${ultari.ai.document.cleanup.retention-hours:168}")
-    private long documentRetentionHours;
-
-    /** 정리 주기(cron). 기본 매일 03:30. temp와 업로드 문서를 각자 보존기간으로 정리. */
+    /** 정리 주기(cron). 기본 매일 03:30. temp는 고정 보존, 업로드 문서 사본은 file_ttl_days+1일. */
     @Scheduled(cron = "${ultari.ai.temp.cleanup.cron:0 30 3 * * *}")
     public void cleanup() {
         if (!enabled) return;
         cleanupDir(tempPath, retentionHours);
+        // 로컬 PDF 미리보기 사본은 게이트웨이 보관기간(file_ttl_days)보다 하루 더 보관 후 삭제.
+        long documentRetentionHours = (configService.getDocRetentionDays() + 1L) * 24L;
         cleanupDir(documentPath, documentRetentionHours);
     }
 
