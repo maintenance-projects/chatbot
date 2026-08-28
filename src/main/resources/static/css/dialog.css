@@ -789,7 +789,7 @@ textarea {
 }
 
 .cb-refline__name {
-    flex: 1 1 auto;        /* 파일명이 우선 공간 확보 */
+    flex: 0 1 auto;        /* 콘텐츠 크기만 차지 → meta가 파일명 바로 옆에 붙음 */
     font-weight: 700;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -798,9 +798,8 @@ textarea {
 }
 
 .cb-refline__meta {
-    flex: 0 1 auto;        /* section_title이 길면 줄어들며 말줄임 */
+    flex: 0 8 auto;        /* 축소비율↑ → 둘 다 길면 meta부터 줄어들며 말줄임(파일명 우선) */
     min-width: 0;
-    max-width: 50%;        /* 파일명 공간을 뺏지 않도록 상한 */
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
