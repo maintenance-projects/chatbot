@@ -420,14 +420,6 @@ document.addEventListener("DOMContentLoaded", () => {
         if (t) t.textContent = String(text || "");
     }
 
-    function isDesktopViewerMode() {
-        try {
-            return window.matchMedia && window.matchMedia("(min-width: 901px)").matches;
-        } catch (e) {
-            return false;
-        }
-    }
-
     function splitHash(url) {
         const raw = String(url || "");
         const i = raw.indexOf("#");
@@ -447,27 +439,19 @@ document.addEventListener("DOMContentLoaded", () => {
 
     async function openViewer(url, title) {
         if (!url) return;
+        // 화면 크기와 무관하게 항상 오른쪽 분할 뷰어로 표시(새 창 사용 안 함).
+        if (!(shell && viewer && viewerFrame)) return;
 
-        const desktop = isDesktopViewerMode();
         const { hash } = splitHash(String(url)); // #page=N 보존
 
-        // 모바일 새 탭은 사용자 제스처 안에서 동기적으로 열어둬야 팝업 차단을 피함.
-        let popup = null;
+        shell.classList.add("has-viewer");
+        viewer.classList.add("is-open");
+        viewer.setAttribute("aria-hidden", "false");
+        setViewerTitle(title || "미리보기");
 
-        if (desktop && shell && viewer && viewerFrame) {
-            shell.classList.add("has-viewer");
-            viewer.classList.add("is-open");
-            viewer.setAttribute("aria-hidden", "false");
-
-            setViewerTitle(title || "미리보기");
-
-            try { viewerFrame.removeAttribute("srcdoc"); } catch (e) { }
-
-            viewerFrame.src = "about:blank"; // 로딩 중 표시(blob 준비 후 교체)
-            scrollToBottom();
-        } else {
-            popup = window.open("about:blank", "_blank");
-        }
+        try { viewerFrame.removeAttribute("srcdoc"); } catch (e) { }
+        viewerFrame.src = "about:blank"; // 로딩 중 표시(blob 준비 후 교체)
+        scrollToBottom();
 
         // 서버가 Content-Disposition: attachment로 응답해도 인라인 렌더되도록 blob으로 로드한다.
         // (미리보기/다운로드가 동일 URL을 공유하므로, 헤더에 의존하지 않고 클라이언트에서 강제 인라인)
@@ -482,24 +466,12 @@ document.addEventListener("DOMContentLoaded", () => {
             const objUrl = URL.createObjectURL(blob);
             activeViewerBlobUrl = objUrl + hash;
 
-            if (desktop && shell && viewer && viewerFrame) {
-                viewerFrame.src = activeViewerBlobUrl;
-                scrollToBottom();
-            } else if (popup) {
-                popup.location.href = activeViewerBlobUrl;
-            } else {
-                window.open(activeViewerBlobUrl, "_blank", "noopener");
-            }
+            viewerFrame.src = activeViewerBlobUrl;
+            scrollToBottom();
         } catch (e) {
-            // 실패 시 기존 방식(직접 URL 열기)으로 폴백 — 최소한 다운로드라도 되게.
+            // 실패 시 원본 URL 직접 로드로 폴백
             revokeViewerBlob();
-            if (desktop && shell && viewer && viewerFrame) {
-                viewerFrame.src = withCacheBuster(String(url));
-            } else if (popup) {
-                popup.location.href = String(url);
-            } else {
-                window.open(String(url), "_blank", "noopener");
-            }
+            viewerFrame.src = withCacheBuster(String(url));
         }
     }
 
