@@ -258,6 +258,68 @@ document.addEventListener("DOMContentLoaded", () => {
         });
     })();
 
+    // 문서 분석(업로드 인덱싱) 완료 알림 — 탭 제목(B) + OS 알림(C, 백그라운드일 때).
+    // 사내 메신저 웹뷰가 Notification/visibility를 미지원하면 조용히 폴백(제목만 동작).
+    const uploadNotify = (function () {
+        const baseTitle = document.title || "ULTARI";
+        let active = 0;            // 진행 중 업로드 수(순차 다중 대응)
+        let asked = false;         // 권한 요청 1회
+        let restoreTimer = null;
+
+        function setTitle(t) { try { document.title = t; } catch (e) { } }
+
+        function ensurePermission() {
+            if (asked) return;
+            asked = true;
+            try {
+                if (typeof Notification !== "undefined" && Notification.permission === "default") {
+                    Notification.requestPermission().catch(function () { });
+                }
+            } catch (e) { }
+        }
+
+        function osNotify(name) {
+            try {
+                if (typeof Notification === "undefined" || Notification.permission !== "granted") return;
+                const body = name ? (name + " 분석이 완료되었습니다.") : "문서 분석이 완료되었습니다.";
+                const n = new Notification("문서 분석 완료", { body: body });
+                n.onclick = function () { try { window.focus(); } catch (e) { } n.close(); };
+            } catch (e) { }
+        }
+
+        function begin() {
+            ensurePermission();
+            active += 1;
+            if (restoreTimer) { clearTimeout(restoreTimer); restoreTimer = null; }
+            setTitle("문서 분석 중… — " + baseTitle);
+        }
+
+        function percent(p) {
+            if (active <= 0) return;
+            const n = Math.max(0, Math.min(100, Math.round(Number(p) || 0)));
+            setTitle("(" + n + "%) 문서 분석 중… — " + baseTitle);
+        }
+
+        function finish(name, ok) {
+            active = Math.max(0, active - 1);
+            if (active > 0) return; // 아직 진행 중인 업로드가 있으면 대기
+            setTitle((ok ? "✓ 분석 완료" : "분석 실패") + " — " + baseTitle);
+            if (ok && document.hidden) osNotify(name); // 창이 백그라운드일 때만 OS 알림
+            if (restoreTimer) clearTimeout(restoreTimer);
+            restoreTimer = setTimeout(function () { setTitle(baseTitle); }, 8000); // 폴백 원복
+        }
+
+        // 창을 다시 보면 제목 원복(진행 중이 아닐 때)
+        document.addEventListener("visibilitychange", function () {
+            if (!document.hidden && active <= 0) {
+                if (restoreTimer) { clearTimeout(restoreTimer); restoreTimer = null; }
+                setTitle(baseTitle);
+            }
+        });
+
+        return { begin: begin, percent: percent, finish: finish };
+    })();
+
     let isResearchMode = false;
     let researchTag = null;
 
@@ -2058,9 +2120,11 @@ document.addEventListener("DOMContentLoaded", () => {
         formData.append("attachFile_name", file.name || "");
 
         setSending(true);
+        uploadNotify.begin(); // 문서 분석 진행 알림 시작(제목/권한)
         let botHandle = null;
         let pendingRefs = [];
         let doneMessage = "";
+        let uploadOk = false;
 
         const ensureBotHandle = () => {
             if (botHandle) return botHandle;
@@ -2076,6 +2140,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 acceptRefs: true,
                 onPercent: (percent, message) => {
                     updateUploadProgress(uploadHandle, percent, message);
+                    uploadNotify.percent(percent);
                 },
                 onProgress: (step) => {
                     const s = String(step || "").trim();
@@ -2110,6 +2175,7 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         )
             .then(() => {
+                uploadOk = true; // 스트림 정상 종료 = 분석 완료
                 updateUploadProgress(uploadHandle, 100, doneMessage || uploadHandle._lastDoneMessage || "완료");
                 finalizeUploadProgress(uploadHandle);
 
@@ -2147,6 +2213,7 @@ document.addEventListener("DOMContentLoaded", () => {
             })
             .finally(() => {
                 setSending(false);
+                uploadNotify.finish(file && file.name, uploadOk); // 완료 알림(제목/OS)
                 if (typeof onDone === "function") onDone();
                 input.focus();
                 autoResizeInput();
