@@ -30,6 +30,10 @@ public class AdminStatisticsService {
     @org.springframework.beans.factory.annotation.Value("${ultari.statistics.template-enabled:true}")
     private boolean templateEnabled;
 
+    /** 첨부파일검색(PKB) 통계 표시여부. 챗봇 탭이 숨겨져 기본 비노출. */
+    @org.springframework.beans.factory.annotation.Value("${ultari.statistics.pkb-enabled:false}")
+    private boolean pkbEnabled;
+
     private boolean hasUser(String userId) {
         return StringUtils.hasText(userId);
     }
@@ -134,6 +138,7 @@ public class AdminStatisticsService {
                 java.util.List.of("CHAT", "DOCUMENT", "TEMPLATE", "PKB_SEARCH", "DIALOG", "AUDIO"));
         if (!audioEnabled) typeList.remove("AUDIO");
         if (!templateEnabled) typeList.remove("TEMPLATE");
+        if (!pkbEnabled) typeList.remove("PKB_SEARCH");
         String[] TYPES = typeList.toArray(new String[0]);
         java.util.Map<String, String> TYPE_LABELS = new java.util.HashMap<>();
         TYPE_LABELS.put("CHAT", "챗봇-질문");

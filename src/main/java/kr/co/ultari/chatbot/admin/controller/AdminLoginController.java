@@ -43,6 +43,10 @@ public class AdminLoginController {
     @org.springframework.beans.factory.annotation.Value("${ultari.statistics.template-enabled:true}")
     boolean statsTemplateEnabled;
 
+    /** 통계 화면의 '첨부파일검색(PKB)' 표시 여부. 챗봇 탭 숨김에 따라 기본 비노출. */
+    @org.springframework.beans.factory.annotation.Value("${ultari.statistics.pkb-enabled:false}")
+    boolean statsPkbEnabled;
+
     private final AdminAuthService authService;
 
     public AdminLoginController(AdminAuthService authService) {
@@ -171,6 +175,7 @@ public class AdminLoginController {
         model.addAttribute("sessionRemainingSeconds", sessionStore.refresh(sessionId)); // 활동(페이지 이동) 시 세션 연장
         model.addAttribute("audioEnabled", statsAudioEnabled);
         model.addAttribute("templateEnabled", statsTemplateEnabled);
+        model.addAttribute("pkbEnabled", statsPkbEnabled);
 
         return "admin/statistics";
     }

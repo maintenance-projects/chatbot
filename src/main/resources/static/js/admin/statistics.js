@@ -35,6 +35,9 @@
     if (window.statsTemplateEnabled === false) {
         TYPES = TYPES.filter(function (t) { return t !== "TEMPLATE"; });
     }
+    if (window.statsPkbEnabled === false) {
+        TYPES = TYPES.filter(function (t) { return t !== "PKB_SEARCH"; });
+    }
 
     var $ = function (sel) { return document.querySelector(sel); };
     var $$ = function (sel) { return document.querySelectorAll(sel); };
