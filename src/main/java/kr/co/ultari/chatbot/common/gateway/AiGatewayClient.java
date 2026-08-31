@@ -14,6 +14,7 @@ import reactor.core.publisher.Flux;
 import reactor.netty.http.client.HttpClient;
 
 import java.net.URI;
+import java.nio.charset.StandardCharsets;
 
 /**
  * AI 서버(게이트웨이) 호출을 단일 지점에서 담당한다.
@@ -59,6 +60,24 @@ public class AiGatewayClient {
                 .accept(MediaType.TEXT_EVENT_STREAM)
                 .header(HttpHeaders.CACHE_CONTROL, "no-cache")
                 .body(BodyInserters.fromMultipartData(body.build()))
+                .retrieve()
+                .bodyToFlux(String.class);
+    }
+
+    /**
+     * JSON 본문 요청에 대한 SSE(text/event-stream) 스트림을 반환한다(예: 다중 문서 질문).
+     * <p>한글이 깨지지 않도록 본문을 <b>UTF-8 바이트</b>로 전송하고 Content-Type에 charset을 명시한다.
+     */
+    public Flux<String> streamJson(String dept, String path, String jsonBody) {
+        String uri = url(dept, path);
+        log.info("gateway stream POST(json) {} body={}", uri, jsonBody);
+        byte[] bytes = (jsonBody == null ? "{}" : jsonBody).getBytes(StandardCharsets.UTF_8);
+        return webClient.post()
+                .uri(URI.create(uri))
+                .contentType(new MediaType(MediaType.APPLICATION_JSON, StandardCharsets.UTF_8))
+                .accept(MediaType.TEXT_EVENT_STREAM)
+                .header(HttpHeaders.CACHE_CONTROL, "no-cache")
+                .bodyValue(bytes)
                 .retrieve()
                 .bodyToFlux(String.class);
     }
