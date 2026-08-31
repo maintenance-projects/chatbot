@@ -1790,7 +1790,10 @@ document.addEventListener("DOMContentLoaded", () => {
             filtered = arr.filter((name) => String(name || "").toLowerCase().includes(lower));
         }
 
-        const shown = filtered;
+        // 가나다(한글)·숫자·영문 자연 정렬
+        const shown = filtered.slice().sort((a, b) =>
+            String(a || "").localeCompare(String(b || ""), "ko", { numeric: true, sensitivity: "base" })
+        );
         if (!shown.length) {
             popup.innerHTML = `${head}<div class="cb-tray__body"><div class="cb-tpl" style="cursor:default"><div class="cb-tpl__name">검색 결과가 없습니다.</div></div></div>`;
             return;
