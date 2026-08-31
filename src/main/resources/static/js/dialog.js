@@ -241,23 +241,6 @@ document.addEventListener("DOMContentLoaded", () => {
             .catch(() => {});
     })();
 
-    // 탭 좌측 로고 클릭 시 logo → logo2 … logo6 순환(표시 크기는 CSS로 동일 고정)
-    (function initLogoCycle() {
-        const logoImg = document.querySelector("#cbTabLogo .cb-modetabs__logo-img");
-        if (!logoImg) return;
-        const logos = [
-            "/img/logo.png", "/img/logo2.png", "/img/logo3.png",
-            "/img/logo4.png", "/img/logo5.png", "/img/logo6.png",
-            "/img/logo7.png", "/img/logo8.png", "/img/logo9.png",
-            "/img/logo10.png",
-        ];
-        let idx = 0;
-        logoImg.addEventListener("click", () => {
-            idx = (idx + 1) % logos.length;
-            logoImg.src = logos[idx];
-        });
-    })();
-
     // 문서 분석(업로드 인덱싱) 완료 알림 — 탭 제목(B) + OS 알림(C, 백그라운드일 때).
     // 사내 메신저 웹뷰가 Notification/visibility를 미지원하면 조용히 폴백(제목만 동작).
     const uploadNotify = (function () {

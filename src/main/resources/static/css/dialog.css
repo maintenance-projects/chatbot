@@ -907,11 +907,10 @@ textarea {
 
 .cb-modetabs__logo-img {
     height: 40px;
-    width: 120px;          /* 로고 순환 시에도 표시 크기 고정(종횡비 유지, 여백 처리) */
+    width: 120px;          /* 표시 크기 고정(종횡비 유지, 여백 처리) */
     object-fit: contain;
     object-position: left center;
     display: block;
-    cursor: pointer;
 }
 
 /* 우측 탭 선택 영역 */
