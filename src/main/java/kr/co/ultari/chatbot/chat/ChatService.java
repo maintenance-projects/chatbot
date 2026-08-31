@@ -105,30 +105,20 @@ public class ChatService {
 
     /**
      * 2.2 Private 대화 — 특정 문서(단일/다중) 검색 (SSE). 파티션 무관.
-     * <p>파일 1개는 기존 방식(multipart, {@code target_filename} 단수),
-     * 여러 개는 JSON({@code {message, target_filenames:[...]}}, UTF-8)으로 게이트웨이에 전달한다.
+     * <p>단일/다중 구분 없이 JSON({@code {message, target_filenames:[...]}}, UTF-8)으로 전달한다.
+     * (단일 파일도 리스트에 1개 담아 전송)
      */
     public SseEmitter messagePrivate(String dept, String userId, String invokeId, String message, java.util.List<String> targetFilenames, String translateTo) {
         aiUsageService.increase(userId, invokeId, "CHAT");
         java.util.List<String> names = cleanNames(targetFilenames);
         log.info("[private] invokeId={}, message={}, target_filenames({})={}", invokeId, message, names.size(), names);
 
-        if (names.size() >= 2) {
-            // 다중 문서 질문: JSON body { message, target_filenames:[...] } (UTF-8 전송)
-            org.json.JSONObject payload = new org.json.JSONObject();
-            payload.put("message", message == null ? "" : message);
-            payload.put("target_filenames", new org.json.JSONArray(names));
-            if (StringUtils.hasText(translateTo)) payload.put("translate_to", translateTo);
-            String json = payload.toString();
-            return sseRelay.relay(() -> gateway.streamJson(null, "/message/private/" + invokeId, json));
-        }
-
-        // 단일 문서 질문: 기존 방식(multipart, target_filename 단수)
-        MultipartBodyBuilder b = new MultipartBodyBuilder();
-        b.part("message", message);
-        for (String n : names) b.part("target_filename", n);
-        if (StringUtils.hasText(translateTo)) b.part("translate_to", translateTo);
-        return sseRelay.relay(() -> gateway.stream(null, "/message/private/" + invokeId, b));
+        org.json.JSONObject payload = new org.json.JSONObject();
+        payload.put("message", message == null ? "" : message);
+        payload.put("target_filenames", new org.json.JSONArray(names));
+        if (StringUtils.hasText(translateTo)) payload.put("translate_to", translateTo);
+        String json = payload.toString();
+        return sseRelay.relay(() -> gateway.streamJson(null, "/message/private/" + invokeId, json));
     }
 
     /** 2.3 Open 대화 — 전체 문서 검색 (SSE) */
@@ -142,26 +132,18 @@ public class ChatService {
 
     /**
      * 2.6 문서 체계적 요약 (SSE). 파티션 무관. (질문과 동일 방식)
-     * <p>파일 1개는 기존 방식(multipart, {@code target_filename} 단수),
-     * 여러 개는 JSON({@code {target_filenames:[...]}}, UTF-8)으로 게이트웨이에 전달한다.
+     * <p>단일/다중 구분 없이 JSON({@code {target_filenames:[...]}}, UTF-8)으로 전달한다.
+     * (단일 파일도 리스트에 1개 담아 전송)
      */
     public SseEmitter documentSummary(String dept, String userId, String invokeId, java.util.List<String> targetFilenames) {
         aiUsageService.increase(userId, invokeId, "SUMMARY");
         java.util.List<String> names = cleanNames(targetFilenames);
         log.info("[summary] invokeId={}, target_filenames({})={}", invokeId, names.size(), names);
 
-        if (names.size() >= 2) {
-            // 다중 문서 통합 요약: JSON body { target_filenames:[...] } (UTF-8 전송)
-            org.json.JSONObject payload = new org.json.JSONObject();
-            payload.put("target_filenames", new org.json.JSONArray(names));
-            String json = payload.toString();
-            return sseRelay.relay(() -> gateway.streamJson(null, "/message/document-summary/" + invokeId, json));
-        }
-
-        // 단일 문서 요약: 기존 방식(multipart, target_filename 단수)
-        MultipartBodyBuilder b = new MultipartBodyBuilder();
-        for (String n : names) b.part("target_filename", n);
-        return sseRelay.relay(() -> gateway.stream(null, "/message/document-summary/" + invokeId, b));
+        org.json.JSONObject payload = new org.json.JSONObject();
+        payload.put("target_filenames", new org.json.JSONArray(names));
+        String json = payload.toString();
+        return sseRelay.relay(() -> gateway.streamJson(null, "/message/document-summary/" + invokeId, json));
     }
 
     /** null/공백 제거 + 순서 유지 중복 제거한 파일명 리스트 */
