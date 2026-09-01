@@ -570,12 +570,20 @@ document.addEventListener("DOMContentLoaded", function () {
     dom.confirmOk.addEventListener("click", function () { var cb = confirmCb; closeConfirm(); if (cb) cb(); });
     dom.confirm.addEventListener("click", function (e) { if (e.target === dom.confirm) closeConfirm(); });
 
-    // 드래그앤드롭 업로드 제거(첨부파일 수동 등록 폐지). 파일을 놓아도 인제스트하지 않으며,
-    // 브라우저 기본 동작(파일 열림)만 막아 검색 화면이 흐트러지지 않게 한다.
+    // 드래그앤드롭: PKB 영역에 파일을 놓으면 인제스트(AI 분석). 챗봇으로 넘어가지 않게 격리
     var shell = dom.chat.closest(".p-shell");
     if (shell) {
-        shell.addEventListener("dragover", function (e) { e.preventDefault(); e.stopPropagation(); });
-        shell.addEventListener("drop", function (e) { e.preventDefault(); e.stopPropagation(); });
+        var dragDepth = 0;
+        function setDrag(on) { shell.classList.toggle("p-dragover", !!on); }
+        shell.addEventListener("dragenter", function (e) { e.preventDefault(); e.stopPropagation(); dragDepth++; setDrag(true); });
+        shell.addEventListener("dragover", function (e) { e.preventDefault(); e.stopPropagation(); setDrag(true); });
+        shell.addEventListener("dragleave", function (e) { e.preventDefault(); e.stopPropagation(); dragDepth = Math.max(0, dragDepth - 1); if (dragDepth === 0) setDrag(false); });
+        shell.addEventListener("drop", function (e) {
+            e.preventDefault(); e.stopPropagation();
+            dragDepth = 0; setDrag(false);
+            var files = (e.dataTransfer && e.dataTransfer.files) ? Array.prototype.slice.call(e.dataTransfer.files) : [];
+            if (files.length) ingest(files[0]);
+        });
     }
 
     // ── 헤더 도구: 이용안내 / 인쇄 / 대화검색 (PKB 영역 대상) ──
