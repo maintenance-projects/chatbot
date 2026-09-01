@@ -1701,7 +1701,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const raw = Array.isArray(data) ? data
                     : (data && Array.isArray(data.files) ? data.files : []);
                 const arr = raw
-                    .map((x) => (x && typeof x === "object") ? (x.fileName || x.name || x.originalFileName || "") : x)
+                    .map((x) => (x && typeof x === "object") ? (x.file_name || x.fileName || x.name || x.originalFileName || "") : x)
                     .map((x) => String(x || "").trim())
                     .filter(Boolean);
                 uploadedFilesCache = arr;
