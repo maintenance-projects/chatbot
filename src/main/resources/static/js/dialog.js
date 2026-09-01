@@ -324,6 +324,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
     let uploadedFilesCache = null;
     let uploadedFilesPromise = null;
+    // 파일명 → 카테고리(있을 때만). 문서함 목록에서 파일명 옆 태그 표시용.
+    let docCategoryMap = {};
 
     let summaryBusy = false;
 
@@ -1700,10 +1702,19 @@ document.addEventListener("DOMContentLoaded", () => {
                 // 게이트웨이는 {"files":[...]} 봉투로 반환(구 버전은 최상위 배열). 둘 다 지원.
                 const raw = Array.isArray(data) ? data
                     : (data && Array.isArray(data.files) ? data.files : []);
+                const catMap = {};
                 const arr = raw
-                    .map((x) => (x && typeof x === "object") ? (x.file_name || x.fileName || x.name || x.originalFileName || "") : x)
-                    .map((x) => String(x || "").trim())
+                    .map((x) => {
+                        if (x && typeof x === "object") {
+                            const nm = String(x.file_name || x.fileName || x.name || x.originalFileName || "").trim();
+                            const cat = String(x.category || x.ai_category || "").trim();
+                            if (nm && cat) catMap[nm] = cat;
+                            return nm;
+                        }
+                        return String(x || "").trim();
+                    })
                     .filter(Boolean);
+                docCategoryMap = catMap;
                 uploadedFilesCache = arr;
                 return arr;
             })
@@ -1787,10 +1798,12 @@ document.addEventListener("DOMContentLoaded", () => {
             .map((name) => {
                 const safe = escapeHtml(name);
                 const checked = selectedDocuments.includes(name) ? " checked" : "";
+                const cat = docCategoryMap[name];
+                const tag = cat ? `<span class="cb-doctag">${escapeHtml(cat)}</span>` : "";
                 return `
           <label class="cb-docitem" data-doc-name="${safe}">
             <input type="checkbox" class="cb-docchk" data-name="${safe}"${checked} />
-            <span class="cb-docitem__name">${safe}</span>
+            <span class="cb-docitem__name">${safe}</span>${tag}
           </label>
         `;
             })

@@ -1571,8 +1571,26 @@ textarea {
 }
 
 .cb-docitem__name {
+    flex: 0 1 auto;
+    min-width: 0;
     font-size: 13px;
     color: #0f172a;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+/* 파일명 옆 카테고리 태그(개인문서 AI 분석 테마=초록). category 있을 때만 렌더 */
+.cb-doctag {
+    flex: 0 0 auto;
+    font-size: 11px;
+    line-height: 1;
+    color: #047857;
+    background: rgba(16, 185, 129, 0.12);
+    border: 1px solid rgba(16, 185, 129, 0.28);
+    border-radius: 999px;
+    padding: 3px 8px;
+    max-width: 40%;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
