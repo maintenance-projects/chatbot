@@ -38,9 +38,8 @@
                     <!-- 우측: 탭 선택 영역 -->
                     <div class="cb-modetabs__tabs">
                         <button class="cb-modetab is-active" type="button" data-mode="chat">AI 어시스턴트</button>
-                        <!--/* AI 첨부파일 검색(pkb) 탭 숨김 — 되살리려면 아래를 주석 밖으로 꺼내기
+                        <!-- AI 첨부파일 검색 탭: chatbot.menu.pkb=true 일 때만 노출 -->
                         <button class="cb-modetab" type="button" data-mode="pkb" th:if="${menuPkb}">AI 첨부파일 검색</button>
-                        */-->
                         <button class="cb-modetab" type="button" data-mode="doc"
                             th:if="${menuUpload or menuDocs}">개인문서 AI 분석</button>
                     </div>
