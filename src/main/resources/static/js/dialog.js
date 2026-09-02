@@ -328,9 +328,6 @@ document.addEventListener("DOMContentLoaded", () => {
     let docCategoryMap = {};
     // 파일명 → 등록시각(epoch 초). 문서함 목록의 등록일·삭제 잔여일(D-n) 표시·날짜정렬용.
     let docIndexedAtMap = {};
-    // 문서함 정렬 상태(팝업 재오픈에도 유지). 기본: 날짜순 최신 먼저.
-    let docSortMode = "date"; // "date" | "name"
-    let docSortDir = -1;      // 1=오름차순, -1=내림차순
 
     let summaryBusy = false;
 
@@ -400,23 +397,25 @@ document.addEventListener("DOMContentLoaded", () => {
         return { text: `D-${daysLeft}`, urgent: daysLeft <= 1 };
     }
 
-    // 문서함 정렬: docSortMode/docSortDir 기준. date는 등록시각(없으면 맨 뒤), name은 가나다 자연정렬.
+    // 문서함 정렬(자동): 등록시각(indexed_at)이 하나라도 있으면 날짜 최신순,
+    // 하나도 없으면 파일명 가나다순. 날짜 정렬 시 시각 없는 항목은 맨 뒤, 동시각은 가나다.
     function sortDocNames(names) {
         const arr = (Array.isArray(names) ? names : []).slice();
-        if (docSortMode === "date") {
-            arr.sort((a, b) => {
-                const ta = Number(docIndexedAtMap[a]);
-                const tb = Number(docIndexedAtMap[b]);
-                const va = isFinite(ta) ? ta : -Infinity;
-                const vb = isFinite(tb) ? tb : -Infinity;
-                if (va === vb) return String(a).localeCompare(String(b), "ko", { numeric: true, sensitivity: "base" });
-                return (va - vb) * docSortDir;
-            });
-        } else {
-            arr.sort((a, b) =>
-                String(a || "").localeCompare(String(b || ""), "ko", { numeric: true, sensitivity: "base" }) * docSortDir
-            );
+        const byName = (a, b) =>
+            String(a || "").localeCompare(String(b || ""), "ko", { numeric: true, sensitivity: "base" });
+        const hasDates = arr.some((n) => isFinite(Number(docIndexedAtMap[n])));
+        if (!hasDates) {
+            arr.sort(byName);
+            return arr;
         }
+        arr.sort((a, b) => {
+            const ta = Number(docIndexedAtMap[a]);
+            const tb = Number(docIndexedAtMap[b]);
+            const va = isFinite(ta) ? ta : -Infinity;
+            const vb = isFinite(tb) ? tb : -Infinity;
+            if (va === vb) return byName(a, b);
+            return vb - va; // 최신(큰 값) 먼저
+        });
         return arr;
     }
 
@@ -1841,22 +1840,11 @@ document.addEventListener("DOMContentLoaded", () => {
             filtered = arr.filter((name) => String(name || "").toLowerCase().includes(lower));
         }
 
-        // 정렬(날짜순/이름순 · 오름/내림) — docSortMode/docSortDir 기준
+        // 정렬(자동): indexed_at 있으면 날짜 최신순, 없으면 가나다순
         const shown = sortDocNames(filtered);
 
-        // 정렬 바: 활성 기준에 방향 화살표(▲오름/▼내림) 표시
-        const arrow = docSortDir === 1 ? "▲" : "▼";
-        const dateActive = docSortMode === "date";
-        const nameActive = docSortMode === "name";
-        const sortBar = `
-          <div class="cb-docsort">
-            <span class="cb-docsort__label">정렬</span>
-            <button type="button" class="cb-docsort__btn${dateActive ? " is-active" : ""}" data-action="sort-date">날짜순${dateActive ? " " + arrow : ""}</button>
-            <button type="button" class="cb-docsort__btn${nameActive ? " is-active" : ""}" data-action="sort-name">이름순${nameActive ? " " + arrow : ""}</button>
-          </div>`;
-
         if (!shown.length) {
-            popup.innerHTML = `${head}${sortBar}<div class="cb-tray__body"><div class="cb-tpl" style="cursor:default"><div class="cb-tpl__name">검색 결과가 없습니다.</div></div></div>`;
+            popup.innerHTML = `${head}<div class="cb-tray__body"><div class="cb-tpl" style="cursor:default"><div class="cb-tpl__name">검색 결과가 없습니다.</div></div></div>`;
             return;
         }
 
@@ -1899,23 +1887,8 @@ document.addEventListener("DOMContentLoaded", () => {
               <button type="button" class="cb-tray__act cb-tray__act--primary" data-action="summary-merge">통합 요약</button>
             </div>
           </div>`;
-        popup.innerHTML = `${head}${sortBar}<div class="cb-tray__body">${items}</div>${foot}`;
+        popup.innerHTML = `${head}<div class="cb-tray__body">${items}</div>${foot}`;
         updateDocSelCount(popup);
-    }
-
-    // 정렬 클릭 시 목록만 다시 그림. 팝업 내 체크상태(아직 selectedDocuments에 미반영분)를 보존.
-    function rerenderDocList() {
-        if (!isDocPopOpen()) return;
-        const preChecked = Array.from(documentListPopup.querySelectorAll(".cb-docchk:checked"))
-            .map((c) => c.getAttribute("data-name") || "")
-            .filter(Boolean);
-        populateDocumentList(documentListPopup, uploadedFilesCache || [], "", false, "");
-        if (preChecked.length) {
-            documentListPopup.querySelectorAll(".cb-docchk").forEach((c) => {
-                if (preChecked.indexOf(c.getAttribute("data-name") || "") !== -1) c.checked = true;
-            });
-            updateDocSelCount(documentListPopup);
-        }
     }
 
     // 문서함 선택 개수 표시 + 액션버튼 활성/비활성 갱신
@@ -2057,21 +2030,6 @@ document.addEventListener("DOMContentLoaded", () => {
             e.preventDefault();
             closeDocPopup();
             input.focus();
-            return;
-        }
-
-        // 정렬 버튼: 활성 기준 재클릭 시 방향 토글, 다른 기준 클릭 시 기준 전환(기본 방향).
-        const sortBtn = e.target && e.target.closest ? e.target.closest(".cb-docsort__btn") : null;
-        if (sortBtn) {
-            e.preventDefault();
-            const mode = sortBtn.getAttribute("data-action") === "sort-name" ? "name" : "date";
-            if (docSortMode === mode) {
-                docSortDir = -docSortDir;
-            } else {
-                docSortMode = mode;
-                docSortDir = mode === "date" ? -1 : 1; // 날짜=최신 먼저, 이름=가나다
-            }
-            rerenderDocList();
             return;
         }
 
