@@ -1580,8 +1580,9 @@ textarea {
     white-space: nowrap;
 }
 
-/* 파일명 옆 카테고리 태그(개인문서 AI 분석 테마=초록). category 있을 때만 렌더 */
-.cb-doctag {
+/* 문서함 목록 파일명 옆 카테고리 태그(개인문서 AI 분석 테마=초록). category 있을 때만 렌더.
+   주의: 컴포저 파일명 칩(.cb-doctag)과 다른 클래스명이어야 함(스타일 충돌 방지) */
+.cb-doccat {
     flex: 0 0 auto;
     font-size: 11px;
     line-height: 1;

@@ -1644,6 +1644,7 @@ document.addEventListener("DOMContentLoaded", () => {
             if (attachBtn) attachBtn.style.display = "none";
             setTemplateFile(null);
             updateChipRow();
+            refreshComposerState(); // 양식 해제 시 문서 게이트 재적용
             return;
         }
 
@@ -1654,6 +1655,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const attachBtn = ensureTemplateAttachBtn();
         if (attachBtn) attachBtn.style.display = selectedTemplate.key === "A003" ? "" : "none";
         updateChipRow();
+        refreshComposerState(); // 양식 선택 시 문서 게이트 해제 반영(버튼 활성/안내문구)
     }
 
     function setResearchMode(on) {
@@ -1799,7 +1801,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const safe = escapeHtml(name);
                 const checked = selectedDocuments.includes(name) ? " checked" : "";
                 const cat = docCategoryMap[name];
-                const tag = cat ? `<span class="cb-doctag">${escapeHtml(cat)}</span>` : "";
+                const tag = cat ? `<span class="cb-doccat">${escapeHtml(cat)}</span>` : "";
                 return `
           <label class="cb-docitem" data-doc-name="${safe}">
             <input type="checkbox" class="cb-docchk" data-name="${safe}"${checked} />
@@ -2329,8 +2331,10 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
-    // 개인문서 AI 분석 탭: 분석할 문서를 반드시 선택해야 질문 가능 → 미선택이면 전송 차단
+    // 개인문서 AI 분석 탭: 분석할 문서를 반드시 선택해야 질문 가능 → 미선택이면 전송 차단.
+    // 단, 양식(템플릿) 선택 시엔 양식+첨부파일로 동작하므로 문서 게이트를 적용하지 않는다.
     function isDocGateBlocked() {
+        if (selectedTemplate) return false;
         return !!widget && widget.classList.contains("is-doc-mode") && selectedDocuments.length === 0;
     }
 
