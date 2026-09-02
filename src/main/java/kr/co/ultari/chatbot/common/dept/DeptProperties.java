@@ -35,4 +35,11 @@ public class DeptProperties {
      * 조직도는 자주 안 바뀌므로 짧은 TTL로 충분. {@code 0 이하}면 캐시 비활성(매번 조회, 구버전 동작).
      */
     private long partCacheTtlSeconds = 300;
+
+    /**
+     * dept 접근권한(allowedDepts) 캐시 TTL(초). 요청마다 인사DB(msg_user)+앱DB(AI_DEPT_GRANT)를
+     * 재조회하던 것을 사용자별로 캐시. 권한은 자주 안 바뀌고 관리자 저장 시 즉시 무효화하므로
+     * 짧은 TTL로 충분. {@code 0 이하}면 캐시 비활성(매번 조회).
+     */
+    private long grantCacheTtlSeconds = 300;
 }

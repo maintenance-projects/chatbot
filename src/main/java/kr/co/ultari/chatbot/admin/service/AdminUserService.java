@@ -1,5 +1,6 @@
 package kr.co.ultari.chatbot.admin.service;
 
+import kr.co.ultari.chatbot.common.dept.DeptResolver;
 import kr.co.ultari.chatbot.database.entity.AiDeptGrant;
 import kr.co.ultari.chatbot.database.repository.AiDeptGrantRepository;
 import kr.co.ultari.chatbot.hr.dto.HrPart;
@@ -25,6 +26,7 @@ public class AdminUserService {
     private final HrPartMapper hrPartMapper;
     private final HrUserMapper hrUserMapper;
     private final AiDeptGrantRepository grantRepository;
+    private final DeptResolver deptResolver;
 
     /**
      * 조직도 트리 + 특정 dept의 부여 상태.
@@ -80,7 +82,10 @@ public class AdminUserService {
                 grantRepository.findByTargetTypeAndTargetIdAndAiDept(targetType, targetId, dept);
         if (!existing.isEmpty()) grantRepository.deleteAll(existing);
 
-        if ("REMOVE".equals(action)) return "ok";
+        if ("REMOVE".equals(action)) {
+            deptResolver.invalidateAll(); // 권한 회수 즉시 반영
+            return "ok";
+        }
 
         String mode = "DENY".equals(action) ? AiDeptGrant.MODE_DENY : AiDeptGrant.MODE_ALLOW;
         AiDeptGrant g = new AiDeptGrant();
@@ -89,6 +94,7 @@ public class AdminUserService {
         g.setAiDept(dept);
         g.setMode(mode);
         grantRepository.save(g);
+        deptResolver.invalidateAll(); // 권한 변경 즉시 반영(캐시 무효화)
         return "ok";
     }
 
