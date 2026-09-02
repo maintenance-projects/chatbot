@@ -326,6 +326,11 @@ document.addEventListener("DOMContentLoaded", () => {
     let uploadedFilesPromise = null;
     // 파일명 → 카테고리(있을 때만). 문서함 목록에서 파일명 옆 태그 표시용.
     let docCategoryMap = {};
+    // 파일명 → 등록시각(epoch 초). 문서함 목록의 등록일·삭제 잔여일(D-n) 표시·날짜정렬용.
+    let docIndexedAtMap = {};
+    // 문서함 정렬 상태(팝업 재오픈에도 유지). 기본: 날짜순 최신 먼저.
+    let docSortMode = "date"; // "date" | "name"
+    let docSortDir = -1;      // 1=오름차순, -1=내림차순
 
     let summaryBusy = false;
 
@@ -367,6 +372,52 @@ document.addEventListener("DOMContentLoaded", () => {
         const ampm = h < 12 ? "오전" : "오후";
         const hh = h % 12 === 0 ? 12 : h % 12;
         return `${ampm} ${hh}:${pad2(m)}`;
+    }
+
+    // epoch 초(소수 허용) → "YYYY-MM-DD HH:mm". 값 없으면 "".
+    function formatDateTime(epochSec) {
+        const s = Number(epochSec);
+        if (!isFinite(s) || s <= 0) return "";
+        const d = new Date(s * 1000);
+        return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())} ${pad2(d.getHours())}:${pad2(d.getMinutes())}`;
+    }
+
+    // 등록시각(epoch 초) 기준 삭제 잔여일 계산. 삭제예정 = 등록 + docRetentionDays일.
+    // 반환: 정수 잔여일(오늘 삭제=0, 만료=음수). 값 없으면 null.
+    function docDaysLeft(epochSec) {
+        const s = Number(epochSec);
+        if (!isFinite(s) || s <= 0) return null;
+        const dayMs = 86400000;
+        const deletionMs = (s + docRetentionDays * 86400) * 1000;
+        return Math.ceil((deletionMs - Date.now()) / dayMs);
+    }
+
+    // D-n 라벨 + 임박 여부. 오늘=D-DAY, 만료=만료, 그 외 D-n.
+    function docDDayLabel(daysLeft) {
+        if (daysLeft == null) return null;
+        if (daysLeft < 0) return { text: "만료", urgent: true };
+        if (daysLeft === 0) return { text: "D-DAY", urgent: true };
+        return { text: `D-${daysLeft}`, urgent: daysLeft <= 1 };
+    }
+
+    // 문서함 정렬: docSortMode/docSortDir 기준. date는 등록시각(없으면 맨 뒤), name은 가나다 자연정렬.
+    function sortDocNames(names) {
+        const arr = (Array.isArray(names) ? names : []).slice();
+        if (docSortMode === "date") {
+            arr.sort((a, b) => {
+                const ta = Number(docIndexedAtMap[a]);
+                const tb = Number(docIndexedAtMap[b]);
+                const va = isFinite(ta) ? ta : -Infinity;
+                const vb = isFinite(tb) ? tb : -Infinity;
+                if (va === vb) return String(a).localeCompare(String(b), "ko", { numeric: true, sensitivity: "base" });
+                return (va - vb) * docSortDir;
+            });
+        } else {
+            arr.sort((a, b) =>
+                String(a || "").localeCompare(String(b || ""), "ko", { numeric: true, sensitivity: "base" }) * docSortDir
+            );
+        }
+        return arr;
     }
 
     // 맨 아래로 버튼 + 자동 추종(stick) 상태
@@ -1705,18 +1756,22 @@ document.addEventListener("DOMContentLoaded", () => {
                 const raw = Array.isArray(data) ? data
                     : (data && Array.isArray(data.files) ? data.files : []);
                 const catMap = {};
+                const atMap = {};
                 const arr = raw
                     .map((x) => {
                         if (x && typeof x === "object") {
                             const nm = String(x.file_name || x.fileName || x.name || x.originalFileName || "").trim();
                             const cat = String(x.category || x.ai_category || "").trim();
+                            const at = Number(x.indexed_at != null ? x.indexed_at : x.received_at);
                             if (nm && cat) catMap[nm] = cat;
+                            if (nm && isFinite(at) && at > 0) atMap[nm] = at;
                             return nm;
                         }
                         return String(x || "").trim();
                     })
                     .filter(Boolean);
                 docCategoryMap = catMap;
+                docIndexedAtMap = atMap;
                 uploadedFilesCache = arr;
                 return arr;
             })
@@ -1786,26 +1841,50 @@ document.addEventListener("DOMContentLoaded", () => {
             filtered = arr.filter((name) => String(name || "").toLowerCase().includes(lower));
         }
 
-        // 가나다(한글)·숫자·영문 자연 정렬
-        const shown = filtered.slice().sort((a, b) =>
-            String(a || "").localeCompare(String(b || ""), "ko", { numeric: true, sensitivity: "base" })
-        );
+        // 정렬(날짜순/이름순 · 오름/내림) — docSortMode/docSortDir 기준
+        const shown = sortDocNames(filtered);
+
+        // 정렬 바: 활성 기준에 방향 화살표(▲오름/▼내림) 표시
+        const arrow = docSortDir === 1 ? "▲" : "▼";
+        const dateActive = docSortMode === "date";
+        const nameActive = docSortMode === "name";
+        const sortBar = `
+          <div class="cb-docsort">
+            <span class="cb-docsort__label">정렬</span>
+            <button type="button" class="cb-docsort__btn${dateActive ? " is-active" : ""}" data-action="sort-date">날짜순${dateActive ? " " + arrow : ""}</button>
+            <button type="button" class="cb-docsort__btn${nameActive ? " is-active" : ""}" data-action="sort-name">이름순${nameActive ? " " + arrow : ""}</button>
+          </div>`;
+
         if (!shown.length) {
-            popup.innerHTML = `${head}<div class="cb-tray__body"><div class="cb-tpl" style="cursor:default"><div class="cb-tpl__name">검색 결과가 없습니다.</div></div></div>`;
+            popup.innerHTML = `${head}${sortBar}<div class="cb-tray__body"><div class="cb-tpl" style="cursor:default"><div class="cb-tpl__name">검색 결과가 없습니다.</div></div></div>`;
             return;
         }
 
         // 다중 선택: 파일별 체크박스. 이미 선택된 문서는 체크 상태로 표시.
+        // 파일명 옆 카테고리 태그 + 등록일(YYYY-MM-DD HH:mm) + 삭제 잔여일(D-n).
         const items = shown
             .map((name) => {
                 const safe = escapeHtml(name);
                 const checked = selectedDocuments.includes(name) ? " checked" : "";
                 const cat = docCategoryMap[name];
                 const tag = cat ? `<span class="cb-doccat">${escapeHtml(cat)}</span>` : "";
+                const at = docIndexedAtMap[name];
+                const dateStr = formatDateTime(at);
+                const dateEl = dateStr ? `<span class="cb-docdate">${dateStr}</span>` : "";
+                const dd = docDDayLabel(docDaysLeft(at));
+                const ddEl = dd
+                    ? `<span class="cb-docdday${dd.urgent ? " is-urgent" : ""}" title="삭제 예정일까지 남은 일수">${dd.text}</span>`
+                    : "";
+                const metaEl = (dateEl || ddEl) ? `<span class="cb-docitem__meta">${dateEl}${ddEl}</span>` : "";
                 return `
           <label class="cb-docitem" data-doc-name="${safe}">
             <input type="checkbox" class="cb-docchk" data-name="${safe}"${checked} />
-            <span class="cb-docitem__name">${safe}</span>${tag}
+            <span class="cb-docitem__body">
+              <span class="cb-docitem__line">
+                <span class="cb-docitem__name">${safe}</span>${tag}
+              </span>
+              ${metaEl}
+            </span>
           </label>
         `;
             })
@@ -1820,8 +1899,23 @@ document.addEventListener("DOMContentLoaded", () => {
               <button type="button" class="cb-tray__act cb-tray__act--primary" data-action="summary-merge">통합 요약</button>
             </div>
           </div>`;
-        popup.innerHTML = `${head}<div class="cb-tray__body">${items}</div>${foot}`;
+        popup.innerHTML = `${head}${sortBar}<div class="cb-tray__body">${items}</div>${foot}`;
         updateDocSelCount(popup);
+    }
+
+    // 정렬 클릭 시 목록만 다시 그림. 팝업 내 체크상태(아직 selectedDocuments에 미반영분)를 보존.
+    function rerenderDocList() {
+        if (!isDocPopOpen()) return;
+        const preChecked = Array.from(documentListPopup.querySelectorAll(".cb-docchk:checked"))
+            .map((c) => c.getAttribute("data-name") || "")
+            .filter(Boolean);
+        populateDocumentList(documentListPopup, uploadedFilesCache || [], "", false, "");
+        if (preChecked.length) {
+            documentListPopup.querySelectorAll(".cb-docchk").forEach((c) => {
+                if (preChecked.indexOf(c.getAttribute("data-name") || "") !== -1) c.checked = true;
+            });
+            updateDocSelCount(documentListPopup);
+        }
     }
 
     // 문서함 선택 개수 표시 + 액션버튼 활성/비활성 갱신
@@ -1963,6 +2057,21 @@ document.addEventListener("DOMContentLoaded", () => {
             e.preventDefault();
             closeDocPopup();
             input.focus();
+            return;
+        }
+
+        // 정렬 버튼: 활성 기준 재클릭 시 방향 토글, 다른 기준 클릭 시 기준 전환(기본 방향).
+        const sortBtn = e.target && e.target.closest ? e.target.closest(".cb-docsort__btn") : null;
+        if (sortBtn) {
+            e.preventDefault();
+            const mode = sortBtn.getAttribute("data-action") === "sort-name" ? "name" : "date";
+            if (docSortMode === mode) {
+                docSortDir = -docSortDir;
+            } else {
+                docSortMode = mode;
+                docSortDir = mode === "date" ? -1 : 1; // 날짜=최신 먼저, 이름=가나다
+            }
+            rerenderDocList();
             return;
         }
 

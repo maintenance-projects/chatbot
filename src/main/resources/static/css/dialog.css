@@ -1597,6 +1597,95 @@ textarea {
     white-space: nowrap;
 }
 
+/* 문서함 항목: 파일명 줄 + 메타 줄(등록일·D-n) 2줄 스택(2열 그리드 셀 폭에 맞춤) */
+.cb-docitem__body {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+    flex: 1 1 auto;
+}
+
+.cb-docitem__line {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+}
+
+.cb-docitem__meta {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+}
+
+.cb-docdate {
+    font-size: 11px;
+    color: #64748b;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.cb-docdday {
+    flex: 0 0 auto;
+    min-width: 34px;
+    text-align: center;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
+    color: #475569;
+    background: rgba(100, 116, 139, 0.12);
+    border-radius: 999px;
+    padding: 3px 7px;
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+/* 삭제 임박(잔여 ≤1일·오늘·만료): 붉은색 강조 */
+.cb-docdday.is-urgent {
+    color: #dc2626;
+    background: rgba(220, 38, 38, 0.12);
+}
+
+/* 문서함 정렬 바 */
+.cb-docsort {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 14px;
+    border-bottom: 1px solid rgba(15, 23, 42, 0.08);
+    background: #fff;
+}
+
+.cb-docsort__label {
+    font-size: 11px;
+    color: #94a3b8;
+    margin-right: 2px;
+}
+
+.cb-docsort__btn {
+    font-size: 12px;
+    font-weight: 600;
+    color: #475569;
+    background: rgba(148, 163, 184, 0.12);
+    border: 1px solid transparent;
+    border-radius: 999px;
+    padding: 4px 10px;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.cb-docsort__btn:hover {
+    background: rgba(148, 163, 184, 0.2);
+}
+
+.cb-docsort__btn.is-active {
+    color: #047857;
+    background: rgba(16, 185, 129, 0.12);
+    border-color: rgba(16, 185, 129, 0.28);
+}
+
 .cb-tray__foot {
     display: flex;
     align-items: center;
