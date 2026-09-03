@@ -336,6 +336,9 @@ document.addEventListener("DOMContentLoaded", () => {
     // 뷰어 원본 URL·다운로드 파일명(뷰어 다운로드 버튼용). blob 렌더와 무관하게 원본명으로 저장.
     let activeViewerUrl = "";
     let activeViewerName = "";
+    // 뷰어 blob 베이스 + 페이지 해시(#page=N). 확장 시 폭맞춤(#view=FitH) 줌 재적용에 사용.
+    let activeViewerBlobBase = "";
+    let activeViewerPageHash = "";
 
     function pad2(n) {
         return String(n).padStart(2, "0");
@@ -569,7 +572,9 @@ document.addEventListener("DOMContentLoaded", () => {
 
             revokeViewerBlob();
             const objUrl = URL.createObjectURL(blob);
-            activeViewerBlobUrl = objUrl + hash;
+            activeViewerBlobBase = objUrl;
+            activeViewerPageHash = hash; // "#page=N" 또는 ""
+            activeViewerBlobUrl = objUrl + viewerZoomHash(); // 확장 상태면 폭맞춤 반영
 
             viewerFrame.src = activeViewerBlobUrl;
             scrollToBottom();
@@ -580,14 +585,46 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     }
 
+    // 뷰어 줌 해시: 확장(is-max) 시 폭맞춤(#view=FitH)으로 콘텐츠 자동 확대, 분할 복귀 시 원래대로.
+    function viewerZoomHash() {
+        let h = activeViewerPageHash || "";
+        const isMax = !!(viewer && viewer.classList.contains("is-max"));
+        if (isMax) h += (h ? "&" : "#") + "view=FitH";
+        return h;
+    }
+
+    // blob URL은 해시만 바꾸면 리로드가 안 되므로(줌 미반영) about:blank 로드 완료를 기다렸다 재설정.
+    // rAF는 blank 커밋 전에 실행돼 두 번째 src가 무시(축소 시 흰 화면)될 수 있어 load 이벤트로 순서 보장.
+    let viewerReloadPending = null;
+    function reloadViewerZoom() {
+        if (!viewerFrame || !activeViewerBlobBase) return;
+        const target = activeViewerBlobBase + viewerZoomHash();
+        activeViewerBlobUrl = target;
+        if (viewerReloadPending) {
+            viewerFrame.removeEventListener("load", viewerReloadPending);
+            viewerReloadPending = null;
+        }
+        const onBlank = () => {
+            viewerFrame.removeEventListener("load", onBlank);
+            viewerReloadPending = null;
+            viewerFrame.src = target;
+        };
+        viewerReloadPending = onBlank;
+        viewerFrame.addEventListener("load", onBlank);
+        viewerFrame.src = "about:blank";
+    }
+
     function setViewerMax(on) {
         if (!viewer) return;
+        const changed = viewer.classList.contains("is-max") !== !!on;
         viewer.classList.toggle("is-max", !!on);
         if (viewerExpand) {
             const label = on ? "축소" : "확장";
             viewerExpand.setAttribute("aria-label", label);
             viewerExpand.setAttribute("title", label);
         }
+        // 확장/축소 시 PDF 줌을 폭맞춤/기본으로 재적용(콘텐츠 자동 확대)
+        if (changed) reloadViewerZoom();
     }
 
     function closeViewer() {
