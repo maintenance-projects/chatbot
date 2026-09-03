@@ -1,6 +1,7 @@
 package kr.co.ultari.chatbot.admin.service;
 
 import kr.co.ultari.chatbot.common.dept.DeptResolver;
+import kr.co.ultari.chatbot.common.dept.HrDirectorySnapshot;
 import kr.co.ultari.chatbot.database.entity.AiDeptGrant;
 import kr.co.ultari.chatbot.database.repository.AiDeptGrantRepository;
 import kr.co.ultari.chatbot.hr.dto.HrPart;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 사용자 부서 관리 서비스. 인사(HR) DB(msg_part/msg_user)를 조회해 조직도 트리를 제공하고,
@@ -27,6 +29,7 @@ public class AdminUserService {
     private final HrUserMapper hrUserMapper;
     private final AiDeptGrantRepository grantRepository;
     private final DeptResolver deptResolver;
+    private final HrDirectorySnapshot hrDirectory;
 
     /**
      * 조직도 트리 + 특정 dept의 부여 상태.
@@ -37,18 +40,43 @@ public class AdminUserService {
         JSONObject root = new JSONObject();
 
         JSONArray parts = new JSONArray();
-        for (HrPart p : hrPartMapper.selectAll()) {
-            parts.put(new JSONObject()
-                    .put("partId", nz(p.getPartId()))
-                    .put("partHigh", nz(p.getPartHigh()))
-                    .put("partName", nz(p.getPartName())));
-        }
         JSONArray users = new JSONArray();
-        for (HrUser u : hrUserMapper.selectAll()) {
-            users.put(new JSONObject()
-                    .put("userId", nz(u.getUserId()))
-                    .put("userName", nz(u.getUserName()))
-                    .put("userHigh", nz(u.getUserHigh())));
+        // 조직도·사용자는 인메모리 스냅샷에서 구성(원격 HR 조회 회피). 미적재 시에만 DB 폴백.
+        if (hrDirectory.isLoaded()) {
+            for (HrPart p : hrDirectory.partList()) {
+                parts.put(new JSONObject()
+                        .put("partId", nz(p.getPartId()))
+                        .put("partHigh", nz(p.getPartHigh()))
+                        .put("partName", nz(p.getPartName())));
+            }
+            // 사용자는 소속부서(겸직/복수)별로 한 행씩 펼쳐 기존 DB 목록과 동일한 형태로 구성
+            for (Map.Entry<String, HrDirectorySnapshot.UserEntry> e : hrDirectory.userMap().entrySet()) {
+                String uid = e.getKey();
+                HrDirectorySnapshot.UserEntry ue = e.getValue();
+                List<String> pids = ue.partIds();
+                if (pids == null || pids.isEmpty()) {
+                    users.put(new JSONObject()
+                            .put("userId", nz(uid)).put("userName", nz(ue.userName())).put("userHigh", ""));
+                } else {
+                    for (String pid : pids) {
+                        users.put(new JSONObject()
+                                .put("userId", nz(uid)).put("userName", nz(ue.userName())).put("userHigh", nz(pid)));
+                    }
+                }
+            }
+        } else {
+            for (HrPart p : hrPartMapper.selectAll()) {
+                parts.put(new JSONObject()
+                        .put("partId", nz(p.getPartId()))
+                        .put("partHigh", nz(p.getPartHigh()))
+                        .put("partName", nz(p.getPartName())));
+            }
+            for (HrUser u : hrUserMapper.selectAll()) {
+                users.put(new JSONObject()
+                        .put("userId", nz(u.getUserId()))
+                        .put("userName", nz(u.getUserName()))
+                        .put("userHigh", nz(u.getUserHigh())));
+            }
         }
 
         JSONArray grantParts = new JSONArray();

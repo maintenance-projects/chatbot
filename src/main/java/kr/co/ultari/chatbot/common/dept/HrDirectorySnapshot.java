@@ -1,6 +1,8 @@
 package kr.co.ultari.chatbot.common.dept;
 
+import kr.co.ultari.chatbot.hr.dto.HrPart;
 import kr.co.ultari.chatbot.hr.dto.HrUser;
+import kr.co.ultari.chatbot.hr.mapper.HrPartMapper;
 import kr.co.ultari.chatbot.hr.mapper.HrUserMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -34,6 +36,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class HrDirectorySnapshot {
 
     private final HrUserMapper hrUserMapper;
+    private final HrPartMapper hrPartMapper;
 
     /** 사용자 1명 = 이름 + 비번(로그인 검증용) + 소속부서(겸직/소스중복 시 복수) */
     public record UserEntry(String userName, String password, List<String> partIds) {}
@@ -44,6 +47,8 @@ public class HrDirectorySnapshot {
 
     /** null = 아직 미적재(기동 직후/배치 실패). 적재 후엔 이 맵만으로 조회(미스=없음). */
     private volatile Map<String, UserEntry> users;
+    /** 조직도 전체(관리자 트리 렌더용, partName 포함). users와 같은 배치로 적재. */
+    private volatile List<HrPart> parts;
     private final AtomicBoolean refreshing = new AtomicBoolean(false);
 
     /** 앱 준비 완료 시 1회 즉시 적재(첫 사용자 지연 제거). */
@@ -85,8 +90,12 @@ public class HrDirectorySnapshot {
                     e.partIds().add(high);
                 }
             }
+            // 조직도(parts)도 같은 배치로 적재(관리자 트리 렌더용). 실패 시 아래 catch로 이전값 유지.
+            List<HrPart> ps = hrPartMapper.selectAll();
+            parts = Collections.unmodifiableList(new ArrayList<>(ps));
+
             users = Collections.unmodifiableMap(map);
-            log.info("[hr-dir] HR 디렉터리 스냅샷 갱신 완료: {}명", map.size());
+            log.info("[hr-dir] HR 디렉터리 스냅샷 갱신 완료: 사용자 {}명, 조직 {}건", map.size(), parts.size());
             return map.size();
         } catch (Exception ex) {
             log.warn("[hr-dir] HR 디렉터리 스냅샷 갱신 실패(기존 유지): {}", ex.getMessage());
@@ -120,5 +129,17 @@ public class HrDirectorySnapshot {
     public List<String> partIdsOf(String userId) {
         UserEntry e = get(userId);
         return e == null ? Collections.emptyList() : Collections.unmodifiableList(e.partIds());
+    }
+
+    /** 조직도 전체(관리자 트리용). 미적재면 빈 리스트. */
+    public List<HrPart> partList() {
+        List<HrPart> p = parts;
+        return p == null ? Collections.emptyList() : p;
+    }
+
+    /** 전체 사용자 맵(관리자 트리용). 미적재면 빈 맵. */
+    public Map<String, UserEntry> userMap() {
+        Map<String, UserEntry> m = users;
+        return m == null ? Collections.emptyMap() : m;
     }
 }

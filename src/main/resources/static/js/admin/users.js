@@ -194,7 +194,8 @@
         node.innerHTML =
             '<span class="tw-toggle' + (hasChildren ? "" : " leaf") + '">▾</span>' +
             '<span class="ticon">' + ICON_PART + '</span>' +
-            '<input type="checkbox" class="cb-part"' + (directGranted ? " checked" : "") + '>' +
+            // 상속(상위 부여)된 하위 부서도 체크 표시 → '비어있어 다시 체크'하는 중복 부여 방지
+            '<input type="checkbox" class="cb-part"' + ((directGranted || inheritedAnc) ? " checked" : "") + '>' +
             '<span class="tlabel">' + esc(p.partName || partId) + '</span>' +
             '<span class="tsub">' + esc(partId) + '</span>' +
             (inheritedAnc ? '<span class="tbadge">상속</span>' : "");
@@ -203,7 +204,20 @@
         var toggle = node.querySelector(".tw-toggle");
         if (hasChildren) toggle.addEventListener("click", function () { li.classList.toggle("collapsed"); });
         node.querySelector(".cb-part").addEventListener("change", function () {
-            applyGrant("PART", partId, this.checked ? "ALLOW" : "REMOVE");
+            var on = this.checked;
+            var inherited = partHasGrantedAncestor(partId); // 상위가 부여했는가
+            if (on) {
+                if (inherited) return; // 이미 상속으로 부여됨 → 직접 부여 불필요(중복 방지)
+                applyGrant("PART", partId, "ALLOW");
+            } else {
+                // 끄기: 직접 부여면 제거, 상속만이면 되돌림(상위에서 해제해야 함)
+                if (grantedParts.has(partId)) {
+                    applyGrant("PART", partId, "REMOVE");
+                } else {
+                    this.checked = true;
+                    notify("상위 부서에서 상속된 권한입니다. 상위 부서에서 해제하세요.", "error");
+                }
+            }
         });
 
         var childUl = document.createElement("ul");
