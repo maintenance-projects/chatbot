@@ -14,6 +14,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const viewerFrame = document.getElementById("cbViewerFrame");
     const viewerClose = document.getElementById("cbViewerClose");
     const viewerExpand = document.getElementById("cbViewerExpand");
+    const viewerDownload = document.getElementById("cbViewerDownload");
 
     if (!body || !input || !sendBtn || !inputWrap) return;
 
@@ -332,6 +333,9 @@ document.addEventListener("DOMContentLoaded", () => {
     let summaryBusy = false;
 
     let activeViewerBlobUrl = null;
+    // 뷰어 원본 URL·다운로드 파일명(뷰어 다운로드 버튼용). blob 렌더와 무관하게 원본명으로 저장.
+    let activeViewerUrl = "";
+    let activeViewerName = "";
 
     function pad2(n) {
         return String(n).padStart(2, "0");
@@ -539,7 +543,11 @@ document.addEventListener("DOMContentLoaded", () => {
         // 화면 크기와 무관하게 항상 오른쪽 분할 뷰어로 표시(새 창 사용 안 함).
         if (!(shell && viewer && viewerFrame)) return;
 
-        const { hash } = splitHash(String(url)); // #page=N 보존
+        const { base, hash } = splitHash(String(url)); // #page=N 보존
+
+        // 뷰어 다운로드 버튼용: blob(uuid)이 아니라 원본 URL + 원본 파일명으로 저장
+        activeViewerUrl = base;
+        activeViewerName = buildDownloadName(title || "document", "pdf");
 
         shell.classList.add("has-viewer");
         viewer.classList.add("is-open");
@@ -606,6 +614,19 @@ document.addEventListener("DOMContentLoaded", () => {
         viewerExpand.addEventListener("click", (e) => {
             e.preventDefault();
             setViewerMax(!viewer.classList.contains("is-max"));
+        });
+    }
+
+    // 뷰어 다운로드: blob(uuid.pdf)이 아닌 원본 파일명으로 강제 다운로드
+    if (viewerDownload) {
+        viewerDownload.addEventListener("click", async (e) => {
+            e.preventDefault();
+            if (!activeViewerUrl) return;
+            try {
+                await forceDownloadFile(activeViewerUrl, activeViewerName);
+            } catch (err) {
+                addBotMessage(err && err.message ? String(err.message) : "다운로드 중 오류가 발생했습니다.");
+            }
         });
     }
 

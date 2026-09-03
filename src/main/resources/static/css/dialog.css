@@ -1910,7 +1910,8 @@ textarea {
 }
 
 .cb-viewer__close,
-.cb-viewer__expand {
+.cb-viewer__expand,
+.cb-viewer__download {
     width: 34px;
     height: 34px;
     border-radius: 12px;
@@ -1923,7 +1924,8 @@ textarea {
     color: #334155;
 }
 
-.cb-viewer__expand:hover {
+.cb-viewer__expand:hover,
+.cb-viewer__download:hover {
     background: #f1f5f9;
 }
 
