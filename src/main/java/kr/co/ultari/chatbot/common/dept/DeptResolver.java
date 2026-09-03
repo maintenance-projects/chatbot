@@ -35,6 +35,7 @@ public class DeptResolver {
     private final AiDeptGrantRepository grantRepository;
     private final HrUserMapper hrUserMapper;
     private final HrPartParentCache hrPartParentCache;
+    private final HrDirectorySnapshot hrDirectory;
 
     /**
      * 사용자별 허용 dept 집합 캐시. 요청마다 인사DB(msg_user)+앱DB(AI_DEPT_GRANT)를 재조회하던 것을
@@ -84,7 +85,10 @@ public class DeptResolver {
         Set<String> depts = new LinkedHashSet<>();
 
         // 1) 조직(PART) 상속 ALLOW — 사용자의 소속 부서 + 상위(조상) 부서까지 확장
-        List<String> directParts = hrUserMapper.selectPartIdsByUser(userId);
+        //    소속부서는 인메모리 스냅샷에서(핫패스 DB-free). 미적재 시에만 원격 HR로 폴백.
+        List<String> directParts = hrDirectory.isLoaded()
+                ? hrDirectory.partIdsOf(userId)
+                : hrUserMapper.selectPartIdsByUser(userId);
         Set<String> parts = expandAncestors(directParts);
         if (!parts.isEmpty()) {
             for (AiDeptGrant g : grantRepository.findByTargetTypeAndTargetIdInAndMode(

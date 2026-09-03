@@ -22,4 +22,11 @@ public interface HrUserMapper {
 
     /** 사용자의 소속 부서(PART_ID) 목록 — 겸직 시 여러 개. 권한 상속 계산용 */
     List<String> selectPartIdsByUser(@Param("userId") String userId);
+
+    /**
+     * 인메모리 디렉터리 스냅샷용 — 전체 사용자(비번·부서 포함) 1회 벌크 조회.
+     * 요청마다 원격 HR을 치지 않도록 주기 배치가 이걸로 전량을 메모리에 적재한다.
+     * 겸직/소스중복 시 한 userId가 여러 행(부서 다름)일 수 있다(호출측에서 그룹핑).
+     */
+    List<HrUser> selectAllWithAuth();
 }

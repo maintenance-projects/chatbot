@@ -49,4 +49,18 @@
         FROM msg_user
         WHERE USER_ID = #{userId}
     </select>
+
+    <!--
+      인메모리 디렉터리 스냅샷용: 전체 사용자(비번·부서 포함) 1회 벌크 조회(WHERE 없음).
+      주기 배치가 이걸로 전량을 메모리에 적재 → 접속/로그인/부서해석은 메모리에서(핫패스 DB-free).
+      ※운영 외부 매퍼(hr.mapper.locations)에서는 실제 스키마에 맞춰 WHERE 없는 UNION 전량으로 교체:
+        SELECT USER_ID, USER_NAME, USER_HIGH, PASSWORD FROM (
+            SELECT USER_ID, USER_NAME, DEPT_ID AS USER_HIGH, PASSWD AS PASSWORD FROM GW_IF.OPEN_PERSON
+            UNION
+            SELECT USER_ID, USER_NAME, USER_HIGH, PASSWORD FROM VIEW_USER)
+    -->
+    <select id="selectAllWithAuth" resultMap="hrUser">
+        SELECT USER_ID, USER_NAME, USER_HIGH, PASSWORD
+        FROM msg_user
+    </select>
 </mapper>

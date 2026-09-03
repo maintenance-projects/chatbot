@@ -2,6 +2,9 @@ package kr.co.ultari.chatbot.admin.controller;
 
 import kr.co.ultari.chatbot.admin.service.AdminUserService;
 import kr.co.ultari.chatbot.common.dept.DeptLabelService;
+import kr.co.ultari.chatbot.common.dept.DeptResolver;
+import kr.co.ultari.chatbot.common.dept.HrDirectorySnapshot;
+import kr.co.ultari.chatbot.common.dept.HrPartParentCache;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Controller;
@@ -21,6 +24,9 @@ public class AdminUserController {
 
     private final AdminUserService userService;
     private final DeptLabelService labelService;
+    private final HrDirectorySnapshot hrDirectory;
+    private final DeptResolver deptResolver;
+    private final HrPartParentCache hrPartParentCache;
 
     /** 조직도 트리 + 특정 dept 부여 상태 */
     @PostMapping("/tree")
@@ -52,5 +58,20 @@ public class AdminUserController {
         log.debug("[users dept-label] adminId={}, dept={}, label={}", adminId, dept, label);
         labelService.save(dept, label);
         return "ok";
+    }
+
+    /**
+     * HR 디렉터리 인메모리 스냅샷 수동 새로고침(신규 사용자/부서변경 즉시 반영).
+     * 조직도 부모맵·dept 권한 캐시도 함께 무효화해 다음 조회에 반영되게 한다.
+     * 반환: 적재된 사용자 수.
+     */
+    @PostMapping("/hr-refresh")
+    @ResponseBody
+    public String hrRefresh(@RequestParam("adminId") String adminId) {
+        int n = hrDirectory.refresh();
+        hrPartParentCache.invalidate();
+        deptResolver.invalidateAll();
+        log.info("[users hr-refresh] adminId={}, 적재 {}명", adminId, n);
+        return String.valueOf(n);
     }
 }
