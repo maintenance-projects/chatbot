@@ -28,6 +28,7 @@
         search: document.getElementById("treeSearch"),
         btnExpand: document.getElementById("btnExpandAll"),
         btnCollapse: document.getElementById("btnCollapseAll"),
+        btnHrRefresh: document.getElementById("btnHrRefresh"),
         btnLogout: document.getElementById("btnLogout"),
         labelInput: document.getElementById("deptLabelInput"),
         labelCode: document.getElementById("deptLabelCode"),
@@ -288,10 +289,25 @@
             });
     }
 
+    // HR 사용자·부서 인메모리 스냅샷 수동 새로고침(신규자 즉시 반영) → 갱신 후 트리 재로딩
+    function hrRefresh() {
+        if (dom.btnHrRefresh) dom.btnHrRefresh.disabled = true;
+        showLoading(true);
+        postForm("/at-i/users/hr-refresh", { adminId: adminId() })
+            .then(function (r) { return r.text(); })
+            .then(function (t) {
+                notify("사용자·부서 새로고침 완료 (" + String(t || "").trim() + "명)", "success");
+                loadTree(); // 갱신된 목록 반영(loadTree가 로딩 표시/해제 담당)
+            })
+            .catch(function () { notify("새로고침 중 오류가 발생했습니다.", "error"); showLoading(false); })
+            .finally(function () { if (dom.btnHrRefresh) dom.btnHrRefresh.disabled = false; });
+    }
+
     // ── 바인딩 ────────────────────────────────────────────────
     if (dom.search) dom.search.addEventListener("input", applySearch);
     if (dom.btnExpand) dom.btnExpand.addEventListener("click", expandAll);
     if (dom.btnCollapse) dom.btnCollapse.addEventListener("click", collapseAll);
+    if (dom.btnHrRefresh) dom.btnHrRefresh.addEventListener("click", hrRefresh);
     if (dom.btnLogout) dom.btnLogout.addEventListener("click", logout);
     if (dom.btnSaveLabel) dom.btnSaveLabel.addEventListener("click", saveLabel);
     if (dom.labelInput) dom.labelInput.addEventListener("keydown", function (e) {
