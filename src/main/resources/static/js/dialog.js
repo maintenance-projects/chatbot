@@ -157,10 +157,29 @@ document.addEventListener("DOMContentLoaded", () => {
         const brandLogo = document.getElementById("cbBrandLogo");
         let labels = {};
 
+        // 인사 말풍선의 '전자법규집'을 파티션 표시명으로 치환(미설정 시 원문 유지). AI 어시스턴트 인사 1건만 해당.
+        const GREET_TOKEN = "전자법규집";
+        let greetEl = null, greetTemplate = "";
+        (function initGreet() {
+            const pres = document.querySelectorAll(".cb-bubble__text [data-rawtext]");
+            for (let i = 0; i < pres.length; i++) {
+                const rt = pres[i].getAttribute("data-rawtext") || "";
+                if (rt.indexOf(GREET_TOKEN) >= 0) { greetEl = pres[i]; greetTemplate = rt; break; }
+            }
+        })();
+        function applyGreetingPartition(label) {
+            if (!greetEl) return;
+            const name = (label && String(label).trim()) ? String(label).trim() : GREET_TOKEN;
+            const text = greetTemplate.split(GREET_TOKEN).join(name); // 원본 템플릿에서 매번 재치환(전환 대응)
+            greetEl.textContent = text;
+            greetEl.setAttribute("data-rawtext", text);
+        }
+
         // 선택된 dept의 친화 명칭만 브랜드에 반영. dept-a/dept-b 코드는 사용자에게 노출하지 않는다.
         function applyBrand(code) {
             if (!code) return;
             const label = labels && labels[code];
+            applyGreetingPartition(label); // 인사 말풍선 파티션명 반영(미설정이면 '전자법규집' 유지/복원)
             if (!label) return; // 명칭 미설정 시 코드 대신 기본 브랜드 유지
             if (brandTitle) brandTitle.textContent = label;
             if (brandLogo) brandLogo.textContent = String(label).trim().charAt(0).toUpperCase() || "A";
