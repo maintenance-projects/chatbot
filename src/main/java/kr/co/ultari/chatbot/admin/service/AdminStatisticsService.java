@@ -38,11 +38,23 @@ public class AdminStatisticsService {
         return StringUtils.hasText(userId);
     }
 
+    /** 화면 칩·엑셀에 표시하는 타입 목록(비활성 항목 제외). 전체합·랭킹도 이 목록으로 맞춰 정합성 유지. */
+    private java.util.List<String> displayedTypes() {
+        java.util.List<String> t = new java.util.ArrayList<>(
+                java.util.List.of("CHAT", "DOCUMENT", "TEMPLATE", "PKB_SEARCH", "DIALOG", "AUDIO"));
+        if (!audioEnabled) t.remove("AUDIO");
+        if (!templateEnabled) t.remove("TEMPLATE");
+        if (!pkbEnabled) t.remove("PKB_SEARCH");
+        return t;
+    }
+
     @Transactional(readOnly = true)
     public JSONObject getSummary(LocalDate start, LocalDate end, String userId) {
+        // 전체 요약도 '표시 타입'만 합산해 화면 칩 합과 항상 일치시킨다(누락/비표시 타입 제외).
+        java.util.List<String> types = displayedTypes();
         List<Object[]> result = hasUser(userId)
-                ? repository.findSummaryByUser(start, end, userId)
-                : repository.findSummary(start, end);
+                ? repository.findSummaryByUserAndTypes(start, end, userId, types)
+                : repository.findSummaryByTypes(start, end, types);
 
         JSONObject json = new JSONObject();
         if (result.isEmpty()) {
@@ -54,14 +66,16 @@ public class AdminStatisticsService {
             json.put("totalCount", row[1] != null ? ((Number) row[1]).longValue() : 0);
         }
 
-        // 타입별 합계
+        // 타입별 합계(표시 타입만)
         List<Object[]> daily = hasUser(userId)
                 ? repository.findDailyStatsByUser(start, end, userId)
                 : repository.findDailyStats(start, end);
 
+        java.util.Set<String> shown = new java.util.HashSet<>(types);
         JSONObject typeCounts = new JSONObject();
         for (Object[] r : daily) {
             String type = (String) r[1];
+            if (!shown.contains(type)) continue; // 비표시 타입 제외
             long count = ((Number) r[3]).longValue();
             typeCounts.put(type, typeCounts.optLong(type, 0) + count);
         }
@@ -111,8 +125,10 @@ public class AdminStatisticsService {
                 ? repository.findUserRankingByUser(start, end, userId)
                 : repository.findUserRanking(start, end);
 
+        java.util.Set<String> shown = new java.util.HashSet<>(displayedTypes());
         JSONArray arr = new JSONArray();
         for (Object[] row : rows) {
+            if (!shown.contains((String) row[1])) continue; // 표시 타입만(전체합·랭킹 정합)
             JSONObject json = new JSONObject();
             json.put("userId", row[0]);
             json.put("type", row[1]);
@@ -133,13 +149,10 @@ public class AdminStatisticsService {
         headerStyle.setFillPattern(FillPatternType.SOLID_FOREGROUND);
         headerStyle.setBorderBottom(BorderStyle.THIN);
 
-        // 타입 목록 — 표시여부(enabled=false)인 항목은 엑셀에서도 제외
-        java.util.List<String> typeList = new java.util.ArrayList<>(
-                java.util.List.of("CHAT", "DOCUMENT", "TEMPLATE", "PKB_SEARCH", "DIALOG", "AUDIO"));
-        if (!audioEnabled) typeList.remove("AUDIO");
-        if (!templateEnabled) typeList.remove("TEMPLATE");
-        if (!pkbEnabled) typeList.remove("PKB_SEARCH");
+        // 타입 목록 — 표시여부(enabled=false)인 항목은 엑셀에서도 제외(화면 칩과 동일)
+        java.util.List<String> typeList = displayedTypes();
         String[] TYPES = typeList.toArray(new String[0]);
+        java.util.Set<String> shownTypes = new java.util.HashSet<>(typeList);
         java.util.Map<String, String> TYPE_LABELS = new java.util.HashMap<>();
         TYPE_LABELS.put("CHAT", "챗봇-질문");
         TYPE_LABELS.put("DOCUMENT", "챗봇-내문서");
@@ -299,6 +312,7 @@ public class AdminStatisticsService {
         // 사용자별 합계 계산
         java.util.Map<String, Long> userTotalMap = new java.util.LinkedHashMap<>();
         for (Object[] row : rankingRows) {
+            if (!shownTypes.contains((String) row[1])) continue; // 표시 타입만 합산(일별시트 합계와 일치)
             String uid = (String) row[0];
             long count = ((Number) row[2]).longValue();
             userTotalMap.merge(uid, count, Long::sum);

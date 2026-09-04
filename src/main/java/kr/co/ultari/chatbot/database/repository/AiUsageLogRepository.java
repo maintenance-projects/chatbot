@@ -60,4 +60,15 @@ public interface AiUsageLogRepository extends JpaRepository<AiUsageLog, Long> {
     @Query("SELECT COUNT(DISTINCT a.userId), SUM(a.requestCount) " +
            "FROM AiUsageLog a WHERE a.requestDate BETWEEN :start AND :end AND a.userId = :userId")
     List<Object[]> findSummaryByUser(@Param("start") LocalDate start, @Param("end") LocalDate end, @Param("userId") String userId);
+
+    /** 표시 타입만 합산(전체 요약이 화면 칩 합과 일치하도록). */
+    @Query("SELECT COUNT(DISTINCT a.userId), SUM(a.requestCount) " +
+           "FROM AiUsageLog a WHERE a.requestDate BETWEEN :start AND :end AND a.requestType IN :types")
+    List<Object[]> findSummaryByTypes(@Param("start") LocalDate start, @Param("end") LocalDate end,
+                                      @Param("types") List<String> types);
+
+    @Query("SELECT COUNT(DISTINCT a.userId), SUM(a.requestCount) " +
+           "FROM AiUsageLog a WHERE a.requestDate BETWEEN :start AND :end AND a.userId = :userId AND a.requestType IN :types")
+    List<Object[]> findSummaryByUserAndTypes(@Param("start") LocalDate start, @Param("end") LocalDate end,
+                                             @Param("userId") String userId, @Param("types") List<String> types);
 }

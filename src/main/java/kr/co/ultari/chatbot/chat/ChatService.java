@@ -109,7 +109,8 @@ public class ChatService {
      * (단일 파일도 리스트에 1개 담아 전송)
      */
     public SseEmitter messagePrivate(String dept, String userId, String invokeId, String message, java.util.List<String> targetFilenames, String translateTo) {
-        aiUsageService.increase(userId, invokeId, "CHAT");
+        // 개인문서 AI 분석 질문 → 통계 '챗봇-내문서'(DOCUMENT). (AI 어시스턴트 일반질문은 CHAT)
+        aiUsageService.increase(userId, invokeId, "DOCUMENT");
         java.util.List<String> names = cleanNames(targetFilenames);
         log.info("[private] invokeId={}, message={}, target_filenames({})={}", invokeId, message, names.size(), names);
 
@@ -136,7 +137,8 @@ public class ChatService {
      * (단일 파일도 리스트에 1개 담아 전송)
      */
     public SseEmitter documentSummary(String dept, String userId, String invokeId, java.util.List<String> targetFilenames) {
-        aiUsageService.increase(userId, invokeId, "SUMMARY");
+        // 개인문서 AI 분석 요약 → 통계 '챗봇-내문서'(DOCUMENT)로 집계(기존 SUMMARY는 칩에 없어 미표시였음)
+        aiUsageService.increase(userId, invokeId, "DOCUMENT");
         java.util.List<String> names = cleanNames(targetFilenames);
         log.info("[summary] invokeId={}, target_filenames({})={}", invokeId, names.size(), names);
 
