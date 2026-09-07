@@ -638,7 +638,7 @@ var isScreenGuideOpen = false;
     // 랭킹 테이블 헤더를 TYPES(표시여부 반영) 기준으로 동적 생성 — 본문 셀과 항상 정합
     function renderRankingHead() {
         if (!elRankingHead) return;
-        var h = '<th style="width:60px;" class="center">순위</th><th class="center">사용자 ID</th>';
+        var h = '<th style="width:60px;" class="center">순위</th><th class="center">사용자</th>';
         TYPES.forEach(function (t) {
             h += '<th style="width:100px;" class="center">' + TYPE_LABELS[t] + '</th>';
         });
