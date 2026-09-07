@@ -32,11 +32,18 @@ public class DefaultController {
 
     // 문서 다운로드(/documents/download/{token})는 dept-aware DocGenController로 이관됨.
 
-    @GetMapping("/document/view/{sessionId}/{fileName}")
-    public ResponseEntity<Resource> viewDocument(@PathVariable("fileName") String fileName, @PathVariable("sessionId") String sessionId) {
-
-        log.debug(fileName);
-        log.debug(sessionId);
+    /**
+     * PDF 미리보기 사본 서빙. 보안상 소유자(sessionId)를 URL에 싣지 않고 <b>세션 userId</b>로 스코프한다.
+     * (로그인 세션 없으면 거부 → 본인 문서만 접근)
+     */
+    @GetMapping("/document/view/{fileName}")
+    public ResponseEntity<Resource> viewDocument(@PathVariable("fileName") String fileName,
+                                                 jakarta.servlet.http.HttpServletRequest request) {
+        Object uid = request.getSession().getAttribute("chatbotUserId");
+        String sessionId = uid == null ? null : uid.toString();
+        if (sessionId == null || sessionId.isBlank()) {
+            return ResponseEntity.status(org.springframework.http.HttpStatus.FORBIDDEN).build();
+        }
 
         // 경로 탈출 방지: 파일명/세션ID는 단일 세그먼트만 허용(디렉터리 구분자·상위경로 제거) + base 하위 확인
         String safeName = Paths.get(fileName).getFileName().toString();

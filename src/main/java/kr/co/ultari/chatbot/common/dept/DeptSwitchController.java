@@ -33,12 +33,12 @@ public class DeptSwitchController {
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(o.toString());
     }
 
-    /** 허용 dept 목록 + 현재 선택 + 표시명. user=화면이 아는 사용자 id로 세션 신원 확립. */
+    /** 허용 dept 목록 + 현재 선택 + 표시명. 신원은 세션(로그인 시 확립)에서만 사용 — user 파라미터 불신(스푸핑 방지). */
     @GetMapping("/me/depts")
     public ResponseEntity<String> list(
             @RequestParam(value = "user", required = false) String user,
             HttpServletRequest request) {
-        deptContext.bindUser(request, user);
+        // (보안) 클라가 보낸 user로 세션 신원을 덮어쓰지 않는다. 신원은 /chatbot/{key} 로그인에서만 확립.
         Set<String> allowed = deptContext.allowed(request);
         JSONObject o = new JSONObject();
         o.put("depts", new JSONArray(allowed));
@@ -53,7 +53,7 @@ public class DeptSwitchController {
     public ResponseEntity<String> select(@RequestParam("dept") String dept,
             @RequestParam(value = "user", required = false) String user,
             HttpServletRequest request) {
-        deptContext.bindUser(request, user);
+        // (보안) user 파라미터로 세션 신원 재바인딩하지 않음. 세션 사용자에게 허용된 dept만 선택 반영.
         boolean ok = deptContext.select(request, dept);
         JSONObject o = new JSONObject();
         o.put("ok", ok);

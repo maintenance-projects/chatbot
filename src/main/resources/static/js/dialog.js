@@ -1119,8 +1119,8 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!name) return "";
         const encodedName = safeEncodePathSegment(name);
         const pn = normalizePageValue(page);
-        if (pn != null) return `/document/view/${sessionId}/${encodedName}#page=${pn}`;
-        return `/document/view/${sessionId}/${encodedName}`;
+        if (pn != null) return `/document/view/${encodedName}#page=${pn}`;
+        return `/document/view/${encodedName}`;
     }
 
     function mapRefs(docs) {
@@ -1830,7 +1830,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (uploadedFilesCache) return uploadedFilesCache;
         if (uploadedFilesPromise) return uploadedFilesPromise;
 
-        uploadedFilesPromise = fetch("/chat/files/" + encodeURIComponent(String(sessionId || "")), {
+        uploadedFilesPromise = fetch("/chat/files", {
             method: "GET",
             credentials: "same-origin",
         })
@@ -2041,7 +2041,7 @@ document.addEventListener("DOMContentLoaded", () => {
         list.forEach((n) => fd.append("target_filename", n));
 
         return streamEventText(
-            "/chat/message/document-summary/" + encodeURIComponent(String(sessionId || "")),
+            "/chat/message/document-summary",
             {
                 method: "POST",
                 headers: { Accept: "text/event-stream" },
@@ -2193,7 +2193,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (translateTo) fd.append("translate_to", translateTo);
 
         streamEventText(
-            "/chat/message/" + encodeURIComponent(String(sessionId || "")),
+            "/chat/message",
             {
                 method: "POST",
                 headers: { Accept: "text/event-stream" },
@@ -2296,7 +2296,7 @@ document.addEventListener("DOMContentLoaded", () => {
         };
 
         streamEventText(
-            "/chat/upload/" + encodeURIComponent(String(sessionId || "")),
+            "/chat/upload",
             { method: "POST", headers: { Accept: "text/event-stream" }, body: formData, credentials: "same-origin" },
             {
                 acceptRefs: true,

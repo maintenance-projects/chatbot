@@ -113,6 +113,8 @@ public class GenerateController {
         log.debug(templateList.toString());
         // 화면 URL key로 세션 신원을 확립 → 로그인 세션 소실(재기동 등)에도 dept 스위처/라우팅 복구
         if (sessionId != null && !sessionId.isBlank()) {
+            // 세션 고정(fixation) 방지: 신원 확립 시 세션ID 재발급(기존 속성은 유지됨)
+            try { request.changeSessionId(); } catch (IllegalStateException ignore) { /* 세션 없음 등 무시 */ }
             request.getSession(true).setAttribute("chatbotUserId", sessionId);
         }
         model.addAttribute("sessionId",sessionId);
