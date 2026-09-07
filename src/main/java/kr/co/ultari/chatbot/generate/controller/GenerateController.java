@@ -93,6 +93,15 @@ public class GenerateController {
             response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_FORBIDDEN);
             return "error";
         }
+        // 일회용 토큰: 암호화 로그인 활성 시, 이미 사용된 토큰은 시간창 안이어도 재사용 거부.
+        // 단 본인 세션 새로고침(세션 userId == 토큰 userId)은 허용. (암호화 off면 무영향)
+        Object curUid = request.getSession(true).getAttribute("chatbotUserId");
+        String sessionUserId = curUid == null ? null : curUid.toString();
+        if (!loginCrypto.consumeOnce(key, sessionId, sessionUserId)) {
+            log.debug("[chatbot access denied] one-time token reuse (userId={})", sessionId);
+            response.setStatus(jakarta.servlet.http.HttpServletResponse.SC_FORBIDDEN);
+            return "error";
+        }
 
         JSONArray templateList = new JSONArray();
         JSONObject templateObject = new JSONObject();

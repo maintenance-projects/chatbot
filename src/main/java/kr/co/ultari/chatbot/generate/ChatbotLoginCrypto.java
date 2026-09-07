@@ -1,5 +1,8 @@
 package kr.co.ultari.chatbot.generate;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
+import jakarta.annotation.PostConstruct;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
@@ -48,8 +51,44 @@ public class ChatbotLoginCrypto {
     @Value("${ultari.chatbot.login.encrypt-window-seconds:300}")
     private long windowSeconds;
 
+    /**
+     * 일회용 토큰 사용 여부. 활성 시 이미 사용된 토큰은 시간창 안이어도 재사용 거부(리플레이 방지).
+     * <b>암호화 로그인(encrypt-enabled=true)일 때만 발효</b>(평문 아이디는 매번 재사용이라 일회용 불가).
+     */
+    @Value("${ultari.chatbot.login.one-time:true}")
+    private boolean oneTimeEnabled;
+
+    /** 사용된 토큰(원문 key) 소비 기록. TTL=시간창이라 창이 지나면 자동 정리(어차피 시각검증에서 걸림). */
+    private Cache<String, Boolean> consumedTokens;
+
+    @PostConstruct
+    void initOneTimeCache() {
+        long ttl = windowSeconds > 0 ? windowSeconds : 300;
+        consumedTokens = Caffeine.newBuilder()
+                .expireAfterWrite(java.time.Duration.ofSeconds(ttl))
+                .maximumSize(100_000)
+                .build();
+    }
+
     public boolean isEnabled() {
         return enabled;
+    }
+
+    /**
+     * 일회용 토큰 소비 판정. {@code encrypt-enabled=true} + {@code one-time=true}일 때만 발효.
+     * 처음 사용이면 소비 기록 후 {@code true}. 이미 사용된 토큰이면 <b>같은 세션 새로고침</b>
+     * (sessionUserId == userId)만 허용하고 새 세션의 재사용은 거부한다.
+     * 비활성(암호화 off 등)이면 항상 {@code true}(무영향).
+     */
+    public boolean consumeOnce(String key, String userId, String sessionUserId) {
+        if (!enabled || !oneTimeEnabled) return true;   // 암호화 켜질 때만 발효
+        if (consumedTokens == null || key == null) return true;
+        if (consumedTokens.getIfPresent(key) != null) {
+            // 이미 사용됨 → 본인 세션 새로고침만 허용(F5), 새 세션의 캡처 재사용은 거부
+            return userId != null && userId.equals(sessionUserId);
+        }
+        consumedTokens.put(key, Boolean.TRUE);
+        return true;
     }
 
     /**
