@@ -650,6 +650,7 @@ var isScreenGuideOpen = false;
         renderRankingHead();
         postData("/at-i/statistics/ranking").then(function (rows) {
             var userMap = {};
+            var nameMap = {};
             rows.forEach(function (r) {
                 if (!userMap[r.userId]) {
                     userMap[r.userId] = {};
@@ -658,6 +659,7 @@ var isScreenGuideOpen = false;
                 if (userMap[r.userId][r.type] !== undefined) {
                     userMap[r.userId][r.type] = r.totalCount;
                 }
+                if (r.userName) nameMap[r.userId] = r.userName;
             });
 
             var sorted = Object.entries(userMap)
@@ -665,7 +667,7 @@ var isScreenGuideOpen = false;
                     var uid = entry[0], v = entry[1];
                     var total = 0;
                     TYPES.forEach(function (t) { total += v[t]; });
-                    return { userId: uid, types: v, total: total };
+                    return { userId: uid, userName: nameMap[uid] || "", types: v, total: total };
                 })
                 .sort(function (a, b) { return b.total - a.total; })
                 .slice(0, 5);
@@ -688,9 +690,12 @@ var isScreenGuideOpen = false;
                     ? '<span class="rank-badge ' + badgeClass + '">' + rank + "</span>"
                     : rank;
 
+                var userDisp = u.userName
+                    ? escapeHtml(u.userName) + "(" + escapeHtml(u.userId) + ")"
+                    : escapeHtml(u.userId);
                 html += "<tr>"
                     + "<td>" + rankHtml + "</td>"
-                    + "<td>" + escapeHtml(u.userId) + "</td>";
+                    + "<td>" + userDisp + "</td>";
                 TYPES.forEach(function (t) {
                     html += "<td>" + (u.types[t] || 0).toLocaleString() + "</td>";
                 });

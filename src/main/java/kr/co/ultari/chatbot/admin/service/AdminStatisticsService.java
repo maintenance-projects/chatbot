@@ -1,5 +1,6 @@
 package kr.co.ultari.chatbot.admin.service;
 
+import kr.co.ultari.chatbot.common.dept.HrDirectorySnapshot;
 import kr.co.ultari.chatbot.database.repository.AiUsageLogRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.poi.ss.usermodel.*;
@@ -22,6 +23,16 @@ public class AdminStatisticsService {
 
     @Autowired
     AiUsageLogRepository repository;
+
+    @Autowired
+    HrDirectorySnapshot hrDirectory;
+
+    /** userId → 사용자명(인메모리 스냅샷). 미적재/미존재면 빈 문자열. */
+    private String nameOf(String userId) {
+        if (userId == null) return "";
+        HrDirectorySnapshot.UserEntry e = hrDirectory.get(userId);
+        return (e != null && e.userName() != null) ? e.userName() : "";
+    }
 
     /** 통계 항목 표시여부(엑셀에서도 비활성 항목 제외). */
     @org.springframework.beans.factory.annotation.Value("${ultari.statistics.audio-enabled:true}")
@@ -131,6 +142,7 @@ public class AdminStatisticsService {
             if (!shown.contains((String) row[1])) continue; // 표시 타입만(전체합·랭킹 정합)
             JSONObject json = new JSONObject();
             json.put("userId", row[0]);
+            json.put("userName", nameOf((String) row[0]));
             json.put("type", row[1]);
             json.put("totalCount", ((Number) row[2]).longValue());
             arr.put(json);
@@ -307,14 +319,26 @@ public class AdminStatisticsService {
         Cell periodCell = periodRow.createCell(0);
         periodCell.setCellValue("조회 기간: " + start.toString() + " ~ " + end.toString());
         periodCell.setCellStyle(totalStyle);
-        rankingSheet.addMergedRegion(new org.apache.poi.ss.util.CellRangeAddress(0, 0, 0, 2));
-        createHeaderRow(rankingSheet, headerStyle, 1, new String[]{"순위", "사용자ID", "요청수"});
-        // 사용자별 합계 계산
+        // 헤더: 순위 | 사용자ID | 이름 | (표시 타입별 라벨) | 합계
+        java.util.List<String> rankHeaders = new java.util.ArrayList<>();
+        rankHeaders.add("순위");
+        rankHeaders.add("사용자ID");
+        rankHeaders.add("이름");
+        for (String t : TYPES) rankHeaders.add(TYPE_LABELS.get(t));
+        rankHeaders.add("합계");
+        int rankCols = rankHeaders.size();
+        rankingSheet.addMergedRegion(new org.apache.poi.ss.util.CellRangeAddress(0, 0, 0, rankCols - 1));
+        createHeaderRow(rankingSheet, headerStyle, 1, rankHeaders.toArray(new String[0]));
+
+        // 사용자별 타입별 카운트 + 합계 계산(표시 타입만)
+        java.util.Map<String, java.util.Map<String, Long>> userTypeMap = new java.util.LinkedHashMap<>();
         java.util.Map<String, Long> userTotalMap = new java.util.LinkedHashMap<>();
         for (Object[] row : rankingRows) {
-            if (!shownTypes.contains((String) row[1])) continue; // 표시 타입만 합산(일별시트 합계와 일치)
+            String type = (String) row[1];
+            if (!shownTypes.contains(type)) continue; // 표시 타입만(일별시트 합계와 일치)
             String uid = (String) row[0];
             long count = ((Number) row[2]).longValue();
+            userTypeMap.computeIfAbsent(uid, k -> new java.util.HashMap<>()).merge(type, count, Long::sum);
             userTotalMap.merge(uid, count, Long::sum);
         }
         List<java.util.Map.Entry<String, Long>> sortedUsers = new java.util.ArrayList<>(userTotalMap.entrySet());
@@ -322,12 +346,17 @@ public class AdminStatisticsService {
         rowIdx = 2;
         int rank = 1;
         for (java.util.Map.Entry<String, Long> entry : sortedUsers) {
+            String uid = entry.getKey();
+            java.util.Map<String, Long> tm = userTypeMap.getOrDefault(uid, java.util.Collections.emptyMap());
             Row r = rankingSheet.createRow(rowIdx++);
-            r.createCell(0).setCellValue(rank++);
-            r.createCell(1).setCellValue(entry.getKey());
-            r.createCell(2).setCellValue(entry.getValue());
+            int c = 0;
+            r.createCell(c++).setCellValue(rank++);
+            r.createCell(c++).setCellValue(uid);
+            r.createCell(c++).setCellValue(nameOf(uid));
+            for (String t : TYPES) r.createCell(c++).setCellValue(tm.getOrDefault(t, 0L));
+            r.createCell(c++).setCellValue(entry.getValue());
         }
-        autoSizeColumns(rankingSheet, 3);
+        autoSizeColumns(rankingSheet, rankCols);
 
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         wb.write(out);
