@@ -42,9 +42,20 @@ public class ChatService {
 
     /** 2.1 문서 업로드 및 인덱싱 (SSE) */
     public SseEmitter upload(String dept, String userId, String invokeId, String attachFileName, MultipartFile file) {
-        aiUsageService.increase(userId, invokeId, "DOCUMENT");
         String filename = file.getOriginalFilename();
         String safeName = Paths.get(filename == null ? "file" : filename).getFileName().toString();
+
+        // 이미지 파일 업로드 차단(문서만 허용). 클라이언트 검증 우회 대비 서버 이중검증 → SSE error 반환.
+        if (isImageFile(safeName)) {
+            SseEmitter em = new SseEmitter();
+            try {
+                em.send(SseEmitter.event().data("{\"type\":\"error\",\"detail\":\"이미지 파일은 업로드할 수 없습니다.\"}"));
+            } catch (Exception ignore) { /* 클라이언트 조기 종료 등은 무시 */ }
+            em.complete();
+            return em;
+        }
+
+        aiUsageService.increase(userId, invokeId, "DOCUMENT");
 
         MultipartBodyBuilder b = new MultipartBodyBuilder();
         b.part("attachFile_name", StringUtils.hasText(attachFileName) ? attachFileName : filename);
@@ -86,6 +97,17 @@ public class ChatService {
             log.warn("[upload] PDF 미리보기용 로컬 사본 저장 실패(원본 스트리밍으로 대체): {}", e.getMessage());
             return null;
         }
+    }
+
+    /** 이미지 확장자 목록(문서 업로드에서 차단). 클라이언트와 동일 기준. */
+    private static final java.util.Set<String> IMAGE_EXTS = java.util.Set.of(
+            "jpg", "jpeg", "png", "gif", "bmp", "webp", "svg", "tif", "tiff", "heic", "heif", "avif", "ico", "jfif");
+
+    private static boolean isImageFile(String name) {
+        if (name == null) return false;
+        int i = name.lastIndexOf('.');
+        if (i < 0 || i == name.length() - 1) return false;
+        return IMAGE_EXTS.contains(name.substring(i + 1).toLowerCase());
     }
 
     /** 3.1 통합 챗봇 — target_filename(다중) 유무로 private/open 라우팅 (SSE) */
