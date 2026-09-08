@@ -73,14 +73,33 @@
         }).join("");
         procsEl.innerHTML = '<table class="gpu-proc-table"><thead><tr><th>PID</th><th>프로세스</th><th style="text-align:right;">GPU 메모리</th></tr></thead><tbody>' + rows + '</tbody></table>';
     }
+    var alertEl = document.getElementById("gpuAlert");
+    function renderAlert(data) {
+        if (!alertEl) return;
+        var th = data.thresholds || { mem: 90, power: 90, util: 90 };
+        var items = [];
+        (data.gpus || []).forEach(function (g) {
+            var mp = pct(g.memUsed, g.memTotal);
+            var pw = g.powerLimit > 0 ? Math.round(g.powerDraw * 100 / g.powerLimit) : 0;
+            if (mp >= th.mem) items.push("GPU" + g.index + " 메모리 " + mp + "% (임계 " + th.mem + "%)");
+            if (pw >= th.power) items.push("GPU" + g.index + " 전력 " + pw + "% (임계 " + th.power + "%)");
+            if (g.utilGpu >= th.util) items.push("GPU" + g.index + " 이용률 " + g.utilGpu + "% (임계 " + th.util + "%)");
+        });
+        if (!items.length) { alertEl.style.display = "none"; return; }
+        alertEl.style.display = "block";
+        alertEl.innerHTML = '<span class="gpu-alert__title">⚠ 임계 초과</span> 자원 부족 가능 — 확인이 필요합니다.<ul>'
+            + items.map(function (t) { return "<li>" + esc(t) + "</li>"; }).join("") + '</ul>';
+    }
     function renderLive(data) {
         if (liveUpdated) liveUpdated.textContent = "마지막 갱신: " + nowStr() + " (3초마다 자동)";
         if (!data || !data.available) {
             cardsEl.innerHTML = ""; liveMsg.style.display = "block";
             if (procsCard) procsCard.style.display = "none";
+            if (alertEl) alertEl.style.display = "none";
             liveMsg.textContent = "GPU 정보를 가져올 수 없습니다" + (data && data.reason ? " (" + data.reason + ")" : "") + ".";
             return;
         }
+        renderAlert(data);
         liveMsg.style.display = "none";
         cardsEl.innerHTML = (data.gpus || []).map(function (g) {
             var mp = pct(g.memUsed, g.memTotal);

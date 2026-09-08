@@ -26,6 +26,13 @@ public class AdminGpuController {
     private final GpuService gpuService;
     private final GpuUsageLogRepository repository;
 
+    @org.springframework.beans.factory.annotation.Value("${ultari.admin.gpu.alert.mem-threshold:90}")
+    private int memThreshold;
+    @org.springframework.beans.factory.annotation.Value("${ultari.admin.gpu.alert.power-threshold:90}")
+    private int powerThreshold;
+    @org.springframework.beans.factory.annotation.Value("${ultari.admin.gpu.alert.util-threshold:90}")
+    private int utilThreshold;
+
     private static final DateTimeFormatter TS_MIN = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     private static final DateTimeFormatter TS_HOUR = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:00");
 
@@ -53,6 +60,8 @@ public class AdminGpuController {
             procs.put(new JSONObject().put("pid", pr.pid()).put("name", pr.name()).put("memMB", pr.memMB()));
         }
         o.put("processes", procs);
+        o.put("thresholds", new JSONObject()
+                .put("mem", memThreshold).put("power", powerThreshold).put("util", utilThreshold));
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(o.toString());
     }
 

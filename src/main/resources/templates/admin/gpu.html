@@ -77,6 +77,27 @@
         .gpu-proc-table th { color: var(--color-text-muted); font-weight: 600; }
         .gpu-proc-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
         .gpu-proc-empty { color: var(--color-text-muted); font-size: 0.8125rem; padding: 8px 2px; }
+
+        /* 임계 경고 배너 */
+        .gpu-alert { border: 1px solid rgba(220, 38, 38, 0.35); background: rgba(220, 38, 38, 0.08);
+            border-radius: 12px; padding: 12px 16px; margin-bottom: 14px; color: var(--color-error);
+            font-size: 0.875rem; font-weight: 600; }
+        .gpu-alert .gpu-alert__title { font-weight: 800; margin-right: 6px; }
+        .gpu-alert ul { margin: 6px 0 0 18px; padding: 0; font-weight: 500; }
+
+        /* 이력 UI 개선 */
+        .hist-toolbar { align-items: center; }
+        .hist-seg { display: inline-flex; background: var(--base-dark); border-radius: 999px; padding: 3px; gap: 2px; }
+        .hist-seg .hist-range { border: none; background: transparent; border-radius: 999px; padding: 6px 14px;
+            color: var(--color-text-light); }
+        .hist-seg .hist-range.active { background: #fff; color: var(--color-primary);
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); border: none; }
+        .chart-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 16px; margin-bottom: 16px; }
+        .chart-card { box-shadow: 0 1px 4px rgba(2, 6, 23, 0.06); }
+        .chart-card h3 { display: flex; align-items: center; gap: 8px; }
+        .chart-card h3::before { content: ""; width: 4px; height: 15px; border-radius: 3px; background: var(--color-primary); }
+        .sum-card { box-shadow: 0 1px 4px rgba(2, 6, 23, 0.06); border-top: 3px solid var(--color-primary); }
+        .sum-row:last-child { margin-bottom: 0; }
     </style>
 </head>
 
@@ -219,6 +240,7 @@
                 </div>
 
                 <section class="gpu-pane active" id="paneLive">
+                    <div class="gpu-alert" id="gpuAlert" style="display:none;"></div>
                     <div class="live-updated" id="liveUpdated"></div>
                     <div class="gpu-cards" id="gpuCards"></div>
                     <div class="gpu-msg" id="gpuLiveMsg" style="display:none;"></div>
@@ -230,32 +252,36 @@
 
                 <section class="gpu-pane" id="paneHistory">
                     <div class="hist-toolbar" id="histRanges">
-                        <button class="hist-range active" type="button" data-hours="24">24시간</button>
-                        <button class="hist-range" type="button" data-hours="6">6시간</button>
-                        <button class="hist-range" type="button" data-hours="1">1시간</button>
-                        <button class="hist-range" type="button" data-hours="168">7일</button>
-                        <button class="hist-range" type="button" data-hours="720">30일</button>
+                        <div class="hist-seg">
+                            <button class="hist-range" type="button" data-hours="1">1시간</button>
+                            <button class="hist-range" type="button" data-hours="6">6시간</button>
+                            <button class="hist-range active" type="button" data-hours="24">24시간</button>
+                            <button class="hist-range" type="button" data-hours="168">7일</button>
+                            <button class="hist-range" type="button" data-hours="720">30일</button>
+                        </div>
                         <span class="tsub" id="histNote" style="color:var(--color-text-muted);font-size:.8125rem;"></span>
                     </div>
                     <div class="gpu-summary" id="histSummary"></div>
-                    <div class="chart-card">
-                        <h3>GPU 이용률(%)</h3>
-                        <div class="chart-body"><canvas id="chartUtil"></canvas></div>
+                    <div class="chart-grid">
+                        <div class="chart-card">
+                            <h3>GPU 이용률(%)</h3>
+                            <div class="chart-body"><canvas id="chartUtil"></canvas></div>
+                        </div>
+                        <div class="chart-card">
+                            <h3>메모리 사용률(%)</h3>
+                            <div class="chart-body"><canvas id="chartMem"></canvas></div>
+                        </div>
+                        <div class="chart-card">
+                            <h3>전력(W) · 실사용 강도</h3>
+                            <div class="chart-body"><canvas id="chartPower"></canvas></div>
+                        </div>
+                        <div class="chart-card">
+                            <h3>온도(℃)</h3>
+                            <div class="chart-body"><canvas id="chartTemp"></canvas></div>
+                        </div>
                     </div>
                     <div class="chart-card">
-                        <h3>GPU 메모리 사용률(%)</h3>
-                        <div class="chart-body"><canvas id="chartMem"></canvas></div>
-                    </div>
-                    <div class="chart-card">
-                        <h3>전력(W) — 실사용 강도</h3>
-                        <div class="chart-body"><canvas id="chartPower"></canvas></div>
-                    </div>
-                    <div class="chart-card">
-                        <h3>온도(℃)</h3>
-                        <div class="chart-body"><canvas id="chartTemp"></canvas></div>
-                    </div>
-                    <div class="chart-card">
-                        <h3>시간대별 평균 이용률(%) — 언제 바쁜지</h3>
+                        <h3>시간대별 평균 이용률(%) · 언제 바쁜지</h3>
                         <div class="chart-body"><canvas id="chartHour"></canvas></div>
                     </div>
                     <div class="gpu-msg" id="gpuHistMsg" style="display:none;"></div>
