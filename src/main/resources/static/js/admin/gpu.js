@@ -127,7 +127,7 @@
     var currentHours = 24;
     var histMsg = document.getElementById("gpuHistMsg");
     var histNote = document.getElementById("histNote");
-    var chartUtil = null, chartMem = null, chartPower = null, chartTemp = null, chartHour = null;
+    var chartUtil = null, chartMem = null, chartPower = null, chartTemp = null, chartHour = null, chartDemand = null;
     var COLORS = ["#2563eb", "#27ae60", "#e67e22", "#8e44ad", "#e74c3c", "#16a085", "#f1c40f", "#34495e"];
 
     document.querySelectorAll(".hist-range").forEach(function (b) {
@@ -205,6 +205,32 @@
             }
         });
     }
+    function drawDemand(dvr) {
+        dvr = dvr || [];
+        var labels = dvr.map(function (p) { return (p.t || "").slice(5) + "시"; });
+        var reqs = dvr.map(function (p) { return p.requests; });
+        var mem = dvr.map(function (p) { return p.gpuMemPct; });
+        var util = dvr.map(function (p) { return p.gpuUtil; });
+        var ds = [
+            { type: "bar", label: "요청수", data: reqs, backgroundColor: "rgba(37,99,235,0.35)", borderColor: "#2563eb", yAxisID: "yReq", order: 2 },
+            { type: "line", label: "GPU 메모리%", data: mem, borderColor: "#e74c3c", backgroundColor: "#e74c3c", borderWidth: 1.8, pointRadius: 0, tension: 0.25, yAxisID: "yPct", order: 1 },
+            { type: "line", label: "GPU 이용률%", data: util, borderColor: "#27ae60", backgroundColor: "#27ae60", borderWidth: 1.4, pointRadius: 0, tension: 0.25, yAxisID: "yPct", order: 1 }
+        ];
+        if (chartDemand) { chartDemand.data.labels = labels; chartDemand.data.datasets = ds; chartDemand.update(); return; }
+        var ctx = document.getElementById("chartDemand").getContext("2d");
+        chartDemand = new Chart(ctx, {
+            data: { labels: labels, datasets: ds },
+            options: {
+                responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
+                scales: {
+                    yReq: { position: "left", beginAtZero: true, title: { display: true, text: "요청수" } },
+                    yPct: { position: "right", beginAtZero: true, max: 100, grid: { drawOnChartArea: false }, ticks: { callback: function (v) { return v + "%"; } }, title: { display: true, text: "GPU %" } },
+                    x: { ticks: { maxTicksLimit: 12, autoSkip: true } }
+                },
+                plugins: { legend: { position: "top" } }
+            }
+        });
+    }
     function loadHistory(hours) {
         fetch("/at-i/gpu/history?hours=" + hours, { credentials: "same-origin" })
             .then(function (r) { return r.json(); })
@@ -220,6 +246,7 @@
                 chartPower = drawChart(chartPower, "chartPower", labels, seriesData(gpus, "power"), false);
                 chartTemp = drawChart(chartTemp, "chartTemp", labels, seriesData(gpus, "temp"), false);
                 drawHour(d.hourPattern);
+                drawDemand(d.demandVsResource);
             })
             .catch(function () { histMsg.style.display = "block"; histMsg.textContent = "이력을 불러오지 못했습니다."; });
     }

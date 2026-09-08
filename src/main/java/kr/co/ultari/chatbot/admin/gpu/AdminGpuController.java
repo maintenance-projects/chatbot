@@ -2,6 +2,7 @@ package kr.co.ultari.chatbot.admin.gpu;
 
 import kr.co.ultari.chatbot.database.entity.GpuUsageLog;
 import kr.co.ultari.chatbot.database.repository.GpuUsageLogRepository;
+import kr.co.ultari.chatbot.database.repository.AiUsageLogRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONArray;
@@ -25,6 +26,7 @@ public class AdminGpuController {
 
     private final GpuService gpuService;
     private final GpuUsageLogRepository repository;
+    private final AiUsageLogRepository usageRepository;
 
     @org.springframework.beans.factory.annotation.Value("${ultari.admin.gpu.alert.mem-threshold:90}")
     private int memThreshold;
@@ -35,6 +37,7 @@ public class AdminGpuController {
 
     private static final DateTimeFormatter TS_MIN = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
     private static final DateTimeFormatter TS_HOUR = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:00");
+    private static final DateTimeFormatter TS_HKEY = DateTimeFormatter.ofPattern("yyyy-MM-dd HH");
 
     /** 실시간 현재 GPU 상태. */
     @GetMapping("/current")
@@ -82,6 +85,8 @@ public class AdminGpuController {
         // 시간대별(0~23) 평균 이용률 패턴(전 GPU 합산). long[24]{utilSum}, long[24]{count}
         long[] hourUtilSum = new long[24];
         long[] hourCount = new long[24];
+        // 수요vs자원: 시간(yyyy-MM-dd HH) 버킷 전 GPU 집계. long[]{utilSum, memPctSum, count}
+        Map<String, long[]> gpuHour = new LinkedHashMap<>();
         for (GpuUsageLog g : rows) {
             names.putIfAbsent(g.getGpuIndex(), g.getGpuName());
             String label = g.getSampledAt().format(hourly ? TS_HOUR : TS_MIN);
@@ -109,6 +114,12 @@ public class AdminGpuController {
             int hod = g.getSampledAt().getHour();
             hourUtilSum[hod] += g.getUtilGpu();
             hourCount[hod] += 1;
+
+            String hkey = g.getSampledAt().format(TS_HKEY);
+            long[] gh = gpuHour.computeIfAbsent(hkey, k -> new long[]{0, 0, 0});
+            gh[0] += g.getUtilGpu();
+            gh[1] += memPct;
+            gh[2] += 1;
         }
 
         JSONArray gpus = new JSONArray();
@@ -149,11 +160,29 @@ public class AdminGpuController {
                     .put("hour", hh2)
                     .put("avgUtil", hourCount[hh2] == 0 ? 0 : Math.round((double) hourUtilSum[hh2] / c)));
         }
+        // 수요(AI 요청수) vs 자원(GPU) — 시간 단위로 겹쳐보기
+        Map<String, Long> demand = new java.util.HashMap<>();
+        for (Object[] r2 : usageRepository.findHourlyStats(start.toLocalDate(), end.toLocalDate())) {
+            String dkey = r2[0].toString() + String.format(" %02d", ((Number) r2[1]).intValue());
+            demand.merge(dkey, ((Number) r2[3]).longValue(), Long::sum);
+        }
+        JSONArray dvr = new JSONArray();
+        for (Map.Entry<String, long[]> e : gpuHour.entrySet()) {
+            long[] v = e.getValue();
+            long c = v[2] == 0 ? 1 : v[2];
+            dvr.put(new JSONObject()
+                    .put("t", e.getKey())
+                    .put("requests", demand.getOrDefault(e.getKey(), 0L))
+                    .put("gpuUtil", Math.round((double) v[0] / c))
+                    .put("gpuMemPct", Math.round((double) v[1] / c)));
+        }
+
         JSONObject o = new JSONObject();
         o.put("hours", h);
         o.put("aggregated", hourly);
         o.put("gpus", gpus);
         o.put("hourPattern", hourPattern);
+        o.put("demandVsResource", dvr);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(o.toString());
     }
 }
