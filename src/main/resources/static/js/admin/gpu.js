@@ -76,14 +76,15 @@
     var alertEl = document.getElementById("gpuAlert");
     function renderAlert(data) {
         if (!alertEl) return;
-        var th = data.thresholds || { mem: 90, power: 90, util: 90 };
+        var th = data.thresholds || { mem: 90, power: 90 };
         var items = [];
         (data.gpus || []).forEach(function (g) {
             var mp = pct(g.memUsed, g.memTotal);
             var pw = g.powerLimit > 0 ? Math.round(g.powerDraw * 100 / g.powerLimit) : 0;
             if (mp >= th.mem) items.push("GPU" + g.index + " 메모리 " + mp + "% (임계 " + th.mem + "%)");
             if (pw >= th.power) items.push("GPU" + g.index + " 전력 " + pw + "% (임계 " + th.power + "%)");
-            if (g.utilGpu >= th.util) items.push("GPU" + g.index + " 이용률 " + g.utilGpu + "% (임계 " + th.util + "%)");
+            // 이용률 경고는 서버에서 OFF면 th.util이 없음 → 배너에서도 제외
+            if (th.util != null && g.utilGpu >= th.util) items.push("GPU" + g.index + " 이용률 " + g.utilGpu + "% (임계 " + th.util + "%)");
         });
         if (!items.length) { alertEl.style.display = "none"; return; }
         alertEl.style.display = "block";

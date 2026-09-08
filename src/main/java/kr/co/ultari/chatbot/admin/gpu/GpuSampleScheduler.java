@@ -39,6 +39,8 @@ public class GpuSampleScheduler {
     private int memThreshold;
     @Value("${ultari.admin.gpu.alert.power-threshold:90}")
     private int powerThreshold;
+    @Value("${ultari.admin.gpu.alert.util-enabled:false}")
+    private boolean utilAlertEnabled;
     @Value("${ultari.admin.gpu.alert.util-threshold:90}")
     private int utilThreshold;
     @Value("${ultari.admin.gpu.alert.util-sustain-min:5}")
@@ -82,15 +84,17 @@ public class GpuSampleScheduler {
                 alert(g.index(), "POWER", String.format("GPU%d 전력 %d%%(임계 %d%%, %.0f/%.0fW)",
                         g.index(), powerPct, powerThreshold, g.powerDraw(), g.powerLimit()), now);
             }
-            // 이용률: 임계 초과가 util-sustain-min 이상 지속될 때만
-            if (g.utilGpu() >= utilThreshold) {
-                LocalDateTime since = utilOverSince.computeIfAbsent(g.index(), k -> now);
-                if (Duration.between(since, now).toMinutes() >= utilSustainMin) {
-                    alert(g.index(), "UTIL", String.format("GPU%d 이용률 %d%%(임계 %d%%) %d분 이상 지속",
-                            g.index(), g.utilGpu(), utilThreshold, utilSustainMin), now);
+            // 이용률 경고는 기본 OFF(util=바쁜 시간 비율이라 추론만 돌면 100% → 실효성 낮음).
+            if (utilAlertEnabled) {
+                if (g.utilGpu() >= utilThreshold) {
+                    LocalDateTime since = utilOverSince.computeIfAbsent(g.index(), k -> now);
+                    if (Duration.between(since, now).toMinutes() >= utilSustainMin) {
+                        alert(g.index(), "UTIL", String.format("GPU%d 이용률 %d%%(임계 %d%%) %d분 이상 지속",
+                                g.index(), g.utilGpu(), utilThreshold, utilSustainMin), now);
+                    }
+                } else {
+                    utilOverSince.remove(g.index()); // 임계 아래로 내려가면 리셋
                 }
-            } else {
-                utilOverSince.remove(g.index()); // 임계 아래로 내려가면 리셋
             }
         }
     }

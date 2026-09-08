@@ -32,6 +32,8 @@ public class AdminGpuController {
     private int memThreshold;
     @org.springframework.beans.factory.annotation.Value("${ultari.admin.gpu.alert.power-threshold:90}")
     private int powerThreshold;
+    @org.springframework.beans.factory.annotation.Value("${ultari.admin.gpu.alert.util-enabled:false}")
+    private boolean utilAlertEnabled;
     @org.springframework.beans.factory.annotation.Value("${ultari.admin.gpu.alert.util-threshold:90}")
     private int utilThreshold;
 
@@ -63,8 +65,9 @@ public class AdminGpuController {
             procs.put(new JSONObject().put("pid", pr.pid()).put("name", pr.name()).put("memMB", pr.memMB()));
         }
         o.put("processes", procs);
-        o.put("thresholds", new JSONObject()
-                .put("mem", memThreshold).put("power", powerThreshold).put("util", utilThreshold));
+        JSONObject th = new JSONObject().put("mem", memThreshold).put("power", powerThreshold);
+        if (utilAlertEnabled) th.put("util", utilThreshold); // util 경고 OFF면 배너에서도 제외
+        o.put("thresholds", th);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(o.toString());
     }
 
