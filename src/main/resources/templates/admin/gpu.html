@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="ko" xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>관리자 페이지 · GPU 모니터링</title>
+    <link rel="stylesheet" th:href="@{/css/admin/base.css}" href="/css/admin/base.css" />
+    <link rel="stylesheet" th:href="@{/css/admin/master.css}" href="/css/admin/master.css" />
+    <script th:inline="javascript">
+        window.adminName = /*[[${adminName}]]*/ "";
+    </script>
+    <style>
+        .gpu-tabs { display: flex; gap: 2px; margin-bottom: 16px; border-bottom: 1px solid var(--color-border); }
+        .gpu-tab { padding: 11px 24px; border: none; background: none; cursor: pointer; position: relative;
+            font-size: 0.9375rem; font-weight: 600; color: var(--color-text-light); }
+        .gpu-tab:hover { color: var(--color-primary); }
+        .gpu-tab.active { color: var(--color-primary); }
+        .gpu-tab.active::after { content: ''; position: absolute; left: 14px; right: 14px; bottom: -1px;
+            height: 2.5px; background: var(--color-primary); border-radius: 3px; }
+        .gpu-pane { display: none; }
+        .gpu-pane.active { display: block; }
+
+        .gpu-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; }
+        .gpu-card { border: 1px solid var(--color-border); border-radius: 12px; padding: 18px; background: #fff; }
+        .gpu-card__title { font-weight: 700; color: var(--color-primary-dark); margin-bottom: 4px; }
+        .gpu-card__sub { font-size: 0.75rem; color: var(--color-text-muted); margin-bottom: 14px; }
+        .gpu-metric { margin-bottom: 12px; }
+        .gpu-metric__label { display: flex; justify-content: space-between; font-size: 0.8125rem;
+            color: var(--color-text-light); margin-bottom: 5px; }
+        .gpu-metric__label b { color: var(--color-text); }
+        .gpu-bar { height: 9px; border-radius: 6px; background: var(--base-dark); overflow: hidden; }
+        .gpu-bar__fill { height: 100%; border-radius: 6px; background: var(--color-primary);
+            transition: width .4s ease; }
+        .gpu-bar__fill.warn { background: #e67e22; }
+        .gpu-bar__fill.danger { background: var(--color-error); }
+        .gpu-etc { display: flex; gap: 18px; font-size: 0.8125rem; color: var(--color-text-light); margin-top: 4px; }
+        .gpu-etc b { color: var(--color-text); }
+        .gpu-msg { padding: 40px; text-align: center; color: var(--color-text-muted); }
+
+        .hist-toolbar { display: flex; gap: 8px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+        .hist-range { padding: 7px 14px; border: 1px solid var(--color-border); background: #fff; border-radius: 20px;
+            cursor: pointer; font-size: 0.8125rem; font-weight: 600; color: var(--color-text-light); }
+        .hist-range.active { color: var(--color-primary); border-color: var(--color-primary);
+            background: rgba(var(--primary-rgb), 0.08); }
+        .chart-card { border: 1px solid var(--color-border); border-radius: 12px; padding: 18px; background: #fff;
+            margin-bottom: 16px; }
+        .chart-card h3 { font-size: 0.9375rem; margin: 0 0 12px; color: var(--color-text); }
+        .chart-body { position: relative; height: 300px; }
+    </style>
+</head>
+
+<body>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <div class="admin-wrapper">
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-header">
+                <a href="#" class="sidebar-logo">
+                    <div class="sidebar-logo-icon">AT-I</div>
+                    <span class="sidebar-logo-text">관리자 페이지</span>
+                </a>
+            </div>
+
+            <nav class="sidebar-nav">
+                <div class="nav-section-title">메뉴</div>
+                <a th:if="${gpu}" href="/at-i/gpu" class="nav-item active" data-page="gpu">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="4" y="4" width="16" height="16" rx="2" /><rect x="9" y="9" width="6" height="6" />
+                        <line x1="9" y1="1" x2="9" y2="4" /><line x1="15" y1="1" x2="15" y2="4" />
+                        <line x1="9" y1="20" x2="9" y2="23" /><line x1="15" y1="20" x2="15" y2="23" />
+                        <line x1="20" y1="9" x2="23" y2="9" /><line x1="20" y1="14" x2="23" y2="14" />
+                        <line x1="1" y1="9" x2="4" y2="9" /><line x1="1" y1="14" x2="4" y2="14" />
+                    </svg>
+                    GPU 모니터링
+                </a>
+                <a th:if="${storage}" href="/at-i/storage" class="nav-item" data-page="storage">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" />
+                        <line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" />
+                    </svg>
+                    문서 관리
+                </a>
+                <a th:if="${partition}" href="/at-i/users" class="nav-item" data-page="users">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
+                        <path d="M22 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                    </svg>
+                    AI 파티션 권한
+                </a>
+                <a th:if="${statistics}" href="/at-i/statistics" class="nav-item" data-page="statistics">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line>
+                    </svg>
+                    통계
+                </a>
+                <a th:if="${master}" href="/at-i/master" class="nav-item" data-page="master">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" />
+                        <path d="M23 21v-2a4 4 0 0 0-3-3.87" /><path d="M16 3.13a4 4 0 0 1 0 7.75" />
+                    </svg>
+                    관리자 관리
+                </a>
+                <a th:if="${config}" href="/at-i/config" class="nav-item" data-page="config">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <circle cx="12" cy="12" r="3" />
+                        <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
+                    </svg>
+                    환경설정
+                </a>
+                <a href="/at-i/guide" class="nav-item" data-page="guide">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20" /><path d="M4 4.5A2.5 2.5 0 0 1 6.5 7H20" />
+                        <path d="M6.5 17V7" /><path d="M20 22V2" />
+                    </svg>
+                    가이드
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="sidebar-user">
+                    <div class="sidebar-user-avatar" id="userAvatar">A</div>
+                    <div class="sidebar-user-info">
+                        <div class="sidebar-user-name" id="userName">admin</div>
+                        <div class="sidebar-user-role" th:text="${adminName}">관리자</div>
+                    </div>
+                    <button class="btn-logout" id="btnLogout" title="로그아웃">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4" /><polyline points="16 17 21 12 16 7" /><line x1="21" y1="12" x2="9" y2="12" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </aside>
+
+        <div class="main-content">
+            <header class="topbar">
+                <div class="topbar-left">
+                    <button class="btn-sidebar-toggle" id="btnSidebarToggle">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="3" y1="12" x2="21" y2="12" /><line x1="3" y1="6" x2="21" y2="6" /><line x1="3" y1="18" x2="21" y2="18" />
+                        </svg>
+                    </button>
+                    <div class="breadcrumb">
+                        <a href="#">홈</a>
+                        <span class="breadcrumb-sep">›</span>
+                        <span class="breadcrumb-current">GPU 모니터링</span>
+                    </div>
+                </div>
+                <div class="topbar-right">
+                    <div class="session-timer">
+                        <span class="session-timer-label">세션 만료까지</span>
+                        <span class="session-timer-value" id="sessionTimer"
+                            th:attr="data-remaining=${sessionRemainingSeconds}" data-remaining="0">00:00:00</span>
+                        <span class="session-timer-note" id="sessionTimerNote"></span>
+                        <button type="button" class="session-timer-refresh" id="sessionTimerRefresh">연장</button>
+                    </div>
+                </div>
+            </header>
+
+            <main class="page-body">
+                <div class="gpu-tabs">
+                    <button class="gpu-tab active" type="button" data-tab="live">실시간</button>
+                    <button class="gpu-tab" type="button" data-tab="history">이력</button>
+                </div>
+
+                <section class="gpu-pane active" id="paneLive">
+                    <div class="gpu-cards" id="gpuCards"></div>
+                    <div class="gpu-msg" id="gpuLiveMsg" style="display:none;"></div>
+                </section>
+
+                <section class="gpu-pane" id="paneHistory">
+                    <div class="hist-toolbar" id="histRanges">
+                        <button class="hist-range active" type="button" data-hours="24">24시간</button>
+                        <button class="hist-range" type="button" data-hours="6">6시간</button>
+                        <button class="hist-range" type="button" data-hours="1">1시간</button>
+                        <button class="hist-range" type="button" data-hours="168">7일</button>
+                        <button class="hist-range" type="button" data-hours="720">30일</button>
+                        <span class="tsub" id="histNote" style="color:var(--color-text-muted);font-size:.8125rem;"></span>
+                    </div>
+                    <div class="chart-card">
+                        <h3>GPU 이용률(%)</h3>
+                        <div class="chart-body"><canvas id="chartUtil"></canvas></div>
+                    </div>
+                    <div class="chart-card">
+                        <h3>GPU 메모리 사용률(%)</h3>
+                        <div class="chart-body"><canvas id="chartMem"></canvas></div>
+                    </div>
+                    <div class="gpu-msg" id="gpuHistMsg" style="display:none;"></div>
+                </section>
+            </main>
+        </div>
+    </div>
+
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script th:src="@{/js/admin/common.js}" src="/js/admin/common.js"></script>
+    <script th:src="@{/js/lib/chart.umd.min.js}" src="/js/lib/chart.umd.min.js"></script>
+    <script th:src="@{/js/admin/gpu.js}" src="/js/admin/gpu.js"></script>
+</body>
+
+</html>

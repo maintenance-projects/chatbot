@@ -1,0 +1,99 @@
+package kr.co.ultari.chatbot.admin.gpu;
+
+import kr.co.ultari.chatbot.database.entity.GpuUsageLog;
+import kr.co.ultari.chatbot.database.repository.GpuUsageLogRepository;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.json.JSONArray;
+import org.json.JSONObject;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
+import java.util.*;
+
+/**
+ * GPU 모니터링 API(관리자). 실시간(nvidia-smi) + 이력(시계열) 조회.
+ */
+@Slf4j
+@RestController
+@RequestMapping("/at-i/gpu")
+@RequiredArgsConstructor
+public class AdminGpuController {
+
+    private final GpuService gpuService;
+    private final GpuUsageLogRepository repository;
+
+    private static final DateTimeFormatter TS_MIN = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm");
+    private static final DateTimeFormatter TS_HOUR = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:00");
+
+    /** 실시간 현재 GPU 상태. */
+    @GetMapping("/current")
+    public ResponseEntity<String> current() {
+        GpuService.GpuResult r = gpuService.read();
+        JSONObject o = new JSONObject();
+        o.put("available", r.available());
+        if (!r.available()) o.put("reason", r.reason() == null ? "" : r.reason());
+        JSONArray arr = new JSONArray();
+        for (GpuService.GpuStat g : r.gpus()) {
+            arr.put(new JSONObject()
+                    .put("index", g.index()).put("name", g.name())
+                    .put("utilGpu", g.utilGpu())
+                    .put("memUsed", g.memUsed()).put("memTotal", g.memTotal())
+                    .put("temperature", g.temperature())
+                    .put("powerDraw", g.powerDraw()).put("powerLimit", g.powerLimit()));
+        }
+        o.put("gpus", arr);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(o.toString());
+    }
+
+    /** 이력(시계열). hours=조회 시간범위(기본 24). 24시간 초과면 시간단위 평균으로 다운샘플. */
+    @GetMapping("/history")
+    public ResponseEntity<String> history(@RequestParam(value = "hours", defaultValue = "24") int hours) {
+        int h = Math.max(1, Math.min(hours, 24 * 90)); // 최대 90일
+        LocalDateTime end = LocalDateTime.now();
+        LocalDateTime start = end.minusHours(h);
+        List<GpuUsageLog> rows = repository.findBySampledAtBetweenOrderBySampledAtAsc(start, end);
+
+        boolean hourly = h > 24; // 24시간 초과면 시간단위 집계
+        // gpuIndex -> (bucketLabel -> 누적)
+        Map<Integer, String> names = new LinkedHashMap<>();
+        Map<Integer, Map<String, long[]>> agg = new LinkedHashMap<>();
+        // long[]{utilSum, memUsedSum, memTotalMax, count}
+        for (GpuUsageLog g : rows) {
+            names.putIfAbsent(g.getGpuIndex(), g.getGpuName());
+            String label = g.getSampledAt().format(hourly ? TS_HOUR : TS_MIN);
+            Map<String, long[]> byBucket = agg.computeIfAbsent(g.getGpuIndex(), k -> new LinkedHashMap<>());
+            long[] v = byBucket.computeIfAbsent(label, k -> new long[]{0, 0, 0, 0});
+            v[0] += g.getUtilGpu();
+            v[1] += g.getMemUsed();
+            v[2] = Math.max(v[2], g.getMemTotal());
+            v[3] += 1;
+        }
+
+        JSONArray gpus = new JSONArray();
+        for (Map.Entry<Integer, Map<String, long[]>> e : agg.entrySet()) {
+            JSONArray points = new JSONArray();
+            for (Map.Entry<String, long[]> b : e.getValue().entrySet()) {
+                long[] v = b.getValue();
+                long cnt = v[3] == 0 ? 1 : v[3];
+                points.put(new JSONObject()
+                        .put("t", b.getKey())
+                        .put("util", Math.round((double) v[0] / cnt))
+                        .put("memUsed", Math.round((double) v[1] / cnt))
+                        .put("memTotal", v[2]));
+            }
+            gpus.put(new JSONObject()
+                    .put("index", e.getKey())
+                    .put("name", names.getOrDefault(e.getKey(), ""))
+                    .put("points", points));
+        }
+        JSONObject o = new JSONObject();
+        o.put("hours", h);
+        o.put("aggregated", hourly);
+        o.put("gpus", gpus);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(o.toString());
+    }
+}

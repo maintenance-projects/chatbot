@@ -180,6 +180,25 @@ public class AdminLoginController {
         return "admin/statistics";
     }
 
+    @RequestMapping("/gpu")
+    public String gpuIndex(HttpServletRequest request, Model model) {
+        String sessionId = (String) request.getSession().getAttribute("sessionId");
+        if (!StringUtils.hasText(sessionId)) return buildSessionExpiredRedirect();
+
+        AdminSession session = sessionStore.get(sessionId);
+        if (session == null) return buildSessionExpiredRedirect();
+
+        model.addAttribute("adminId", session.getAdminId());
+        model.addAttribute("adminName", session.getAdminName());
+        model.addAttribute("storage", session.isAuthStorage());
+        model.addAttribute("statistics", session.isAuthStatistics());
+        model.addAttribute("master", session.isAuthMaster());
+        model.addAttribute("partition", session.isAuthPartition());
+        model.addAttribute("config", session.isAuthConfig());
+        model.addAttribute("sessionRemainingSeconds", sessionStore.refresh(sessionId));
+        return "admin/gpu";
+    }
+
     @RequestMapping("/master")
     public String masterIndex(HttpServletRequest request, Model model, @RequestParam(value="adminId", required = false) String a) {
         String sessionId = (String) request.getSession().getAttribute("sessionId");
