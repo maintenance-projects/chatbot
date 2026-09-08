@@ -58,10 +58,12 @@ public class AdminGpuController {
         List<GpuUsageLog> rows = repository.findBySampledAtBetweenOrderBySampledAtAsc(start, end);
 
         boolean hourly = h > 24; // 24시간 초과면 시간단위 집계
-        // gpuIndex -> (bucketLabel -> 누적)
+        // gpuIndex -> (bucketLabel -> 누적) : 차트용
         Map<Integer, String> names = new LinkedHashMap<>();
         Map<Integer, Map<String, long[]>> agg = new LinkedHashMap<>();
-        // long[]{utilSum, memUsedSum, memTotalMax, count}
+        // 요약(증설 판단)은 원자료 기준으로 계산 → 다운샘플로 피크가 뭉개지지 않게.
+        // long[]{utilSum, utilMax, memPctSum, memPctMax, over90Count, count}
+        Map<Integer, long[]> summary = new LinkedHashMap<>();
         for (GpuUsageLog g : rows) {
             names.putIfAbsent(g.getGpuIndex(), g.getGpuName());
             String label = g.getSampledAt().format(hourly ? TS_HOUR : TS_MIN);
@@ -71,6 +73,15 @@ public class AdminGpuController {
             v[1] += g.getMemUsed();
             v[2] = Math.max(v[2], g.getMemTotal());
             v[3] += 1;
+
+            int memPct = g.getMemTotal() > 0 ? (int) Math.round(g.getMemUsed() * 100.0 / g.getMemTotal()) : 0;
+            long[] s = summary.computeIfAbsent(g.getGpuIndex(), k -> new long[]{0, 0, 0, 0, 0, 0});
+            s[0] += g.getUtilGpu();
+            s[1] = Math.max(s[1], g.getUtilGpu());
+            s[2] += memPct;
+            s[3] = Math.max(s[3], memPct);
+            if (g.getUtilGpu() >= 90) s[4] += 1;
+            s[5] += 1;
         }
 
         JSONArray gpus = new JSONArray();
@@ -85,9 +96,18 @@ public class AdminGpuController {
                         .put("memUsed", Math.round((double) v[1] / cnt))
                         .put("memTotal", v[2]));
             }
+            long[] s = summary.getOrDefault(e.getKey(), new long[]{0, 0, 0, 0, 0, 0});
+            long sc = s[5] == 0 ? 1 : s[5];
+            JSONObject sum = new JSONObject()
+                    .put("avgUtil", Math.round((double) s[0] / sc))
+                    .put("maxUtil", s[1])
+                    .put("avgMemPct", Math.round((double) s[2] / sc))
+                    .put("maxMemPct", s[3])
+                    .put("over90Ratio", Math.round((double) s[4] * 100 / sc)); // 이용률 90%↑ 시간 비율(%)
             gpus.put(new JSONObject()
                     .put("index", e.getKey())
                     .put("name", names.getOrDefault(e.getKey(), ""))
+                    .put("summary", sum)
                     .put("points", points));
         }
         JSONObject o = new JSONObject();

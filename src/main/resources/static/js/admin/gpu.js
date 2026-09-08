@@ -53,7 +53,14 @@
         return '<div class="gpu-metric"><div class="gpu-metric__label"><span>' + label + '</span><b>' + esc(valText) + '</b></div>'
             + '<div class="gpu-bar"><div class="gpu-bar__fill ' + barClass(pctVal) + '" style="width:' + Math.min(100, pctVal) + '%"></div></div></div>';
     }
+    var liveUpdated = document.getElementById("liveUpdated");
+    function nowStr() {
+        var d = new Date();
+        function p(n) { return (n < 10 ? "0" : "") + n; }
+        return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) + " " + p(d.getHours()) + ":" + p(d.getMinutes()) + ":" + p(d.getSeconds());
+    }
     function renderLive(data) {
+        if (liveUpdated) liveUpdated.textContent = "마지막 갱신: " + nowStr() + " (3초마다 자동)";
         if (!data || !data.available) {
             cardsEl.innerHTML = ""; liveMsg.style.display = "block";
             liveMsg.textContent = "GPU 정보를 가져올 수 없습니다" + (data && data.reason ? " (" + data.reason + ")" : "") + ".";
@@ -106,6 +113,25 @@
         });
     }
     function labelsOf(gpus) { return (gpus && gpus[0] && gpus[0].points) ? gpus[0].points.map(function (p) { return p.t; }) : []; }
+    var histSummary = document.getElementById("histSummary");
+    function cls(v) { return v >= 90 ? "danger" : (v >= 70 ? "warn" : ""); }
+    function renderSummary(gpus) {
+        if (!histSummary) return;
+        histSummary.innerHTML = (gpus || []).map(function (g) {
+            var s = g.summary || {};
+            return '<div class="sum-card">'
+                + '<div class="sum-card__title">GPU ' + g.index + ' · ' + esc(g.name) + ' — 기간 요약</div>'
+                + row("이용률 최대", (s.maxUtil || 0) + "%", cls(s.maxUtil || 0))
+                + row("이용률 평균", (s.avgUtil || 0) + "%", "")
+                + row("메모리 최대", (s.maxMemPct || 0) + "%", cls(s.maxMemPct || 0))
+                + row("메모리 평균", (s.avgMemPct || 0) + "%", "")
+                + row("이용률 90%↑ 시간", (s.over90Ratio || 0) + "%", cls(s.over90Ratio || 0))
+                + '</div>';
+        }).join("");
+    }
+    function row(label, val, c) {
+        return '<div class="sum-row"><span>' + label + '</span><b class="' + c + '">' + esc(val) + '</b></div>';
+    }
     function drawChart(existing, canvasId, labels, ds) {
         if (existing) { existing.data.labels = labels; existing.data.datasets = ds; existing.update(); return existing; }
         var ctx = document.getElementById(canvasId).getContext("2d");
@@ -123,9 +149,10 @@
             .then(function (r) { return r.json(); })
             .then(function (d) {
                 var gpus = d.gpus || [];
-                if (!gpus.length) { histMsg.style.display = "block"; histMsg.textContent = "이력 데이터가 없습니다(수집 시작 후 표시됩니다)."; return; }
+                if (!gpus.length) { histMsg.style.display = "block"; histMsg.textContent = "이력 데이터가 없습니다(수집 시작 후 표시됩니다)."; if (histSummary) histSummary.innerHTML = ""; return; }
                 histMsg.style.display = "none";
-                histNote.textContent = d.aggregated ? "(시간 단위 평균)" : "(1분 원자료)";
+                histNote.textContent = d.aggregated ? "(차트: 시간 단위 평균 · 요약: 원자료 기준)" : "(1분 원자료)";
+                renderSummary(gpus);
                 var labels = labelsOf(gpus);
                 chartUtil = drawChart(chartUtil, "chartUtil", labels, datasets(gpus, false));
                 chartMem = drawChart(chartMem, "chartMem", labels, datasets(gpus, true));
