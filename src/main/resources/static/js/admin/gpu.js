@@ -59,23 +59,42 @@
         function p(n) { return (n < 10 ? "0" : "") + n; }
         return d.getFullYear() + "-" + p(d.getMonth() + 1) + "-" + p(d.getDate()) + " " + p(d.getHours()) + ":" + p(d.getMinutes()) + ":" + p(d.getSeconds());
     }
+    var procsCard = document.getElementById("gpuProcsCard");
+    var procsEl = document.getElementById("gpuProcs");
+    function renderProcs(list) {
+        if (!procsCard || !procsEl) return;
+        procsCard.style.display = "block";
+        if (!list || !list.length) {
+            procsEl.innerHTML = '<div class="gpu-proc-empty">현재 GPU를 사용 중인 프로세스가 없습니다.</div>';
+            return;
+        }
+        var rows = list.map(function (p) {
+            return '<tr><td>' + esc(p.pid) + '</td><td>' + esc(p.name || '-') + '</td><td class="num">' + (p.memMB || 0).toLocaleString() + ' MB</td></tr>';
+        }).join("");
+        procsEl.innerHTML = '<table class="gpu-proc-table"><thead><tr><th>PID</th><th>프로세스</th><th style="text-align:right;">GPU 메모리</th></tr></thead><tbody>' + rows + '</tbody></table>';
+    }
     function renderLive(data) {
         if (liveUpdated) liveUpdated.textContent = "마지막 갱신: " + nowStr() + " (3초마다 자동)";
         if (!data || !data.available) {
             cardsEl.innerHTML = ""; liveMsg.style.display = "block";
+            if (procsCard) procsCard.style.display = "none";
             liveMsg.textContent = "GPU 정보를 가져올 수 없습니다" + (data && data.reason ? " (" + data.reason + ")" : "") + ".";
             return;
         }
         liveMsg.style.display = "none";
         cardsEl.innerHTML = (data.gpus || []).map(function (g) {
             var mp = pct(g.memUsed, g.memTotal);
+            var pw = g.powerLimit > 0 ? Math.round(g.powerDraw * 100 / g.powerLimit) : 0;
             return '<div class="gpu-card">'
                 + '<div class="gpu-card__title">GPU ' + g.index + ' · ' + esc(g.name) + '</div>'
-                + '<div class="gpu-card__sub">온도 ' + g.temperature + '℃ · 전력 ' + Math.round(g.powerDraw) + '/' + Math.round(g.powerLimit) + 'W</div>'
-                + metric("이용률", g.utilGpu + '%', g.utilGpu)
+                + '<div class="gpu-card__sub">온도 ' + g.temperature + '℃ · 팬 ' + g.fanSpeed + '% · 클럭 ' + g.smClock + '/' + g.smClockMax + ' MHz</div>'
+                + metric("전력 (실사용 강도)", Math.round(g.powerDraw) + ' / ' + Math.round(g.powerLimit) + ' W (' + pw + '%)', pw)
                 + metric("메모리", g.memUsed.toLocaleString() + ' / ' + g.memTotal.toLocaleString() + ' MB (' + mp + '%)', mp)
+                + metric("이용률 (바쁜 시간)", g.utilGpu + '%', g.utilGpu)
+                + '<div class="gpu-etc"><span>메모리 대역폭 <b>' + (g.memUtil || 0) + '%</b></span></div>'
                 + '</div>';
         }).join("");
+        renderProcs(data.processes);
     }
     function loadLive() {
         fetch("/at-i/gpu/current", { credentials: "same-origin" })
@@ -89,7 +108,7 @@
     var currentHours = 24;
     var histMsg = document.getElementById("gpuHistMsg");
     var histNote = document.getElementById("histNote");
-    var chartUtil = null, chartMem = null;
+    var chartUtil = null, chartMem = null, chartPower = null, chartTemp = null, chartHour = null;
     var COLORS = ["#2563eb", "#27ae60", "#e67e22", "#8e44ad", "#e74c3c", "#16a085", "#f1c40f", "#34495e"];
 
     document.querySelectorAll(".hist-range").forEach(function (b) {
@@ -100,14 +119,17 @@
             loadHistory(currentHours);
         });
     });
-    function datasets(gpus, isMemPct) {
+    function seriesData(gpus, kind) {
         return (gpus || []).map(function (g, i) {
             var color = COLORS[i % COLORS.length];
             return {
                 label: "GPU " + g.index, borderColor: color, backgroundColor: color,
                 borderWidth: 1.6, pointRadius: 0, tension: 0.25,
                 data: (g.points || []).map(function (p) {
-                    return isMemPct ? (p.memTotal > 0 ? Math.round(p.memUsed * 100 / p.memTotal) : 0) : p.util;
+                    if (kind === "memPct") return p.memTotal > 0 ? Math.round(p.memUsed * 100 / p.memTotal) : 0;
+                    if (kind === "power") return p.power;
+                    if (kind === "temp") return p.temp;
+                    return p.util;
                 })
             };
         });
@@ -126,21 +148,41 @@
                 + row("메모리 최대", (s.maxMemPct || 0) + "%", cls(s.maxMemPct || 0))
                 + row("메모리 평균", (s.avgMemPct || 0) + "%", "")
                 + row("이용률 90%↑ 시간", (s.over90Ratio || 0) + "%", cls(s.over90Ratio || 0))
+                + row("전력 최대", (s.maxPower || 0) + " W", "")
+                + row("전력 평균", (s.avgPower || 0) + " W", "")
                 + '</div>';
         }).join("");
     }
     function row(label, val, c) {
         return '<div class="sum-row"><span>' + label + '</span><b class="' + c + '">' + esc(val) + '</b></div>';
     }
-    function drawChart(existing, canvasId, labels, ds) {
+    function drawChart(existing, canvasId, labels, ds, percent) {
         if (existing) { existing.data.labels = labels; existing.data.datasets = ds; existing.update(); return existing; }
         var ctx = document.getElementById(canvasId).getContext("2d");
+        var y = (percent === false)
+            ? { beginAtZero: true }
+            : { beginAtZero: true, max: 100, ticks: { callback: function (v) { return v + "%"; } } };
         return new Chart(ctx, {
             type: "line", data: { labels: labels, datasets: ds },
             options: {
                 responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
-                scales: { y: { beginAtZero: true, max: 100, ticks: { callback: function (v) { return v + "%"; } } }, x: { ticks: { maxTicksLimit: 12, autoSkip: true } } },
+                scales: { y: y, x: { ticks: { maxTicksLimit: 12, autoSkip: true } } },
                 plugins: { legend: { position: "top" } }
+            }
+        });
+    }
+    function drawHour(pattern) {
+        var labels = (pattern || []).map(function (p) { return p.hour + "시"; });
+        var data = (pattern || []).map(function (p) { return p.avgUtil; });
+        if (chartHour) { chartHour.data.labels = labels; chartHour.data.datasets[0].data = data; chartHour.update(); return; }
+        var ctx = document.getElementById("chartHour").getContext("2d");
+        chartHour = new Chart(ctx, {
+            type: "bar",
+            data: { labels: labels, datasets: [{ label: "평균 이용률", backgroundColor: "#2563eb", data: data }] },
+            options: {
+                responsive: true, maintainAspectRatio: false,
+                scales: { y: { beginAtZero: true, max: 100, ticks: { callback: function (v) { return v + "%"; } } } },
+                plugins: { legend: { display: false } }
             }
         });
     }
@@ -154,8 +196,11 @@
                 histNote.textContent = d.aggregated ? "(차트: 시간 단위 평균 · 요약: 원자료 기준)" : "(1분 원자료)";
                 renderSummary(gpus);
                 var labels = labelsOf(gpus);
-                chartUtil = drawChart(chartUtil, "chartUtil", labels, datasets(gpus, false));
-                chartMem = drawChart(chartMem, "chartMem", labels, datasets(gpus, true));
+                chartUtil = drawChart(chartUtil, "chartUtil", labels, seriesData(gpus, "util"), true);
+                chartMem = drawChart(chartMem, "chartMem", labels, seriesData(gpus, "memPct"), true);
+                chartPower = drawChart(chartPower, "chartPower", labels, seriesData(gpus, "power"), false);
+                chartTemp = drawChart(chartTemp, "chartTemp", labels, seriesData(gpus, "temp"), false);
+                drawHour(d.hourPattern);
             })
             .catch(function () { histMsg.style.display = "block"; histMsg.textContent = "이력을 불러오지 못했습니다."; });
     }

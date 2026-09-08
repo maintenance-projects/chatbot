@@ -40,12 +40,19 @@ public class AdminGpuController {
         for (GpuService.GpuStat g : r.gpus()) {
             arr.put(new JSONObject()
                     .put("index", g.index()).put("name", g.name())
-                    .put("utilGpu", g.utilGpu())
+                    .put("utilGpu", g.utilGpu()).put("memUtil", g.memUtil())
                     .put("memUsed", g.memUsed()).put("memTotal", g.memTotal())
                     .put("temperature", g.temperature())
-                    .put("powerDraw", g.powerDraw()).put("powerLimit", g.powerLimit()));
+                    .put("powerDraw", g.powerDraw()).put("powerLimit", g.powerLimit())
+                    .put("smClock", g.smClock()).put("smClockMax", g.smClockMax())
+                    .put("fanSpeed", g.fanSpeed()));
         }
         o.put("gpus", arr);
+        JSONArray procs = new JSONArray();
+        for (GpuService.GpuProc pr : r.processes()) {
+            procs.put(new JSONObject().put("pid", pr.pid()).put("name", pr.name()).put("memMB", pr.memMB()));
+        }
+        o.put("processes", procs);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(o.toString());
     }
 
@@ -58,30 +65,41 @@ public class AdminGpuController {
         List<GpuUsageLog> rows = repository.findBySampledAtBetweenOrderBySampledAtAsc(start, end);
 
         boolean hourly = h > 24; // 24시간 초과면 시간단위 집계
-        // gpuIndex -> (bucketLabel -> 누적) : 차트용
+        // gpuIndex -> (bucketLabel -> 누적) : 차트용. long[]{utilSum, memUsedSum, memTotalMax, count, powerSum, tempSum}
         Map<Integer, String> names = new LinkedHashMap<>();
         Map<Integer, Map<String, long[]>> agg = new LinkedHashMap<>();
-        // 요약(증설 판단)은 원자료 기준으로 계산 → 다운샘플로 피크가 뭉개지지 않게.
-        // long[]{utilSum, utilMax, memPctSum, memPctMax, over90Count, count}
+        // 요약(증설 판단)은 원자료 기준. long[]{utilSum,utilMax,memPctSum,memPctMax,over90Count,count,powerSum,powerMax}
         Map<Integer, long[]> summary = new LinkedHashMap<>();
+        // 시간대별(0~23) 평균 이용률 패턴(전 GPU 합산). long[24]{utilSum}, long[24]{count}
+        long[] hourUtilSum = new long[24];
+        long[] hourCount = new long[24];
         for (GpuUsageLog g : rows) {
             names.putIfAbsent(g.getGpuIndex(), g.getGpuName());
             String label = g.getSampledAt().format(hourly ? TS_HOUR : TS_MIN);
             Map<String, long[]> byBucket = agg.computeIfAbsent(g.getGpuIndex(), k -> new LinkedHashMap<>());
-            long[] v = byBucket.computeIfAbsent(label, k -> new long[]{0, 0, 0, 0});
+            long[] v = byBucket.computeIfAbsent(label, k -> new long[]{0, 0, 0, 0, 0, 0});
             v[0] += g.getUtilGpu();
             v[1] += g.getMemUsed();
             v[2] = Math.max(v[2], g.getMemTotal());
             v[3] += 1;
+            v[4] += Math.round(g.getPowerDraw());
+            v[5] += g.getTemperature();
 
             int memPct = g.getMemTotal() > 0 ? (int) Math.round(g.getMemUsed() * 100.0 / g.getMemTotal()) : 0;
-            long[] s = summary.computeIfAbsent(g.getGpuIndex(), k -> new long[]{0, 0, 0, 0, 0, 0});
+            long[] s = summary.computeIfAbsent(g.getGpuIndex(), k -> new long[]{0, 0, 0, 0, 0, 0, 0, 0});
             s[0] += g.getUtilGpu();
             s[1] = Math.max(s[1], g.getUtilGpu());
             s[2] += memPct;
             s[3] = Math.max(s[3], memPct);
             if (g.getUtilGpu() >= 90) s[4] += 1;
             s[5] += 1;
+            long pw = Math.round(g.getPowerDraw());
+            s[6] += pw;
+            s[7] = Math.max(s[7], pw);
+
+            int hod = g.getSampledAt().getHour();
+            hourUtilSum[hod] += g.getUtilGpu();
+            hourCount[hod] += 1;
         }
 
         JSONArray gpus = new JSONArray();
@@ -94,26 +112,39 @@ public class AdminGpuController {
                         .put("t", b.getKey())
                         .put("util", Math.round((double) v[0] / cnt))
                         .put("memUsed", Math.round((double) v[1] / cnt))
-                        .put("memTotal", v[2]));
+                        .put("memTotal", v[2])
+                        .put("power", Math.round((double) v[4] / cnt))
+                        .put("temp", Math.round((double) v[5] / cnt)));
             }
-            long[] s = summary.getOrDefault(e.getKey(), new long[]{0, 0, 0, 0, 0, 0});
+            long[] s = summary.getOrDefault(e.getKey(), new long[]{0, 0, 0, 0, 0, 0, 0, 0});
             long sc = s[5] == 0 ? 1 : s[5];
             JSONObject sum = new JSONObject()
                     .put("avgUtil", Math.round((double) s[0] / sc))
                     .put("maxUtil", s[1])
                     .put("avgMemPct", Math.round((double) s[2] / sc))
                     .put("maxMemPct", s[3])
-                    .put("over90Ratio", Math.round((double) s[4] * 100 / sc)); // 이용률 90%↑ 시간 비율(%)
+                    .put("over90Ratio", Math.round((double) s[4] * 100 / sc)) // 이용률 90%↑ 시간 비율(%)
+                    .put("avgPower", Math.round((double) s[6] / sc))
+                    .put("maxPower", s[7]);
             gpus.put(new JSONObject()
                     .put("index", e.getKey())
                     .put("name", names.getOrDefault(e.getKey(), ""))
                     .put("summary", sum)
                     .put("points", points));
         }
+        // 시간대별 평균 이용률(0~23)
+        JSONArray hourPattern = new JSONArray();
+        for (int hh2 = 0; hh2 < 24; hh2++) {
+            long c = hourCount[hh2] == 0 ? 1 : hourCount[hh2];
+            hourPattern.put(new JSONObject()
+                    .put("hour", hh2)
+                    .put("avgUtil", hourCount[hh2] == 0 ? 0 : Math.round((double) hourUtilSum[hh2] / c)));
+        }
         JSONObject o = new JSONObject();
         o.put("hours", h);
         o.put("aggregated", hourly);
         o.put("gpus", gpus);
+        o.put("hourPattern", hourPattern);
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(o.toString());
     }
 }

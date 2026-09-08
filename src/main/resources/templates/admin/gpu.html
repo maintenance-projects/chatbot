@@ -69,6 +69,14 @@
         .gpu-help__body ul { margin: 6px 0 6px 18px; padding: 0; }
         .gpu-help__body .ok { color: #27ae60; font-weight: 700; }
         .gpu-help__body .warn { color: var(--color-error); font-weight: 700; }
+
+        .gpu-procs { border: 1px solid var(--color-border); border-radius: 12px; padding: 16px; background: #fff; margin-top: 16px; }
+        .gpu-procs h3 { font-size: 0.9375rem; margin: 0 0 12px; color: var(--color-text); }
+        .gpu-proc-table { width: 100%; border-collapse: collapse; font-size: 0.8125rem; }
+        .gpu-proc-table th, .gpu-proc-table td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--color-border); }
+        .gpu-proc-table th { color: var(--color-text-muted); font-weight: 600; }
+        .gpu-proc-table td.num { text-align: right; font-variant-numeric: tabular-nums; }
+        .gpu-proc-empty { color: var(--color-text-muted); font-size: 0.8125rem; padding: 8px 2px; }
     </style>
 </head>
 
@@ -191,7 +199,17 @@
                             <li><b>메모리(VRAM) 사용률</b>이 상시 높음(90%+) — LLM은 보통 <b>메모리가 더 결정적 한계</b>(OOM 위험)</li>
                             <li>동시 사용 증가 시 <b>응답 지연·대기</b> 발생</li>
                         </ul>
-                        <p><b>지표 특성</b>: 실시간 탭은 <b>순간값</b>(요청 중 100%는 정상), 이력은 <b>1분 간격 샘플</b>입니다. 순간 100%보다 <b>지속 비율·메모리·응답 지연</b>으로 판단하세요. (이력 탭의 "이용률 90%↑ 시간 비율"이 핵심 지표)</p>
+                        <p><b>지표 특성</b>: 실시간 탭은 <b>순간값</b>(요청 중 100%는 정상), 이력은 <b>샘플 기반</b>입니다. 순간 100%보다 <b>지속 비율·메모리·응답 지연</b>으로 판단하세요. (이력 탭의 "이용률 90%↑ 시간 비율"이 핵심 지표)</p>
+
+                        <hr style="border:none;border-top:1px solid var(--color-border);margin:12px 0;" />
+                        <p><b>GPU는 CPU처럼 '한 숫자 사용률'이 아닙니다.</b> CPU %는 연산 능력에 비례하는 단일 값이지만, GPU는 여러 축으로 나눠 봐야 합니다:</p>
+                        <ul>
+                            <li><b>이용률(util)</b> = GPU가 <b>바쁜 시간 비율</b>(연산 능력 아님) → 작은 작업이 계속 돌아도 100%가 됩니다.</li>
+                            <li><b>메모리(used/total)</b> = <b>용량 사용률</b> — CPU %에 가장 가까운 선형 지표. <b>LLM은 보통 메모리가 실질 한계</b>.</li>
+                            <li><b>전력(draw/limit)</b> = <b>실사용 강도</b>. util 100%여도 전력이 낮으면 가벼운 작업입니다.</li>
+                            <li>(참고) <b>SM 점유율·텐서코어</b> = 진짜 '연산 용량 몇 %'(DCGM 필요), <b>tokens/s·큐</b> = AI 처리량(모델 서버 메트릭). 둘 다 별도 연동 필요.</li>
+                        </ul>
+                        <p>→ 그래서 이 화면은 <b>전력·메모리를 앞세워</b> "얼마나 세게/많이 쓰는지"를 봅니다. 증설 판단은 <b>메모리 + 전력 + 이용률 90%↑ 지속</b>을 함께 보세요.</p>
                     </div>
                 </details>
 
@@ -204,6 +222,10 @@
                     <div class="live-updated" id="liveUpdated"></div>
                     <div class="gpu-cards" id="gpuCards"></div>
                     <div class="gpu-msg" id="gpuLiveMsg" style="display:none;"></div>
+                    <div class="gpu-procs" id="gpuProcsCard" style="display:none;">
+                        <h3>GPU 사용 프로세스</h3>
+                        <div id="gpuProcs"></div>
+                    </div>
                 </section>
 
                 <section class="gpu-pane" id="paneHistory">
@@ -223,6 +245,18 @@
                     <div class="chart-card">
                         <h3>GPU 메모리 사용률(%)</h3>
                         <div class="chart-body"><canvas id="chartMem"></canvas></div>
+                    </div>
+                    <div class="chart-card">
+                        <h3>전력(W) — 실사용 강도</h3>
+                        <div class="chart-body"><canvas id="chartPower"></canvas></div>
+                    </div>
+                    <div class="chart-card">
+                        <h3>온도(℃)</h3>
+                        <div class="chart-body"><canvas id="chartTemp"></canvas></div>
+                    </div>
+                    <div class="chart-card">
+                        <h3>시간대별 평균 이용률(%) — 언제 바쁜지</h3>
+                        <div class="chart-body"><canvas id="chartHour"></canvas></div>
                     </div>
                     <div class="gpu-msg" id="gpuHistMsg" style="display:none;"></div>
                 </section>
