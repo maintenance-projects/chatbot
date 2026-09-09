@@ -2018,7 +2018,7 @@ textarea {
 }
 
 .document-list-popup.is-open {
-    max-height: 280px;
+    max-height: 380px;
     opacity: 1;
     transform: translateY(0) scale(1);
     pointer-events: auto;
@@ -2028,14 +2028,19 @@ textarea {
     grid-template-columns: 1fr;
 }
 
+/* 안내 문구가 여러 줄이라 head를 상단 정렬 → 닫기 버튼이 타이틀과 같은 높이에 위치 */
+.document-list-popup .cb-tray__head {
+    align-items: flex-start;
+}
+
 .document-list-popup .cb-tray__titlewrap {
     display: grid;
-    gap: 3px;
+    gap: 8px;
 }
 
 .document-list-popup .cb-tray__subnote {
     color: #f15f5f;
-    font-size: 10px;
+    font-size: 14px;
     font-weight: 700;
     font-family: system-ui;
     line-height: 1.25;
@@ -2230,7 +2235,7 @@ textarea {
     }
 
     .document-list-popup.is-open {
-        max-height: 240px;
+        max-height: 340px;
     }
 
     #cbDocumentTag .cb-doctag__label {

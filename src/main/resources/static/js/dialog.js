@@ -1911,7 +1911,7 @@ document.addEventListener("DOMContentLoaded", () => {
                         <div class="cb-tray__head">
                             <div class="cb-tray__titlewrap">
                             <div class="cb-tray__title">업로드 파일 선택</div>
-                            <div class="cb-tray__subnote">※업로드된 파일은 ${docRetentionDays}일간 보관되며,<br/>보관 기간 만료 시 시스템에 의해 자동 삭제됩니다.</div>
+                            <div class="cb-tray__subnote">- 업로드된 파일은 ${docRetentionDays}일간 보관되며, 보관기간 만료 시 시스템에 의해 자동 삭제됩니다.<br/>- 보안상 제한된 내용이 포함된 경우 분석이 제한될 수 있습니다.<br/>- 스캔한 문서나 문서에 포함된 이미지는 현재 분석이 제한됩니다.</div>
                             </div>
                             <button type="button" class="cb-tray__close" data-action="close" aria-label="닫기">×</button>
                         </div>
