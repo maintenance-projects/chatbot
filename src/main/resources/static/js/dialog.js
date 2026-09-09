@@ -1672,7 +1672,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const wrap = ensureDocChipsWrap();
         wrap.innerHTML = selectedDocuments
             .map((name) => `
-      <button type="button" class="cb-doctag" data-name="${escapeHtml(name)}" aria-pressed="true">
+      <button type="button" class="cb-doctag" data-name="${escapeHtml(name)}" title="${escapeHtml(name)}" aria-pressed="true">
         <span class="cb-taghash" aria-hidden="true">#</span>
         <span class="cb-doctag__label">${escapeHtml(name)}</span>
         <span class="cb-doctag__x" aria-hidden="true">×</span>
