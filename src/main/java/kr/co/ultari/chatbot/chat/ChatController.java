@@ -39,23 +39,21 @@ public class ChatController {
     /** 3.1 통합 챗봇 (private/open 자동 라우팅) — target_filename 다중 지원 */
     @PostMapping(value = "/message", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter message(@RequestParam("message") String message,
-                              @RequestParam(value = "target_filename", required = false) java.util.List<String> targetFilenames,
                               @RequestParam(value = "translate_to", required = false) String translateTo,
                               HttpServletRequest request) {
         String uid = userId(request);
         if (uid == null || uid.isBlank()) return forbiddenSse();
-        return chatService.message(dept(request), uid, uid, message, targetFilenames, translateTo);
+        return chatService.message(dept(request), uid, uid, message, targetFilenames(request), translateTo);
     }
 
     /** 2.2 Private 대화 — target_filename 다중 지원 */
     @PostMapping(value = "/message/private", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public SseEmitter messagePrivate(@RequestParam("message") String message,
-                                     @RequestParam("target_filename") java.util.List<String> targetFilenames,
                                      @RequestParam(value = "translate_to", required = false) String translateTo,
                                      HttpServletRequest request) {
         String uid = userId(request);
         if (uid == null || uid.isBlank()) return forbiddenSse();
-        return chatService.messagePrivate(dept(request), uid, uid, message, targetFilenames, translateTo);
+        return chatService.messagePrivate(dept(request), uid, uid, message, targetFilenames(request), translateTo);
     }
 
     /** 2.3 Open 대화 */
@@ -70,11 +68,10 @@ public class ChatController {
 
     /** 2.6 문서 체계적 요약 — target_filename 다중(통합 요약) 지원 */
     @PostMapping(value = "/message/document-summary", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
-    public SseEmitter documentSummary(@RequestParam("target_filename") java.util.List<String> targetFilenames,
-                                      HttpServletRequest request) {
+    public SseEmitter documentSummary(HttpServletRequest request) {
         String uid = userId(request);
         if (uid == null || uid.isBlank()) return forbiddenSse();
-        return chatService.documentSummary(dept(request), uid, uid, targetFilenames);
+        return chatService.documentSummary(dept(request), uid, uid, targetFilenames(request));
     }
 
     /** 2.4 업로드 파일 목록 조회 */
@@ -96,6 +93,17 @@ public class ChatController {
     // --- helpers ---
     private String dept(HttpServletRequest request) {
         return deptContext.resolve(request);
+    }
+
+    /**
+     * target_filename 값 목록을 원본 그대로 반환한다.
+     * <p>{@code @RequestParam List<String>}로 받으면 값이 하나일 때 Spring이 쉼표로 재분리하여
+     * 쉼표가 포함된 파일명(예: {@code "직급, 직책.hwp"})이 두 개로 쪼개진다.
+     * getParameterValues는 제출된 값을 분리 없이 그대로 돌려주므로 단일·다중 모두 안전하다.
+     */
+    private static java.util.List<String> targetFilenames(HttpServletRequest request) {
+        String[] vals = request.getParameterValues("target_filename");
+        return vals == null ? java.util.Collections.emptyList() : java.util.Arrays.asList(vals);
     }
 
     /** 사용자 식별자는 세션(로그인 시 확립)에서만 얻는다. 요청/URL 값은 신뢰하지 않는다. */
