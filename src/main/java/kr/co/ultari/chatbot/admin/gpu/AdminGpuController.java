@@ -80,7 +80,8 @@ public class AdminGpuController {
         List<GpuUsageLog> rows = repository.findBySampledAtBetweenOrderBySampledAtAsc(start, end);
 
         boolean hourly = h > 24; // 24시간 초과면 시간단위 집계
-        // gpuIndex -> (bucketLabel -> 누적) : 차트용. long[]{utilSum, memUsedSum, memTotalMax, count, powerSum, tempSum}
+        // gpuIndex -> (bucketLabel -> 누적) : 차트용. long[]{utilMax, memUsedMax, memTotalMax, count, powerMax, tempMax}
+        // 이력 차트는 모든 지표를 버킷 '최댓값(peak)'으로 표시한다(요약 카드의 원자료 최대와 정합, 스파이크가 평균에 묻히지 않음).
         Map<Integer, String> names = new LinkedHashMap<>();
         Map<Integer, Map<String, long[]>> agg = new LinkedHashMap<>();
         // 요약(증설 판단)은 원자료 기준. long[]{utilSum,utilMax,memPctSum,memPctMax,over90Count,count,powerSum,powerMax}
@@ -95,12 +96,12 @@ public class AdminGpuController {
             String label = g.getSampledAt().format(hourly ? TS_HOUR : TS_MIN);
             Map<String, long[]> byBucket = agg.computeIfAbsent(g.getGpuIndex(), k -> new LinkedHashMap<>());
             long[] v = byBucket.computeIfAbsent(label, k -> new long[]{0, 0, 0, 0, 0, 0});
-            v[0] += g.getUtilGpu();
-            v[1] += g.getMemUsed();
+            v[0] = Math.max(v[0], g.getUtilGpu());
+            v[1] = Math.max(v[1], g.getMemUsed());
             v[2] = Math.max(v[2], g.getMemTotal());
             v[3] += 1;
-            v[4] += Math.round(g.getPowerDraw());
-            v[5] += g.getTemperature();
+            v[4] = Math.max(v[4], Math.round(g.getPowerDraw()));
+            v[5] = Math.max(v[5], g.getTemperature());
 
             int memPct = g.getMemTotal() > 0 ? (int) Math.round(g.getMemUsed() * 100.0 / g.getMemTotal()) : 0;
             long[] s = summary.computeIfAbsent(g.getGpuIndex(), k -> new long[]{0, 0, 0, 0, 0, 0, 0, 0});
@@ -130,14 +131,13 @@ public class AdminGpuController {
             JSONArray points = new JSONArray();
             for (Map.Entry<String, long[]> b : e.getValue().entrySet()) {
                 long[] v = b.getValue();
-                long cnt = v[3] == 0 ? 1 : v[3];
                 points.put(new JSONObject()
                         .put("t", b.getKey())
-                        .put("util", Math.round((double) v[0] / cnt))
-                        .put("memUsed", Math.round((double) v[1] / cnt))
+                        .put("util", v[0])
+                        .put("memUsed", v[1])
                         .put("memTotal", v[2])
-                        .put("power", Math.round((double) v[4] / cnt))
-                        .put("temp", Math.round((double) v[5] / cnt)));
+                        .put("power", v[4])
+                        .put("temp", v[5])); // util·memUsed·power·temp 모두 버킷 최댓값(peak) — 요약 카드 '최대'와 정합
             }
             long[] s = summary.getOrDefault(e.getKey(), new long[]{0, 0, 0, 0, 0, 0, 0, 0});
             long sc = s[5] == 0 ? 1 : s[5];

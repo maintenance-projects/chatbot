@@ -176,18 +176,23 @@
     function row(label, val, c) {
         return '<div class="sum-row"><span>' + label + '</span><b class="' + c + '">' + esc(val) + '</b></div>';
     }
-    function drawChart(existing, canvasId, labels, ds, percent) {
+    // unit: 축 눈금·툴팁에 함께 붙일 단위(예: "%", " W", "℃"). percent=true면 0~100 범위 고정.
+    function drawChart(existing, canvasId, labels, ds, percent, unit) {
+        var suffix = unit || (percent ? "%" : "");
         if (existing) { existing.data.labels = labels; existing.data.datasets = ds; existing.update(); return existing; }
         var ctx = document.getElementById(canvasId).getContext("2d");
-        var y = (percent === false)
-            ? { beginAtZero: true }
-            : { beginAtZero: true, max: 100, ticks: { callback: function (v) { return v + "%"; } } };
+        var y = (percent === true)
+            ? { beginAtZero: true, max: 100, ticks: { callback: function (v) { return v + suffix; } } }
+            : { beginAtZero: true, ticks: { callback: function (v) { return v + suffix; } } };
         return new Chart(ctx, {
             type: "line", data: { labels: labels, datasets: ds },
             options: {
                 responsive: true, maintainAspectRatio: false, interaction: { mode: "index", intersect: false },
-                scales: { y: y, x: { ticks: { maxTicksLimit: 12, autoSkip: true } } },
-                plugins: { legend: { position: "top" } }
+                scales: { y: y, x: { ticks: { maxTicksLimit: 16, autoSkip: true } } },
+                plugins: {
+                    legend: { position: "top" },
+                    tooltip: { callbacks: { label: function (c) { return (c.dataset.label || "") + ": " + c.formattedValue + suffix; } } }
+                }
             }
         });
     }
@@ -202,7 +207,10 @@
             options: {
                 responsive: true, maintainAspectRatio: false,
                 scales: { y: { beginAtZero: true, max: 100, ticks: { callback: function (v) { return v + "%"; } } } },
-                plugins: { legend: { display: false } }
+                plugins: {
+                    legend: { display: false },
+                    tooltip: { callbacks: { label: function (c) { return "평균 이용률: " + c.formattedValue + "%"; } } }
+                }
             }
         });
     }
@@ -228,7 +236,14 @@
                     yPct: { position: "right", beginAtZero: true, max: 100, grid: { drawOnChartArea: false }, ticks: { callback: function (v) { return v + "%"; } }, title: { display: true, text: "GPU %" } },
                     x: { ticks: { maxTicksLimit: 12, autoSkip: true } }
                 },
-                plugins: { legend: { position: "top" } }
+                plugins: {
+                    legend: { position: "top" },
+                    // 요청수(yReq)는 단위 없음, GPU 지표(yPct)는 % 부착
+                    tooltip: { callbacks: { label: function (c) {
+                        var v = c.formattedValue;
+                        return (c.dataset.label || "") + ": " + v + (c.dataset.yAxisID === "yPct" ? "%" : "");
+                    } } }
+                }
             }
         });
     }
@@ -239,13 +254,13 @@
                 var gpus = d.gpus || [];
                 if (!gpus.length) { histMsg.style.display = "block"; histMsg.textContent = "이력 데이터가 없습니다(수집 시작 후 표시됩니다)."; if (histSummary) histSummary.innerHTML = ""; return; }
                 histMsg.style.display = "none";
-                histNote.textContent = d.aggregated ? "(차트: 시간 단위 평균 · 요약: 원자료 기준)" : "(1분 원자료)";
+                histNote.textContent = d.aggregated ? "(차트: 시간 단위 최대값 · 요약: 원자료 기준)" : "(1분 원자료)";
                 renderSummary(gpus);
                 var labels = labelsOf(gpus);
-                chartUtil = drawChart(chartUtil, "chartUtil", labels, seriesData(gpus, "util"), true);
-                chartMem = drawChart(chartMem, "chartMem", labels, seriesData(gpus, "memPct"), true);
-                chartPower = drawChart(chartPower, "chartPower", labels, seriesData(gpus, "power"), false);
-                chartTemp = drawChart(chartTemp, "chartTemp", labels, seriesData(gpus, "temp"), false);
+                chartUtil = drawChart(chartUtil, "chartUtil", labels, seriesData(gpus, "util"), true, "%");
+                chartMem = drawChart(chartMem, "chartMem", labels, seriesData(gpus, "memPct"), true, "%");
+                chartPower = drawChart(chartPower, "chartPower", labels, seriesData(gpus, "power"), false, " W");
+                chartTemp = drawChart(chartTemp, "chartTemp", labels, seriesData(gpus, "temp"), false, "℃");
                 drawHour(d.hourPattern);
                 drawDemand(d.demandVsResource);
             })

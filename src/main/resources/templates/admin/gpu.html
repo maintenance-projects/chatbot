@@ -92,7 +92,8 @@
             color: var(--color-text-light); }
         .hist-seg .hist-range.active { background: #fff; color: var(--color-primary);
             box-shadow: 0 1px 3px rgba(0, 0, 0, 0.12); border: none; }
-        .chart-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 16px; margin-bottom: 16px; }
+        /* 지표 차트는 1열 전체폭 → 가로가 넓어져 한 화면에서 더 많은 시간대를 표시 */
+        .chart-grid { display: grid; grid-template-columns: 1fr; gap: 16px; margin-bottom: 16px; }
         .chart-card { box-shadow: 0 1px 4px rgba(2, 6, 23, 0.06); }
         .chart-card h3 { display: flex; align-items: center; gap: 8px; }
         .chart-card h3::before { content: ""; width: 4px; height: 15px; border-radius: 3px; background: var(--color-primary); }
@@ -276,7 +277,7 @@
                             <div class="chart-body"><canvas id="chartMem"></canvas></div>
                         </div>
                         <div class="chart-card">
-                            <h3>전력(W) · 실사용 강도</h3>
+                            <h3>전력(W)</h3>
                             <div class="chart-body"><canvas id="chartPower"></canvas></div>
                         </div>
                         <div class="chart-card">
