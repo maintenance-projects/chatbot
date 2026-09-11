@@ -220,4 +220,17 @@ public class ChatService {
     public ResponseEntity<String> history(String dept, String invokeId) {
         return gateway.get(null, "/history/" + invokeId); // 개인 대화 기록: 파티션 무관
     }
+
+    /**
+     * 개인 업로드 문서 삭제 — 게이트웨이 DELETE /files/{userId}/{fileName} (파티션 무관).
+     * 파일명은 공백·한글·특수문자가 있어 경로 세그먼트로 퍼센트 인코딩한다. 성공 시 파일목록 캐시 무효화.
+     */
+    public ResponseEntity<String> deleteFile(String invokeId, String fileName) {
+        String name = fileName == null ? "" : fileName.trim();
+        String encId = java.net.URLEncoder.encode(invokeId, java.nio.charset.StandardCharsets.UTF_8).replace("+", "%20");
+        String encName = java.net.URLEncoder.encode(name, java.nio.charset.StandardCharsets.UTF_8).replace("+", "%20");
+        ResponseEntity<String> res = gateway.delete(null, "/files/" + encId + "/" + encName);
+        cachedService.FilesCacheClear(invokeId); // 삭제 후 목록 캐시 무효화
+        return res;
+    }
 }

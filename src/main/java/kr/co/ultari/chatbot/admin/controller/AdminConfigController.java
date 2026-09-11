@@ -60,6 +60,28 @@ public class AdminConfigController {
         return withUtf8(configService.saveSettings(d, jsonBody));
     }
 
+    /** 개인문서 보관기간 조회(전역) — 게이트웨이 GET /admin/file-ttl 통과. */
+    @PostMapping("/ttl/load")
+    @ResponseBody
+    public ResponseEntity<String> ttlLoad() {
+        return withUtf8(configService.getFileTtl());
+    }
+
+    /** 개인문서 보관기간 저장(전역) — file_ttl_days(1 이상)만 게이트웨이 POST /admin/file-ttl 로 전달. */
+    @PostMapping("/ttl/save")
+    @ResponseBody
+    public ResponseEntity<String> ttlSave(@RequestBody(required = false) String jsonBody) {
+        int days;
+        try {
+            days = new JSONObject(jsonBody == null ? "{}" : jsonBody).optInt("file_ttl_days", 0);
+        } catch (Exception e) {
+            return badRequest();
+        }
+        if (days < 1) return badRequest();
+        log.debug("[config ttl save] file_ttl_days={}", days);
+        return withUtf8(configService.saveFileTtl("{\"file_ttl_days\":" + days + "}"));
+    }
+
     /** 로컬 설정 조회(게이트웨이 무관) — 개인문서 업로드 개수 제한 등. */
     @PostMapping("/local/load")
     @ResponseBody
@@ -99,7 +121,7 @@ public class AdminConfigController {
 
     private ResponseEntity<String> badRequest() {
         return ResponseEntity.badRequest().contentType(JSON_UTF8)
-                .body("{\"error\":\"invalid dept\"}");
+                .body("{\"error\":\"invalid request\"}");
     }
 
     /** 게이트웨이 응답의 상태코드·본문은 유지하고 Content-Type을 UTF-8로 명시해 재포장. */

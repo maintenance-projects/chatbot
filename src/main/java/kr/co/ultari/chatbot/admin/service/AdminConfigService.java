@@ -63,9 +63,23 @@ public class AdminConfigService {
         return out.toString();
     }
 
+    /** 개인문서 보관기간 조회(전역) — 게이트웨이 GET /admin/file-ttl 응답을 그대로 통과. */
+    public ResponseEntity<String> getFileTtl() {
+        return gateway.get(null, "/admin/file-ttl");
+    }
+
+    /** 개인문서 보관기간 저장(전역) — file_ttl_days만 추려 POST /admin/file-ttl. 저장 후 캐시 무효화. */
+    public ResponseEntity<String> saveFileTtl(String jsonBody) {
+        JSONObject in = (jsonBody == null || jsonBody.isBlank()) ? new JSONObject() : new JSONObject(jsonBody);
+        JSONObject out = new JSONObject();
+        if (in.has("file_ttl_days")) out.put("file_ttl_days", in.get("file_ttl_days"));
+        ResponseEntity<String> res = gateway.postJson(null, "/admin/file-ttl", out.toString());
+        cachedTtlDays = -1; // 저장 후 캐시 무효화
+        return res;
+    }
+
     /**
-     * 개인문서 보관일수(전역, 사용자 표시용). 기본 dept 설정의 file_ttl_days를 60초 캐시, 실패 시 기본값.
-     * (보관기간 전용 API가 생기면 이 조회 경로만 교체하면 된다.)
+     * 개인문서 보관일수(전역, 사용자 표시용). 게이트웨이 GET /admin/file-ttl 의 file_ttl_days를 60초 캐시, 실패 시 기본값.
      */
     public int getDocRetentionDays() {
         long now = System.currentTimeMillis();
@@ -73,7 +87,7 @@ public class AdminConfigService {
 
         int fallback = Math.max(1, defaultRetentionHours / 24);
         try {
-            ResponseEntity<String> res = gateway.get(null, "/admin/settings/" + deptProperties.getDefaultDept());
+            ResponseEntity<String> res = gateway.get(null, "/admin/file-ttl");
             if (res != null && res.getBody() != null && !res.getBody().isBlank()) {
                 int d = new JSONObject(res.getBody()).optInt("file_ttl_days", fallback);
                 cachedTtlDays = d > 0 ? d : fallback;

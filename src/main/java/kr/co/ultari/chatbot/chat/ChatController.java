@@ -90,6 +90,19 @@ public class ChatController {
         return GatewayForward.json(chatService.history(dept(request), uid));
     }
 
+    /** 개인 업로드 문서 삭제 — 파일명은 요청 파라미터, 사용자 식별자는 세션에서만(경로 노출 금지). */
+    @DeleteMapping("/file")
+    public ResponseEntity<String> deleteFile(@RequestParam(value = "name", required = false) String name,
+                                             HttpServletRequest request) {
+        String uid = userId(request);
+        if (uid == null || uid.isBlank()) return forbidden();
+        if (name == null || name.isBlank()) {
+            return ResponseEntity.badRequest().contentType(MediaType.APPLICATION_JSON)
+                    .body("{\"type\":\"error\",\"detail\":\"파일명이 필요합니다.\"}");
+        }
+        return GatewayForward.json(chatService.deleteFile(uid, name));
+    }
+
     // --- helpers ---
     private String dept(HttpServletRequest request) {
         return deptContext.resolve(request);

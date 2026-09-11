@@ -1984,9 +1984,10 @@ document.addEventListener("DOMContentLoaded", () => {
         `;
             })
             .join("");
-        // 하단 액션바: 선택 개수 + 질문 / 개별 요약 / 통합 요약
+        // 하단 액션바: (좌)삭제 · 선택 개수 · (우)질문 / 개별 요약 / 통합 요약
         const foot = `
           <div class="cb-tray__foot">
+            <button type="button" class="cb-tray__act cb-tray__act--danger" data-action="delete">삭제</button>
             <span class="cb-tray__count"><b class="cb-doc-selcount">0</b>개 선택</span>
             <div class="cb-tray__acts">
               <button type="button" class="cb-tray__act" data-action="ask">질문</button>
@@ -2155,6 +2156,10 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!names.length) return;
 
         const action = act.getAttribute("data-action") || "";
+        if (action === "delete") {
+            deleteSelectedDocs(names);
+            return;
+        }
         if (action === "ask") {
             // 선택 문서를 칩으로 반영 → 입력창에서 질문(전송 시 다중 target_filename)
             setSelectedDocuments(names);
@@ -2179,6 +2184,80 @@ document.addEventListener("DOMContentLoaded", () => {
             return;
         }
     });
+
+    // 인앱 확인 모달(웹뷰에서 native confirm이 무시되는 경우 대비). Promise<boolean> 반환.
+    function cbConfirm(message) {
+        return new Promise((resolve) => {
+            const ov = document.createElement("div");
+            ov.className = "cb-confirm";
+            ov.innerHTML =
+                '<div class="cb-confirm__box" role="dialog" aria-modal="true">' +
+                '<div class="cb-confirm__msg"></div>' +
+                '<div class="cb-confirm__btns">' +
+                '<button type="button" class="cb-confirm__btn" data-c="cancel">취소</button>' +
+                '<button type="button" class="cb-confirm__btn cb-confirm__btn--danger" data-c="ok">삭제</button>' +
+                '</div></div>';
+            ov.querySelector(".cb-confirm__msg").textContent = String(message || "");
+            function done(v) {
+                ov.remove();
+                document.removeEventListener("keydown", onKey);
+                resolve(v);
+            }
+            function onKey(e) { if (e.key === "Escape") done(false); }
+            ov.addEventListener("click", (e) => {
+                if (e.target === ov) return done(false); // 배경 클릭 = 취소
+                const b = e.target.closest ? e.target.closest("[data-c]") : null;
+                if (b) done(b.getAttribute("data-c") === "ok");
+            });
+            document.addEventListener("keydown", onKey);
+            document.body.appendChild(ov);
+        });
+    }
+
+    // 선택한 개인문서를 건건이 삭제(게이트웨이 DELETE /files/{userId}/{fileName} 프록시).
+    async function deleteSelectedDocs(names) {
+        const list = (Array.isArray(names) ? names : []).map((n) => String(n || "").trim()).filter(Boolean);
+        if (!list.length) return;
+        if (!(await cbConfirm(`선택한 ${list.length}개 문서를 삭제할까요?\n삭제하면 되돌릴 수 없습니다.`))) return;
+
+        // 삭제 진행 중 액션 잠금
+        documentListPopup.querySelectorAll(".cb-tray__act").forEach((b) => { b.disabled = true; });
+
+        let done = 0;
+        const failed = [];
+        for (const name of list) {
+            try {
+                const res = await fetch("/chat/file?name=" + encodeURIComponent(name), {
+                    method: "DELETE", credentials: "same-origin",
+                });
+                if (res.ok) done++; else failed.push(name);
+            } catch (e) {
+                failed.push(name);
+            }
+        }
+
+        // 삭제된 문서는 선택 칩에서도 제거
+        const deleted = new Set(list.filter((n) => !failed.includes(n)));
+        if (deleted.size) {
+            setSelectedDocuments(selectedDocuments.filter((n) => !deleted.has(n)));
+        }
+
+        // 목록 갱신(서버·클라 캐시 무효화 후 재조회)
+        try {
+            const files = await fetchUploadedFiles(true);
+            populateDocumentList(documentListPopup, files, "", false, "");
+        } catch (e) {
+            populateDocumentList(documentListPopup, [], "", false, "목록을 갱신하지 못했습니다.");
+        }
+
+        if (failed.length && done) {
+            addBotMessage(`${done}개 삭제 완료, ${failed.length}개 실패했습니다.`);
+        } else if (failed.length) {
+            addBotMessage(`문서 삭제에 실패했습니다. (${failed.length}개)`);
+        } else {
+            addBotMessage(`${done}개 문서를 삭제했습니다.`);
+        }
+    }
 
     function sendTextMessage(msg, targetNameOverride, translateTo) {
         closeTray();

@@ -82,20 +82,22 @@
         return dom.temperature.value !== loaded.temperature || dom.userPrompt.value !== loaded.system_prompt;
     }
 
-    // 초기 로드: 선택 dept의 temperature/프롬프트 + 전역 보관기간(기본 dept)
+    // 초기 로드: 선택 dept의 temperature/프롬프트 (보관기간은 전역이라 loadRetention에서 별도 로드)
     function loadConfig() {
         showLoading(true);
         var dept = currentDept();
         prevDept = dept;
-        var p = fetchSettings(dept).then(function (c) {
-            applyDeptFields(c);
-            if (dept === defaultDept) applyRetention(c); // 기본 dept면 한 응답으로 보관기간까지
-        });
-        if (dept !== defaultDept) {
-            p = p.then(function () { return fetchSettings(defaultDept).then(applyRetention); });
-        }
-        p.catch(function () { toast("설정을 불러오지 못했습니다.", "error"); })
+        fetchSettings(dept).then(applyDeptFields)
+            .catch(function () { toast("설정을 불러오지 못했습니다.", "error"); })
             .finally(function () { showLoading(false); });
+    }
+
+    // 개인문서 보관기간(전역) — 게이트웨이 /admin/file-ttl
+    function loadRetention() {
+        fetch("/at-i/config/ttl/load", { method: "POST" })
+            .then(function (r) { if (!r.ok) throw new Error("ttl load " + r.status); return r.json(); })
+            .then(applyRetention)
+            .catch(function () { /* 보관기간 로드 실패는 조용히(기본값 유지) */ });
     }
 
     // dept 전환: 해당 파티션의 temperature/프롬프트만 재로드(보관기간은 전역이라 유지)
@@ -152,7 +154,14 @@
             .catch(function () { /* 로컬 설정 로드 실패는 조용히(기본 0=무제한) */ });
     }
 
+    // 전역 설정 저장: 개인문서 보관기간(게이트웨이) + 업로드 개수 제한(로컬)
     function saveGlobalConfig() {
+        var days = parseInt(dom.docRetentionDays.value, 10);
+        if (isNaN(days) || days < 1) {
+            toast("보관 기간은 1일 이상이어야 합니다.", "error");
+            dom.docRetentionDays.focus();
+            return;
+        }
         var max = parseInt(dom.maxDocs.value, 10);
         if (isNaN(max) || max < 0) {
             toast("업로드 개수 제한은 0 이상이어야 합니다. (0 = 무제한)", "error");
@@ -161,13 +170,20 @@
         }
         dom.btnSaveGlobal.disabled = true;
         dom.btnSaveGlobal.textContent = "저장 중...";
-        fetch("/at-i/config/local/save", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ maxDocs: max }),
-        })
-            .then(function (res) {
-                toast(res.ok ? "전역 설정이 저장되었습니다." : "저장에 실패했습니다.", res.ok ? "success" : "error");
+        Promise.all([
+            fetch("/at-i/config/ttl/save", {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ file_ttl_days: days }),
+            }),
+            fetch("/at-i/config/local/save", {
+                method: "POST", headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ maxDocs: max }),
+            }),
+        ])
+            .then(function (results) {
+                var ok = results.every(function (r) { return r.ok; });
+                toast(ok ? "전역 설정이 저장되었습니다." : "일부 저장에 실패했습니다.", ok ? "success" : "error");
+                if (ok) loadRetention(); // 게이트웨이가 값을 조정할 수 있어 실제 저장값 재조회
             })
             .catch(function () { toast("서버 오류가 발생했습니다.", "error"); })
             .finally(function () {
@@ -226,6 +242,7 @@
 
         bindCommon();
         loadConfig();
+        loadRetention();
         loadLocalConfig();
     });
 })();
