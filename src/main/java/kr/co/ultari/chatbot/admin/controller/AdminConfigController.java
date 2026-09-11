@@ -1,8 +1,10 @@
 package kr.co.ultari.chatbot.admin.controller;
 
 import kr.co.ultari.chatbot.admin.service.AdminConfigService;
+import kr.co.ultari.chatbot.admin.service.AppSettingService;
 import kr.co.ultari.chatbot.common.dept.DeptProperties;
 import lombok.extern.slf4j.Slf4j;
+import org.json.JSONObject;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
@@ -26,10 +28,13 @@ public class AdminConfigController {
 
     private final AdminConfigService configService;
     private final DeptProperties deptProperties;
+    private final AppSettingService appSettingService;
 
-    public AdminConfigController(AdminConfigService configService, DeptProperties deptProperties) {
+    public AdminConfigController(AdminConfigService configService, DeptProperties deptProperties,
+                                 AppSettingService appSettingService) {
         this.configService = configService;
         this.deptProperties = deptProperties;
+        this.appSettingService = appSettingService;
     }
 
     /** application/json;charset=UTF-8 — 게이트웨이 응답에 charset이 없어 브라우저가 오해석하지 않도록 명시. */
@@ -53,6 +58,31 @@ public class AdminConfigController {
         if (d == null) return badRequest();
         log.debug("[config save] dept={}, body={}", d, jsonBody);
         return withUtf8(configService.saveSettings(d, jsonBody));
+    }
+
+    /** 로컬 설정 조회(게이트웨이 무관) — 개인문서 업로드 개수 제한 등. */
+    @PostMapping("/local/load")
+    @ResponseBody
+    public ResponseEntity<String> localLoad() {
+        JSONObject o = new JSONObject();
+        o.put("maxDocs", appSettingService.getPersonalDocMaxCount()); // 0 = 무제한
+        return ResponseEntity.ok().contentType(JSON_UTF8).body(o.toString());
+    }
+
+    /** 로컬 설정 저장 — 개인문서 업로드 개수 제한(0=무제한, 음수 거부). */
+    @PostMapping("/local/save")
+    @ResponseBody
+    public ResponseEntity<String> localSave(@RequestBody(required = false) String jsonBody) {
+        int maxDocs;
+        try {
+            maxDocs = new JSONObject(jsonBody == null ? "{}" : jsonBody).optInt("maxDocs", 0);
+        } catch (Exception e) {
+            return badRequest();
+        }
+        if (maxDocs < 0) return badRequest();
+        appSettingService.setPersonalDocMaxCount(maxDocs);
+        log.debug("[config local save] maxDocs={}", maxDocs);
+        return ResponseEntity.ok().contentType(JSON_UTF8).body("{\"ok\":true,\"maxDocs\":" + maxDocs + "}");
     }
 
     /**

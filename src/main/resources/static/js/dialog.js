@@ -252,11 +252,14 @@ document.addEventListener("DOMContentLoaded", () => {
             .then((r) => r.json())
             .then((d) => {
                 const days = d && Number(d.days);
-                if (!days || days < 1) return;
-                docRetentionDays = days;
-                document.querySelectorAll(".js-doc-retention-days").forEach((el) => {
-                    el.textContent = String(days);
-                });
+                if (days && days >= 1) {
+                    docRetentionDays = days;
+                    document.querySelectorAll(".js-doc-retention-days").forEach((el) => {
+                        el.textContent = String(days);
+                    });
+                }
+                const md = d && Number(d.maxDocs);
+                docMaxCount = (isFinite(md) && md > 0) ? md : 0; // 0 = 무제한
             })
             .catch(() => {});
     })();
@@ -336,6 +339,7 @@ document.addEventListener("DOMContentLoaded", () => {
     let docChipsWrap = null;    // 선택 문서 칩들을 담는 컨테이너
     let docGateHinted = false; // 개인문서 미선택 안내 중복 표시 방지
     let docRetentionDays = 7;  // 개인문서 보관일수(관리자 환경설정값). /me/doc-retention에서 갱신
+    let docMaxCount = 0;       // 개인문서 업로드 개수 제한(0=무제한). /me/doc-retention에서 갱신
 
     let continueNext = false;
     let continueThreadId = null;
@@ -1907,11 +1911,20 @@ document.addEventListener("DOMContentLoaded", () => {
 
     function populateDocumentList(popup, list, keyword, loading, errorText) {
         const k = String(keyword || "").trim();
+        // 업로드 개수 제한(0=무제한)이 있으면 현재 사용량·잔여 안내
+        const count = Array.isArray(list) ? list.length : null;
+        let usage = "";
+        if (docMaxCount > 0 && count != null) {
+            const atLimit = count >= docMaxCount;
+            const tail = atLimit ? "한도 도달 — 기존 문서 삭제 후 업로드" : `${docMaxCount - count}개 더 업로드 가능`;
+            usage = `<div class="cb-tray__usage" style="margin-top:6px;font-size:12px;font-weight:700;color:${atLimit ? "#e74c3c" : "#2563eb"};">개인문서 ${count} / ${docMaxCount}개 사용 · ${tail}</div>`;
+        }
         const head = `
                         <div class="cb-tray__head">
                             <div class="cb-tray__titlewrap">
                             <div class="cb-tray__title">업로드 파일 선택</div>
                             <div class="cb-tray__subnote">- 업로드된 파일은 ${docRetentionDays}일간 보관되며, 보관기간 만료 시 시스템에 의해 자동 삭제됩니다.<br/>- 보안상 제한된 내용이 포함된 경우 분석이 제한될 수 있습니다.<br/>- 스캔한 문서나 문서에 포함된 이미지는 현재 분석이 제한됩니다.</div>
+                            ${usage}
                             </div>
                             <button type="button" class="cb-tray__close" data-action="close" aria-label="닫기">×</button>
                         </div>
@@ -2640,9 +2653,25 @@ document.addEventListener("DOMContentLoaded", () => {
     }
 
     // 여러 파일을 순차 업로드(동시 SSE 충돌 방지). 각 완료 후 다음 파일.
-    function uploadFilesSequentially(files) {
-        const list = (Array.isArray(files) ? files : []).filter(isAllowedFile);
+    async function uploadFilesSequentially(files) {
+        let list = (Array.isArray(files) ? files : []).filter(isAllowedFile);
         if (!list.length) return;
+
+        // 개인문서 업로드 개수 제한(관리자 환경설정, 0=무제한). 잔여만큼만 업로드하고 초과분은 안내.
+        if (docMaxCount > 0) {
+            let current = 0;
+            try { current = (await fetchUploadedFiles(true)).length; } catch (e) { current = 0; }
+            const remaining = docMaxCount - current;
+            if (remaining <= 0) {
+                addBotMessage(`개인문서는 최대 ${docMaxCount}개까지 보관할 수 있습니다. 기존 문서를 삭제한 뒤 업로드해 주세요. (현재 ${current}개)`);
+                return;
+            }
+            if (list.length > remaining) {
+                addBotMessage(`개인문서는 최대 ${docMaxCount}개까지 보관할 수 있어 ${remaining}개만 업로드합니다. (현재 ${current}개 · 선택 ${list.length}개)`);
+                list = list.slice(0, remaining);
+            }
+        }
+
         let i = 0;
         const next = () => {
             if (i >= list.length) { input.focus(); autoResizeInput(); return; }

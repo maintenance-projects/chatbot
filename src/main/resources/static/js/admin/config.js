@@ -11,8 +11,10 @@
         temperatureValue: null,
         userPrompt: null,
         docRetentionDays: null,
+        maxDocs: null,
         deptSelect: null,
         btnSave: null,
+        btnSaveGlobal: null,
         loading: null,
     };
 
@@ -140,6 +142,40 @@
             });
     }
 
+    // 로컬 설정(게이트웨이 무관): 개인문서 업로드 개수 제한
+    function loadLocalConfig() {
+        fetch("/at-i/config/local/load", { method: "POST" })
+            .then(function (r) { if (!r.ok) throw new Error("local load " + r.status); return r.json(); })
+            .then(function (c) {
+                if (dom.maxDocs) dom.maxDocs.value = (c.maxDocs != null ? c.maxDocs : 0);
+            })
+            .catch(function () { /* 로컬 설정 로드 실패는 조용히(기본 0=무제한) */ });
+    }
+
+    function saveGlobalConfig() {
+        var max = parseInt(dom.maxDocs.value, 10);
+        if (isNaN(max) || max < 0) {
+            toast("업로드 개수 제한은 0 이상이어야 합니다. (0 = 무제한)", "error");
+            dom.maxDocs.focus();
+            return;
+        }
+        dom.btnSaveGlobal.disabled = true;
+        dom.btnSaveGlobal.textContent = "저장 중...";
+        fetch("/at-i/config/local/save", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ maxDocs: max }),
+        })
+            .then(function (res) {
+                toast(res.ok ? "전역 설정이 저장되었습니다." : "저장에 실패했습니다.", res.ok ? "success" : "error");
+            })
+            .catch(function () { toast("서버 오류가 발생했습니다.", "error"); })
+            .finally(function () {
+                dom.btnSaveGlobal.disabled = false;
+                dom.btnSaveGlobal.textContent = "저장";
+            });
+    }
+
     function bindCommon() {
         var btnLogout = $("#btnLogout");
         if (btnLogout) {
@@ -177,15 +213,19 @@
         dom.temperatureValue = $("#temperatureValue");
         dom.userPrompt = $("#userPrompt");
         dom.docRetentionDays = $("#docRetentionDays");
+        dom.maxDocs = $("#maxDocs");
         dom.deptSelect = $("#deptSelect");
         dom.btnSave = $("#btnSaveConfig");
+        dom.btnSaveGlobal = $("#btnSaveGlobal");
         dom.loading = $("#loadingOverlay");
 
         if (dom.temperature) dom.temperature.addEventListener("input", syncSliderReadout);
         if (dom.deptSelect) dom.deptSelect.addEventListener("change", onDeptChange);
         if (dom.btnSave) dom.btnSave.addEventListener("click", saveConfig);
+        if (dom.btnSaveGlobal) dom.btnSaveGlobal.addEventListener("click", saveGlobalConfig);
 
         bindCommon();
         loadConfig();
+        loadLocalConfig();
     });
 })();

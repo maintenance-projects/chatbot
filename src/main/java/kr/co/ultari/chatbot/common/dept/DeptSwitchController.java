@@ -24,12 +24,14 @@ public class DeptSwitchController {
     private final DeptContext deptContext;
     private final DeptLabelService labelService;
     private final kr.co.ultari.chatbot.admin.service.AdminConfigService configService;
+    private final kr.co.ultari.chatbot.admin.service.AppSettingService appSettingService;
 
-    /** 개인문서 보관일수(사용자 화면 안내용). 관리자 환경설정값을 그대로 노출. */
+    /** 개인문서 보관일수·업로드 개수 제한(사용자 화면 안내·게이팅용). 관리자 환경설정값을 그대로 노출. */
     @GetMapping("/me/doc-retention")
     public ResponseEntity<String> docRetention() {
         JSONObject o = new JSONObject();
         o.put("days", configService.getDocRetentionDays());
+        o.put("maxDocs", appSettingService.getPersonalDocMaxCount()); // 0 = 무제한
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(o.toString());
     }
 

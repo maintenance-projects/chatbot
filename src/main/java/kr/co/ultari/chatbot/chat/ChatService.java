@@ -1,5 +1,6 @@
 package kr.co.ultari.chatbot.chat;
 
+import kr.co.ultari.chatbot.admin.service.AppSettingService;
 import kr.co.ultari.chatbot.common.gateway.AiGatewayClient;
 import kr.co.ultari.chatbot.common.sse.SseRelay;
 import kr.co.ultari.chatbot.database.service.AIUsageService;
@@ -35,6 +36,7 @@ public class ChatService {
     private final SseRelay sseRelay;
     private final AIUsageService aiUsageService;
     private final CachedService cachedService;
+    private final AppSettingService appSettingService;
 
     /** PDF 페이지 보기(/document/view) 로컬 사본 저장 경로. temp와 분리(별도 보존기간 관리). */
     @Value("${ultari.ai.document.path:documents}")
@@ -47,12 +49,13 @@ public class ChatService {
 
         // 이미지 파일 업로드 차단(문서만 허용). 클라이언트 검증 우회 대비 서버 이중검증 → SSE error 반환.
         if (isImageFile(safeName)) {
-            SseEmitter em = new SseEmitter();
-            try {
-                em.send(SseEmitter.event().data("{\"type\":\"error\",\"detail\":\"이미지 파일은 업로드할 수 없습니다.\"}"));
-            } catch (Exception ignore) { /* 클라이언트 조기 종료 등은 무시 */ }
-            em.complete();
-            return em;
+            return sseError("이미지 파일은 업로드할 수 없습니다.");
+        }
+
+        // 개인문서 업로드 개수 제한(로컬 설정, 0=무제한). 클라이언트 게이팅 우회 대비 서버 이중검증.
+        int maxDocs = appSettingService.getPersonalDocMaxCount();
+        if (maxDocs > 0 && countCurrentDocs(dept, invokeId) >= maxDocs) {
+            return sseError("개인문서는 최대 " + maxDocs + "개까지 보관할 수 있습니다. 기존 문서를 삭제한 뒤 업로드해 주세요.");
         }
 
         aiUsageService.increase(userId, invokeId, "DOCUMENT");
@@ -108,6 +111,32 @@ public class ChatService {
         int i = name.lastIndexOf('.');
         if (i < 0 || i == name.length() - 1) return false;
         return IMAGE_EXTS.contains(name.substring(i + 1).toLowerCase());
+    }
+
+    /** 즉시 종료되는 SSE error 이미터(업로드 거부 응답용). */
+    private SseEmitter sseError(String detail) {
+        SseEmitter em = new SseEmitter();
+        try {
+            em.send(SseEmitter.event().data(new org.json.JSONObject()
+                    .put("type", "error").put("detail", detail).toString()));
+        } catch (Exception ignore) { /* 클라이언트 조기 종료 등은 무시 */ }
+        em.complete();
+        return em;
+    }
+
+    /** 현재 개인 업로드 문서 수. 조회 실패 시 0(제한 확인 실패로 정상 업로드를 막지 않음 — fail-open). */
+    private int countCurrentDocs(String dept, String invokeId) {
+        try {
+            ResponseEntity<String> res = files(dept, invokeId);
+            if (res == null || res.getBody() == null || res.getBody().isBlank()) return 0;
+            String body = res.getBody().trim();
+            if (body.startsWith("[")) return new org.json.JSONArray(body).length();
+            org.json.JSONObject o = new org.json.JSONObject(body);
+            return o.optJSONArray("files") != null ? o.getJSONArray("files").length() : 0;
+        } catch (Exception e) {
+            log.warn("[upload] 개인문서 개수 확인 실패(업로드 허용): {}", e.getMessage());
+            return 0;
+        }
     }
 
     /** 3.1 통합 챗봇 — target_filename(다중) 유무로 private/open 라우팅 (SSE) */
