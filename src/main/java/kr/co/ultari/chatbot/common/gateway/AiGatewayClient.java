@@ -70,7 +70,7 @@ public class AiGatewayClient {
      */
     public Flux<String> streamJson(String dept, String path, String jsonBody) {
         String uri = url(dept, path);
-        log.info("gateway stream POST(json) {} body={}", uri, jsonBody);
+        log.debug("gateway stream POST(json) {} body={}", uri, jsonBody);
         byte[] bytes = (jsonBody == null ? "{}" : jsonBody).getBytes(StandardCharsets.UTF_8);
         return webClient.post()
                 .uri(URI.create(uri))
