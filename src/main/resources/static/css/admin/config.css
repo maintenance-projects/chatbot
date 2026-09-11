@@ -6,6 +6,7 @@
     border-radius: var(--radius-lg);
     padding: 28px 28px 24px;
     max-width: 760px;
+    margin-bottom: 16px;
 }
 
 .config-section {
@@ -171,6 +172,37 @@
     font-size: 0.9rem;
     color: var(--text-mid);
     font-weight: 600;
+}
+
+/* ── 파티션 선택 드롭다운 ── */
+.config-select {
+    min-width: 220px;
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 10px 12px;
+    font-size: 0.95rem;
+    color: var(--text-dark);
+    background: #fff;
+    box-sizing: border-box;
+    cursor: pointer;
+}
+
+.config-select:focus {
+    outline: none;
+    border-color: var(--primary);
+}
+
+/* '전역' 배지 — 보관 기간이 모든 파티션 공통임을 표시 */
+.config-badge {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 2px 8px;
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--primary);
+    background: rgba(37, 99, 235, 0.1);
+    border-radius: 999px;
+    vertical-align: middle;
 }
 
 /* ── 저장 버튼 ── */

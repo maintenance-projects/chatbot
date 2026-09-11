@@ -1,5 +1,6 @@
 package kr.co.ultari.chatbot.admin.service;
 
+import kr.co.ultari.chatbot.common.dept.DeptProperties;
 import kr.co.ultari.chatbot.common.gateway.AiGatewayClient;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -9,8 +10,10 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 /**
- * AI 환경설정: 게이트웨이 {@code /admin/settings}(전역, dept 무관)로 조회/저장을 프록시한다.
+ * AI 환경설정: 게이트웨이 {@code /admin/settings/{dept}}(파티션별)로 조회/저장을 프록시한다.
  * 응답 형식 {@code {file_ttl_days, temperature, system_prompt}}. (로컬 DB 저장 없음 — 게이트웨이 단일 소스)
+ * <p>temperature/system_prompt는 파티션별. file_ttl_days(보관기간)는 전역 취급으로,
+ * 전용 API가 나오기 전까지 기본 dept({@link DeptProperties#getDefaultDept()}) 설정에서 조회/저장한다.
  */
 @Slf4j
 @Service
@@ -18,6 +21,7 @@ import org.springframework.stereotype.Service;
 public class AdminConfigService {
 
     private final AiGatewayClient gateway;
+    private final DeptProperties deptProperties;
 
     /** 게이트웨이 실패 시 사용할 기본 보관일수 유도(기존 정적 설정에서). */
     @Value("${ultari.ai.document.cleanup.retention-hours:168}")
@@ -28,26 +32,48 @@ public class AdminConfigService {
     private volatile int cachedTtlDays = -1;
     private volatile long cachedAt = 0L;
 
-    /** 설정 조회 — 게이트웨이 GET /admin/settings 응답을 그대로 통과. */
-    public ResponseEntity<String> getSettings() {
-        return gateway.get(null, "/admin/settings");
+    /** 파티션별 설정 조회 — 게이트웨이 GET /admin/settings/{dept} 응답을 그대로 통과. */
+    public ResponseEntity<String> getSettings(String dept) {
+        return gateway.get(null, "/admin/settings/" + dept);
     }
 
-    /** 설정 저장 — 게이트웨이 POST /admin/settings 로 JSON 전달, 응답 그대로 통과. */
-    public ResponseEntity<String> saveSettings(String jsonBody) {
-        ResponseEntity<String> res = gateway.postJson(null, "/admin/settings", jsonBody);
+    /**
+     * 파티션별 설정 저장 — POST /admin/settings/{dept}.
+     * <p>게이트웨이 per-dept 저장은 {@code temperature}·{@code system_prompt}만 허용한다
+     * (그 외 필드는 422 extra_forbidden). 보관기간(file_ttl_days)은 전용 API 예정이라 여기서 보내지 않는다.
+     * 전달 JSON에서 허용 키만 추려 봉투 필드·초과 필드 유입을 차단한다.
+     */
+    public ResponseEntity<String> saveSettings(String dept, String jsonBody) {
+        String body = filterSettingKeys(jsonBody);
+        ResponseEntity<String> res = gateway.postJson(null, "/admin/settings/" + dept, body);
         cachedTtlDays = -1; // 저장 후 캐시 무효화
         return res;
     }
 
-    /** 개인문서 보관일수(사용자 표시용). 게이트웨이 file_ttl_days를 60초 캐시, 실패 시 기본값. */
+    /** 게이트웨이 per-dept 저장이 허용하는 설정 키(보관기간·봉투 필드 제외). */
+    private static final String[] SETTING_KEYS = {"temperature", "system_prompt"};
+
+    /** 전달 JSON에서 허용 설정 키만 추린 JSON 반환(초과 필드로 인한 422 방지). */
+    private String filterSettingKeys(String jsonBody) {
+        JSONObject in = (jsonBody == null || jsonBody.isBlank()) ? new JSONObject() : new JSONObject(jsonBody);
+        JSONObject out = new JSONObject();
+        for (String k : SETTING_KEYS) {
+            if (in.has(k)) out.put(k, in.get(k));
+        }
+        return out.toString();
+    }
+
+    /**
+     * 개인문서 보관일수(전역, 사용자 표시용). 기본 dept 설정의 file_ttl_days를 60초 캐시, 실패 시 기본값.
+     * (보관기간 전용 API가 생기면 이 조회 경로만 교체하면 된다.)
+     */
     public int getDocRetentionDays() {
         long now = System.currentTimeMillis();
         if (cachedTtlDays > 0 && (now - cachedAt) < TTL_CACHE_MS) return cachedTtlDays;
 
         int fallback = Math.max(1, defaultRetentionHours / 24);
         try {
-            ResponseEntity<String> res = gateway.get(null, "/admin/settings");
+            ResponseEntity<String> res = gateway.get(null, "/admin/settings/" + deptProperties.getDefaultDept());
             if (res != null && res.getBody() != null && !res.getBody().isBlank()) {
                 int d = new JSONObject(res.getBody()).optInt("file_ttl_days", fallback);
                 cachedTtlDays = d > 0 ? d : fallback;

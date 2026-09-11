@@ -9,6 +9,10 @@
     <!-- 공통 레이아웃(사이드바/톱바/페이지/모달/토스트)은 master.css에 정의돼 있어 재사용 -->
     <link rel="stylesheet" th:href="@{/css/admin/master.css}" href="/css/admin/master.css" />
     <link rel="stylesheet" th:href="@{/css/admin/config.css}" href="/css/admin/config.css" />
+    <script th:inline="javascript">
+        // 환경설정: temperature/프롬프트는 파티션별. 기본 dept(보관기간 전역 저장/조회 기준) 노출.
+        window.CONFIG_DEFAULT_DEPT = /*[[${defaultDept}]]*/ "";
+    </script>
 </head>
 
 <body>
@@ -156,7 +160,24 @@
                         <div class="spinner"></div>
                     </div>
 
-                    <!-- 1. Temperature -->
+                    <!-- 0. 파티션 선택 (2개 이상일 때만 노출) — 아래 Temperature·프롬프트에 적용 -->
+                    <div class="config-section" id="deptSelectSection"
+                         th:if="${deptLabels != null and deptLabels.size() > 1}">
+                        <div class="config-section-head">
+                            <h3 class="config-title">파티션 선택</h3>
+                            <p class="config-desc">아래 <b>Temperature·시스템 프롬프트</b>는 선택한 파티션에만 적용됩니다.
+                                (개인문서 보관 기간은 전역 공통)</p>
+                        </div>
+                        <div class="config-inline">
+                            <select id="deptSelect" class="config-select">
+                                <option th:each="e : ${deptLabels}" th:value="${e.key}" th:text="${e.value}"
+                                        th:selected="${e.key == defaultDept}"></option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="config-divider" th:if="${deptLabels != null and deptLabels.size() > 1}"></div>
+
+                    <!-- 1. Temperature (파티션별) -->
                     <div class="config-section">
                         <div class="config-section-head">
                             <h3 class="config-title">Temperature</h3>
@@ -185,22 +206,27 @@
                             placeholder="예) 당신은 사내 규정 안내 도우미입니다. 정중하고 간결하게 한국어로 답변하세요."></textarea>
                     </div>
 
-                    <div class="config-divider"></div>
-
-                    <!-- 3. 개인문서 보관 기간 -->
-                    <div class="config-section">
-                        <div class="config-section-head">
-                            <h3 class="config-title">개인문서 보관 기간</h3>
-                            <p class="config-desc">개인문서 AI 분석 탭에서 사용자가 업로드한 파일의 보관 기간입니다. 사용자 화면에도 안내됩니다.</p>
-                        </div>
-                        <div class="config-inline">
-                            <input type="number" id="docRetentionDays" class="config-number" min="1" max="365" value="7" />
-                            <span class="config-unit">일</span>
-                        </div>
-                    </div>
-
                     <div class="config-actions">
                         <button class="btn btn-primary" id="btnSaveConfig" type="button">저장</button>
+                    </div>
+                </section>
+
+                <!-- 카드 2: 전역 설정 (모든 파티션 공통) — 파티션별 설정과 분리 -->
+                <section class="config-card">
+                    <!-- 개인문서 보관 기간 (전용 API 준비 중이라 임시 읽기전용) -->
+                    <div class="config-section">
+                        <div class="config-section-head">
+                            <h3 class="config-title">개인문서 보관 기간 <span class="config-badge">전역</span></h3>
+                            <p class="config-desc">개인문서 AI 분석 탭에서 사용자가 업로드한 파일의 보관 기간입니다.
+                                모든 파티션 공통으로 적용되며, 사용자 화면에도 안내됩니다.</p>
+                        </div>
+                        <div class="config-inline">
+                            <input type="number" id="docRetentionDays" class="config-number" min="1" max="365" value="7"
+                                   readonly disabled />
+                            <span class="config-unit">일</span>
+                        </div>
+                        <p class="config-desc" style="margin-top:8px;color:var(--text-mid);">
+                            ※ 보관 기간 변경은 전용 API 준비 중입니다. 현재는 조회만 가능합니다.</p>
                     </div>
                 </section>
             </main>

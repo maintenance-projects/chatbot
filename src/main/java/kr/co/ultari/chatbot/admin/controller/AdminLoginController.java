@@ -287,6 +287,10 @@ public class AdminLoginController {
         model.addAttribute("partition", session.isAuthPartition());
         model.addAttribute("config", session.isAuthConfig());
         model.addAttribute("sessionRemainingSeconds", sessionStore.refresh(sessionId)); // 활동(페이지 이동) 시 세션 연장
+        // 환경설정(temperature/프롬프트)은 파티션별 → 드롭다운 목록·표시명·기본 dept 주입
+        model.addAttribute("deptCodes", deptProperties.getCodes());
+        model.addAttribute("deptLabels", deptLabelService.labels());
+        model.addAttribute("defaultDept", deptProperties.getDefaultDept());
 
         return "admin/config";
     }

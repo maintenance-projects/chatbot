@@ -11,6 +11,7 @@
         temperatureValue: null,
         userPrompt: null,
         docRetentionDays: null,
+        deptSelect: null,
         btnSave: null,
         loading: null,
     };
@@ -41,52 +42,93 @@
     }
 
     // 게이트웨이 계약: { file_ttl_days, temperature(소수), system_prompt }
+    // temperature/system_prompt는 파티션(dept)별, file_ttl_days(보관기간)는 전역(기본 dept 기준).
+    var defaultDept = window.CONFIG_DEFAULT_DEPT || "";
+    var prevDept = "";                                  // dept 전환 취소 시 복원용
+    var loaded = { temperature: null, system_prompt: null }; // 미저장 변경 감지용(선택 dept 기준)
+
+    function currentDept() {
+        return (dom.deptSelect && dom.deptSelect.value) || defaultDept || "";
+    }
+
+    function fetchSettings(dept) {
+        return fetch("/at-i/config/load?dept=" + encodeURIComponent(dept), { method: "POST" })
+            .then(function (r) { if (!r.ok) throw new Error("load failed: " + r.status); return r.json(); });
+    }
+    function postSettings(dept, payload) {
+        return fetch("/at-i/config/save?dept=" + encodeURIComponent(dept), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+        });
+    }
+
+    function applyDeptFields(c) {
+        if (dom.temperature) dom.temperature.value = (c.temperature != null ? c.temperature : 0.3);
+        syncSliderReadout();
+        if (dom.userPrompt) dom.userPrompt.value = c.system_prompt || "";
+        loaded.temperature = dom.temperature ? dom.temperature.value : null;
+        loaded.system_prompt = dom.userPrompt ? dom.userPrompt.value : null;
+    }
+    function applyRetention(c) {
+        if (!dom.docRetentionDays) return;
+        var ttl = c.file_ttl_days != null ? Math.round(Number(c.file_ttl_days)) : 7;
+        dom.docRetentionDays.value = (isNaN(ttl) || ttl < 1) ? 7 : ttl;
+    }
+    function isDirty() {
+        if (!dom.temperature || !dom.userPrompt) return false;
+        return dom.temperature.value !== loaded.temperature || dom.userPrompt.value !== loaded.system_prompt;
+    }
+
+    // 초기 로드: 선택 dept의 temperature/프롬프트 + 전역 보관기간(기본 dept)
     function loadConfig() {
         showLoading(true);
-        fetch("/at-i/config/load", { method: "POST" })
-            .then(function (r) {
-                if (!r.ok) throw new Error("load failed: " + r.status);
-                return r.json();
-            })
-            .then(function (c) {
-                if (dom.temperature) dom.temperature.value = (c.temperature != null ? c.temperature : 0.3);
-                syncSliderReadout();
-                if (dom.userPrompt) dom.userPrompt.value = c.system_prompt || "";
-                if (dom.docRetentionDays) {
-                    var ttl = c.file_ttl_days != null ? Math.round(Number(c.file_ttl_days)) : 7;
-                    dom.docRetentionDays.value = (isNaN(ttl) || ttl < 1) ? 7 : ttl;
-                }
-            })
+        var dept = currentDept();
+        prevDept = dept;
+        var p = fetchSettings(dept).then(function (c) {
+            applyDeptFields(c);
+            if (dept === defaultDept) applyRetention(c); // 기본 dept면 한 응답으로 보관기간까지
+        });
+        if (dept !== defaultDept) {
+            p = p.then(function () { return fetchSettings(defaultDept).then(applyRetention); });
+        }
+        p.catch(function () { toast("설정을 불러오지 못했습니다.", "error"); })
+            .finally(function () { showLoading(false); });
+    }
+
+    // dept 전환: 해당 파티션의 temperature/프롬프트만 재로드(보관기간은 전역이라 유지)
+    function loadDeptOnly(dept) {
+        showLoading(true);
+        fetchSettings(dept).then(applyDeptFields)
             .catch(function () { toast("설정을 불러오지 못했습니다.", "error"); })
             .finally(function () { showLoading(false); });
     }
 
-    function saveConfig() {
-        var days = parseInt(dom.docRetentionDays.value, 10);
-        if (isNaN(days) || days < 1) {
-            toast("보관 기간은 1일 이상이어야 합니다.", "error");
-            dom.docRetentionDays.focus();
+    function onDeptChange() {
+        if (isDirty() && !confirm("저장하지 않은 변경이 있습니다. 파티션을 바꾸면 사라집니다. 계속할까요?")) {
+            dom.deptSelect.value = prevDept; // 취소 → 이전 선택 복원
             return;
         }
-        var temp = parseFloat(dom.temperature.value);
+        prevDept = dom.deptSelect.value;
+        loadDeptOnly(dom.deptSelect.value);
+    }
 
-        var payload = {
-            file_ttl_days: days,
-            temperature: isNaN(temp) ? 0.3 : temp,
-            system_prompt: dom.userPrompt.value || "",
-        };
+    // 저장: 선택 파티션의 temperature/시스템 프롬프트만.
+    // (보관기간은 게이트웨이 per-dept 저장이 거부 → 전용 API 나오면 별도 처리)
+    function saveConfig() {
+        var temp = parseFloat(dom.temperature.value);
+        var dept = currentDept();
+        var payload = { temperature: isNaN(temp) ? 0.3 : temp, system_prompt: dom.userPrompt.value || "" };
 
         dom.btnSave.disabled = true;
         dom.btnSave.textContent = "저장 중...";
 
-        fetch("/at-i/config/save", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-        })
+        postSettings(dept, payload)
             .then(function (res) {
                 if (res.ok) {
                     toast("설정이 저장되었습니다.", "success");
+                    loaded.temperature = dom.temperature.value;
+                    loaded.system_prompt = dom.userPrompt.value;
                 } else {
                     toast("저장에 실패했습니다.", "error");
                 }
@@ -135,10 +177,12 @@
         dom.temperatureValue = $("#temperatureValue");
         dom.userPrompt = $("#userPrompt");
         dom.docRetentionDays = $("#docRetentionDays");
+        dom.deptSelect = $("#deptSelect");
         dom.btnSave = $("#btnSaveConfig");
         dom.loading = $("#loadingOverlay");
 
         if (dom.temperature) dom.temperature.addEventListener("input", syncSliderReadout);
+        if (dom.deptSelect) dom.deptSelect.addEventListener("change", onDeptChange);
         if (dom.btnSave) dom.btnSave.addEventListener("click", saveConfig);
 
         bindCommon();
