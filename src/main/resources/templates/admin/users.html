@@ -34,6 +34,40 @@
             background: var(--base-dark); padding: 3px 10px; border-radius: 20px; }
         .dle-hint { color: var(--color-text-muted); font-size: 0.8125rem; margin-left: auto; }
 
+        /* 콜렉션 관리 패널 */
+        .collection-panel { width: 700px; max-width: 100%; margin-left: 18px; margin-bottom: 18px;
+            padding: 14px 16px; border-radius: var(--radius-md, 12px);
+            background: rgba(var(--primary-rgb), 0.045); border: 1px solid var(--color-border); }
+        .cp-head { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 12px; }
+        .cp-cap { font-size: 0.8125rem; font-weight: 700; color: var(--color-primary-dark); }
+        .cp-code { font-size: 0.75rem; font-weight: 600; color: var(--color-text-muted);
+            background: var(--base-dark); padding: 3px 10px; border-radius: 20px; }
+        .cp-hint { color: var(--color-text-muted); font-size: 0.8125rem; margin-left: auto; }
+        .cp-create { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
+        .cp-create .search-input { max-width: 280px; }
+        .cp-list { display: flex; flex-direction: column; gap: 8px; }
+        .cp-empty { color: var(--color-text-muted); font-size: 0.875rem; padding: 6px 2px; }
+        .cp-item { display: flex; align-items: center; gap: 10px; padding: 10px 14px;
+            border-radius: 10px; background: var(--color-surface, #fff); border: 1px solid var(--color-border); }
+        .cp-item .cp-name { font-weight: 600; color: var(--color-text); }
+        .cp-item .cp-id { font-size: 0.75rem; font-weight: 600; color: var(--color-text-muted);
+            background: var(--base-dark); padding: 2px 9px; border-radius: 20px; }
+        .cp-item .cp-date { color: var(--color-text-muted); font-size: 0.8125rem; margin-left: auto; }
+        .cp-item .cp-del { flex: 0 0 auto; }
+
+        /* 권한 대상 칩 (dept 전체 | 콜렉션별) */
+        .grant-target { display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+            margin-left: 18px; margin-bottom: 14px; }
+        .gt-cap { font-size: 0.8125rem; font-weight: 700; color: var(--color-primary-dark); }
+        .gt-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+        .gt-chip { padding: 7px 16px; border-radius: 20px; cursor: pointer;
+            font-size: 0.8125rem; font-weight: 600; color: var(--color-text-light);
+            background: var(--base-dark); border: 1px solid var(--color-border);
+            transition: all var(--transition-fast); }
+        .gt-chip:hover { color: var(--color-primary); border-color: var(--color-primary); }
+        .gt-chip.active { color: #fff; background: var(--color-primary); border-color: var(--color-primary); }
+        .gt-empty { font-size: 0.8125rem; color: var(--color-text-muted); }
+
         /* 툴바 */
         .tree-toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
         .tree-toolbar .search-input { max-width: 280px; }
@@ -244,6 +278,27 @@
                         <span class="dle-hint">챗봇 화면 상단에 이 명칭으로 표시됩니다.</span>
                     </div>
 
+                    <!-- 콜렉션 관리: 현재 파티션(dept) 하위 콜렉션 생성/삭제 -->
+                    <div class="collection-panel">
+                        <div class="cp-head">
+                            <span class="cp-cap">콜렉션</span>
+                            <span class="cp-code" id="colDeptCode"></span>
+                            <span class="cp-hint">이 파티션 하위의 콜렉션을 생성·삭제합니다.</span>
+                        </div>
+                        <div class="cp-create">
+                            <input type="text" class="search-input" id="colNameInput" maxlength="100"
+                                placeholder="콜렉션 이름 입력">
+                            <button class="btn btn-primary btn-sm" id="btnAddCollection" type="button">추가</button>
+                        </div>
+                        <div class="cp-list" id="colList"></div>
+                    </div>
+
+                    <!-- 권한 대상: dept 전체 | 콜렉션별 — 선택에 따라 아래 트리 체크상태가 스왑됨 -->
+                    <div class="grant-target">
+                        <span class="gt-cap">권한 대상</span>
+                        <div class="gt-chips" id="grantTargetChips"></div>
+                    </div>
+
                     <div class="tree-toolbar">
                         <input type="text" class="search-input" id="treeSearch" placeholder="이름 / 아이디 검색…">
                         <button class="btn btn-outline btn-sm" id="btnExpandAll" type="button">모두 펼치기</button>
@@ -292,6 +347,34 @@
             <div class="modal-footer">
                 <button class="btn btn-outline" id="pwModalCancel" type="button">취소</button>
                 <button class="btn btn-primary" id="pwModalSave" type="button">변경</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 콜렉션 이름 변경 모달 -->
+    <div class="modal-overlay" id="colRenameModal">
+        <div class="modal" style="max-width:420px;">
+            <div class="modal-header">
+                <h3 class="modal-title">콜렉션 이름 변경</h3>
+                <button class="modal-close" id="colRenameClose" type="button">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18" />
+                        <line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label class="form-label">새 이름 <span class="required">*</span></label>
+                    <input type="text" class="form-input" id="colRenameInput" maxlength="100"
+                        placeholder="새 콜렉션 이름을 입력하세요">
+                </div>
+                <div class="pw-error" id="colRenameError" style="display:none;"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" id="colRenameCancel" type="button">취소</button>
+                <button class="btn btn-primary" id="colRenameSave" type="button">변경</button>
             </div>
         </div>
     </div>

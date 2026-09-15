@@ -28,25 +28,28 @@ public class AdminUserController {
     private final DeptResolver deptResolver;
     private final HrPartParentCache hrPartParentCache;
 
-    /** 조직도 트리 + 특정 dept 부여 상태 */
+    /** 조직도 트리 + 부여 상태. collection이 있으면 콜렉션 권한, 없으면 dept 권한 기준. */
     @PostMapping("/tree")
     @ResponseBody
     public String tree(@RequestParam("adminId") String adminId,
-                       @RequestParam("dept") String dept) {
-        log.debug("[users tree] adminId={}, dept={}", adminId, dept);
-        return userService.tree(dept).toString();
+                       @RequestParam("dept") String dept,
+                       @RequestParam(value = "collection", required = false) String collection) {
+        log.debug("[users tree] adminId={}, dept={}, collection={}", adminId, dept, collection);
+        return userService.tree(dept, collection).toString();
     }
 
-    /** 권한 부여 적용 (action: ALLOW | DENY | REMOVE) */
+    /** 권한 부여 적용 (action: ALLOW | DENY | REMOVE). collection이 있으면 콜렉션 권한 대상. */
     @PostMapping("/grant")
     @ResponseBody
     public String grant(@RequestParam("adminId") String adminId,
                         @RequestParam("dept") String dept,
+                        @RequestParam(value = "collection", required = false) String collection,
                         @RequestParam("targetType") String targetType,
                         @RequestParam("targetId") String targetId,
                         @RequestParam("action") String action) {
-        log.debug("[users grant] adminId={}, dept={}, {}:{} {}", adminId, dept, targetType, targetId, action);
-        return userService.applyGrant(dept, targetType, targetId, action);
+        log.debug("[users grant] adminId={}, dept={}, collection={}, {}:{} {}",
+                adminId, dept, collection, targetType, targetId, action);
+        return userService.applyGrant(dept, collection, targetType, targetId, action);
     }
 
     /** dept 표시 명칭 저장(빈 값이면 코드 폴백) */

@@ -94,6 +94,18 @@ public class AiGatewayClient {
                 .block();
     }
 
+    /** multipart PATCH — 게이트웨이 상태코드·본문을 그대로 전달(예: 콜렉션 이름 변경). */
+    public ResponseEntity<String> patchMultipart(String dept, String path, MultipartBodyBuilder body) {
+        String uri = url(dept, path);
+        log.debug("gateway PATCH {}", uri);
+        return webClient.patch()
+                .uri(URI.create(uri))
+                .contentType(MediaType.MULTIPART_FORM_DATA)
+                .body(BodyInserters.fromMultipartData(body.build()))
+                .exchangeToMono(resp -> resp.toEntity(String.class))
+                .block();
+    }
+
     /** 본문 없는 POST(예: 금칙어 재로드). */
     public ResponseEntity<String> post(String dept, String path) {
         String uri = url(dept, path);

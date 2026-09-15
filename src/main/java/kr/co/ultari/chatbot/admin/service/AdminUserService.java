@@ -2,7 +2,9 @@ package kr.co.ultari.chatbot.admin.service;
 
 import kr.co.ultari.chatbot.common.dept.DeptResolver;
 import kr.co.ultari.chatbot.common.dept.HrDirectorySnapshot;
+import kr.co.ultari.chatbot.database.entity.AiCollectionGrant;
 import kr.co.ultari.chatbot.database.entity.AiDeptGrant;
+import kr.co.ultari.chatbot.database.repository.AiCollectionGrantRepository;
 import kr.co.ultari.chatbot.database.repository.AiDeptGrantRepository;
 import kr.co.ultari.chatbot.hr.dto.HrPart;
 import kr.co.ultari.chatbot.hr.dto.HrUser;
@@ -13,6 +15,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.util.List;
 import java.util.Map;
@@ -28,15 +31,17 @@ public class AdminUserService {
     private final HrPartMapper hrPartMapper;
     private final HrUserMapper hrUserMapper;
     private final AiDeptGrantRepository grantRepository;
+    private final AiCollectionGrantRepository collectionGrantRepository;
     private final DeptResolver deptResolver;
     private final HrDirectorySnapshot hrDirectory;
 
     /**
-     * 조직도 트리 + 특정 dept의 부여 상태.
+     * 조직도 트리 + 부여 상태. collection이 비면 dept 접근 권한(AI_DEPT_GRANT),
+     * 값이 있으면 그 콜렉션 접근 권한(AI_COLLECTION_GRANT) 기준으로 grants를 구성한다.
      * { parts:[{partId,partHigh,partName}], users:[{userId,userName,userHigh}],
      *   grants:{ parts:[partId..(ALLOW)], usersAllow:[userId..], usersDeny:[userId..] } }
      */
-    public JSONObject tree(String dept) {
+    public JSONObject tree(String dept, String collection) {
         JSONObject root = new JSONObject();
 
         JSONArray parts = new JSONArray();
@@ -82,12 +87,25 @@ public class AdminUserService {
         JSONArray grantParts = new JSONArray();
         JSONArray usersAllow = new JSONArray();
         JSONArray usersDeny = new JSONArray();
-        for (AiDeptGrant g : grantRepository.findByAiDept(dept)) {
-            if (AiDeptGrant.TYPE_PART.equals(g.getTargetType())) {
-                if (AiDeptGrant.MODE_ALLOW.equals(g.getMode())) grantParts.put(g.getTargetId());
-            } else if (AiDeptGrant.TYPE_USER.equals(g.getTargetType())) {
-                if (AiDeptGrant.MODE_DENY.equals(g.getMode())) usersDeny.put(g.getTargetId());
-                else usersAllow.put(g.getTargetId());
+        if (StringUtils.hasText(collection)) {
+            // 콜렉션 접근 권한(AI_COLLECTION_GRANT)
+            for (AiCollectionGrant g : collectionGrantRepository.findByAiDeptAndCollectionName(dept, collection)) {
+                if (AiCollectionGrant.TYPE_PART.equals(g.getTargetType())) {
+                    if (AiCollectionGrant.MODE_ALLOW.equals(g.getMode())) grantParts.put(g.getTargetId());
+                } else if (AiCollectionGrant.TYPE_USER.equals(g.getTargetType())) {
+                    if (AiCollectionGrant.MODE_DENY.equals(g.getMode())) usersDeny.put(g.getTargetId());
+                    else usersAllow.put(g.getTargetId());
+                }
+            }
+        } else {
+            // dept 접근 권한(AI_DEPT_GRANT)
+            for (AiDeptGrant g : grantRepository.findByAiDept(dept)) {
+                if (AiDeptGrant.TYPE_PART.equals(g.getTargetType())) {
+                    if (AiDeptGrant.MODE_ALLOW.equals(g.getMode())) grantParts.put(g.getTargetId());
+                } else if (AiDeptGrant.TYPE_USER.equals(g.getTargetType())) {
+                    if (AiDeptGrant.MODE_DENY.equals(g.getMode())) usersDeny.put(g.getTargetId());
+                    else usersAllow.put(g.getTargetId());
+                }
             }
         }
 
@@ -102,10 +120,15 @@ public class AdminUserService {
 
     /**
      * 권한 부여 적용. action: ALLOW | DENY | REMOVE.
-     * (같은 대상+dept의 기존 행을 정리하고 해당 상태로 설정)
+     * collection이 비면 dept 접근 권한(AI_DEPT_GRANT), 값이 있으면 콜렉션 권한(AI_COLLECTION_GRANT).
+     * (같은 대상+dept(+콜렉션)의 기존 행을 정리하고 해당 상태로 설정)
      */
     @Transactional
-    public String applyGrant(String dept, String targetType, String targetId, String action) {
+    public String applyGrant(String dept, String collection, String targetType, String targetId, String action) {
+        if (StringUtils.hasText(collection)) {
+            return applyCollectionGrant(dept, collection, targetType, targetId, action);
+        }
+
         List<AiDeptGrant> existing =
                 grantRepository.findByTargetTypeAndTargetIdAndAiDept(targetType, targetId, dept);
         if (!existing.isEmpty()) grantRepository.deleteAll(existing);
@@ -123,6 +146,27 @@ public class AdminUserService {
         g.setMode(mode);
         grantRepository.save(g);
         deptResolver.invalidateAll(); // 권한 변경 즉시 반영(캐시 무효화)
+        return "ok";
+    }
+
+    /** 콜렉션 접근 권한 부여/회수(AI_COLLECTION_GRANT). dept 권한과 동일한 정리→설정 흐름. */
+    private String applyCollectionGrant(String dept, String collection,
+                                        String targetType, String targetId, String action) {
+        List<AiCollectionGrant> existing =
+                collectionGrantRepository.findByTargetTypeAndTargetIdAndAiDeptAndCollectionName(
+                        targetType, targetId, dept, collection);
+        if (!existing.isEmpty()) collectionGrantRepository.deleteAll(existing);
+
+        if ("REMOVE".equals(action)) return "ok";
+
+        String mode = "DENY".equals(action) ? AiCollectionGrant.MODE_DENY : AiCollectionGrant.MODE_ALLOW;
+        AiCollectionGrant g = new AiCollectionGrant();
+        g.setTargetType(targetType);
+        g.setTargetId(targetId);
+        g.setAiDept(dept);
+        g.setCollectionName(collection);
+        g.setMode(mode);
+        collectionGrantRepository.save(g);
         return "ok";
     }
 

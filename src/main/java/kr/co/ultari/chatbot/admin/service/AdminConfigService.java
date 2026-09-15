@@ -9,6 +9,9 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+
 /**
  * AI 환경설정: 게이트웨이 {@code /admin/settings/{dept}}(파티션별)로 조회/저장을 프록시한다.
  * 응답 형식 {@code {file_ttl_days, temperature, system_prompt}}. (로컬 DB 저장 없음 — 게이트웨이 단일 소스)
@@ -48,6 +51,25 @@ public class AdminConfigService {
         ResponseEntity<String> res = gateway.postJson(null, "/admin/settings/" + dept, body);
         cachedTtlDays = -1; // 저장 후 캐시 무효화
         return res;
+    }
+
+    /**
+     * 콜렉션별 설정 조회 — 게이트웨이 GET /{dept}/admin/partitions/{collection}/settings.
+     * dept는 URL prefix(콜렉션 API와 동일), 응답은 {@code {temperature, system_prompt, partition}}.
+     * 콜렉션에 설정이 없으면 게이트웨이가 파티션(dept) 설정으로 폴백한다.
+     */
+    public ResponseEntity<String> getCollectionSettings(String dept, String collection) {
+        return gateway.get(dept, "/admin/partitions/" + enc(collection) + "/settings");
+    }
+
+    /** 콜렉션별 설정 저장 — POST /{dept}/admin/partitions/{collection}/settings. temperature·system_prompt만 허용. */
+    public ResponseEntity<String> saveCollectionSettings(String dept, String collection, String jsonBody) {
+        String body = filterSettingKeys(jsonBody);
+        return gateway.postJson(dept, "/admin/partitions/" + enc(collection) + "/settings", body);
+    }
+
+    private static String enc(String s) {
+        return URLEncoder.encode(s, StandardCharsets.UTF_8).replace("+", "%20");
     }
 
     /** 게이트웨이 per-dept 저장이 허용하는 설정 키(보관기간·봉투 필드 제외). */

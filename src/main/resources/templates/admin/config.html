@@ -13,6 +13,16 @@
         // 환경설정: temperature/프롬프트는 파티션별. 기본 dept(보관기간 전역 저장/조회 기준) 노출.
         window.CONFIG_DEFAULT_DEPT = /*[[${defaultDept}]]*/ "";
     </script>
+    <style>
+        /* 설정 대상 칩 (파티션 전체 | 콜렉션별) */
+        .config-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+        .config-chip { padding: 7px 16px; border-radius: 20px; cursor: pointer;
+            font-size: 0.8125rem; font-weight: 600; color: var(--color-text-light);
+            background: var(--base-dark); border: 1px solid var(--color-border);
+            transition: all var(--transition-fast); }
+        .config-chip:hover { color: var(--color-primary); border-color: var(--color-primary); }
+        .config-chip.active { color: #fff; background: var(--color-primary); border-color: var(--color-primary); }
+    </style>
 </head>
 
 <body>
@@ -176,6 +186,17 @@
                         </div>
                     </div>
                     <div class="config-divider" th:if="${deptLabels != null and deptLabels.size() > 1}"></div>
+
+                    <!-- 0.5 설정 대상: 파티션 전체 | 콜렉션별 (아래 Temperature·프롬프트에 적용) -->
+                    <div class="config-section" id="settingTargetSection">
+                        <div class="config-section-head">
+                            <h3 class="config-title">설정 대상</h3>
+                            <p class="config-desc">파티션 전체 또는 특정 콜렉션의 설정을 편집합니다.
+                                콜렉션에 설정이 없으면 <b>파티션 전체 설정</b>을 따릅니다.</p>
+                        </div>
+                        <div class="config-chips" id="settingTargetChips"></div>
+                    </div>
+                    <div class="config-divider"></div>
 
                     <!-- 1. Temperature (파티션별) -->
                     <div class="config-section">

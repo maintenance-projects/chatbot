@@ -60,6 +60,33 @@ public class AdminConfigController {
         return withUtf8(configService.saveSettings(d, jsonBody));
     }
 
+    /** 콜렉션별 설정 조회 — 게이트웨이 GET /{dept}/admin/partitions/{collection}/settings 통과. */
+    @PostMapping("/collection/load")
+    @ResponseBody
+    public ResponseEntity<String> collectionLoad(@RequestParam(value = "dept", required = false) String dept,
+                                                 @RequestParam(value = "collection", required = false) String collection) {
+        String d = resolveDept(dept);
+        if (d == null || !validCollection(collection)) return badRequest();
+        return withUtf8(configService.getCollectionSettings(d, collection.trim()));
+    }
+
+    /** 콜렉션별 설정 저장 — temperature·system_prompt만 게이트웨이로 전달. */
+    @PostMapping("/collection/save")
+    @ResponseBody
+    public ResponseEntity<String> collectionSave(@RequestParam(value = "dept", required = false) String dept,
+                                                 @RequestParam(value = "collection", required = false) String collection,
+                                                 @RequestBody(required = false) String jsonBody) {
+        String d = resolveDept(dept);
+        if (d == null || !validCollection(collection)) return badRequest();
+        log.debug("[config collection save] dept={}, collection={}, body={}", d, collection, jsonBody);
+        return withUtf8(configService.saveCollectionSettings(d, collection.trim(), jsonBody));
+    }
+
+    /** 콜렉션 식별자(name) 검증 — 게이트웨이 경로 주입 방지(게이트웨이 채번: 예 documents_1). */
+    private boolean validCollection(String collection) {
+        return collection != null && collection.trim().matches("[A-Za-z0-9._-]+");
+    }
+
     /** 개인문서 보관기간 조회(전역) — 게이트웨이 GET /admin/file-ttl 통과. */
     @PostMapping("/ttl/load")
     @ResponseBody
