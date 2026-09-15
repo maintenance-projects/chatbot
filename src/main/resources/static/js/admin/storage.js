@@ -91,7 +91,7 @@
         screenGuideDim: $("#screenGuideDim"),
         screenGuideClose: $("#btnCloseScreenGuide"),
         screenGuideLayer: $("#screenGuideHighlightLayer"),
-        partitionSelect: $("#partitionSelect"),
+        partitionChips: $("#partitionChips"),
         partitionEmpty: $("#partitionEmpty"),
         docTargetPartition: $("#docTargetPartition")
     };
@@ -162,26 +162,29 @@
             .catch(function () { partitions = []; currentPartition = ""; renderPartitionSelect(); });
     }
 
+    // 파티션 선택기를 칩 버튼으로 렌더(다른 관리자 화면의 대상 칩과 동일 UX).
     function renderPartitionSelect() {
-        var sel = dom.partitionSelect;
-        if (!sel) return;
+        var box = dom.partitionChips;
+        if (!box) return;
         if (!partitions.length) {
-            sel.innerHTML = "";
-            sel.style.display = "none";
+            box.innerHTML = "";
+            box.style.display = "none";
             if (dom.partitionEmpty) dom.partitionEmpty.style.display = "";
             if (dom.btnAddDoc) dom.btnAddDoc.disabled = true;
             return;
         }
-        sel.style.display = "";
+        box.style.display = "";
         if (dom.partitionEmpty) dom.partitionEmpty.style.display = "none";
         if (dom.btnAddDoc) dom.btnAddDoc.disabled = false;
-        sel.innerHTML = "";
+        box.innerHTML = "";
         partitions.forEach(function (it) {
-            var opt = document.createElement("option");
-            opt.value = String(it.name);
-            opt.textContent = it.description || it.name;
-            if (String(it.name) === currentPartition) opt.selected = true;
-            sel.appendChild(opt);
+            var name = String(it.name);
+            var b = document.createElement("button");
+            b.type = "button";
+            b.className = "partition-chip" + (name === currentPartition ? " active" : "");
+            b.textContent = it.description || it.name;
+            b.addEventListener("click", function () { switchPartition(name); });
+            box.appendChild(b);
         });
     }
 
@@ -190,6 +193,7 @@
     function switchPartition(name) {
         if (name === currentPartition) return;
         currentPartition = name;
+        renderPartitionSelect();            // 칩 active 상태 갱신
         isSearchMode = false;
         searchQuery = "";
         if (dom.searchInput) dom.searchInput.value = "";
@@ -1693,11 +1697,7 @@
         });
 
         if (dom.btnAddDoc) dom.btnAddDoc.addEventListener("click", openDocModal);
-        if (dom.partitionSelect) {
-            dom.partitionSelect.addEventListener("change", function () {
-                switchPartition(dom.partitionSelect.value);
-            });
-        }
+        // 파티션 선택은 칩 버튼(renderPartitionSelect에서 각 칩에 click 바인딩)으로 처리
         if (dom.btnReloadProfanity) dom.btnReloadProfanity.addEventListener("click", reloadProfanity);
         if (dom.docModalClose) dom.docModalClose.addEventListener("click", attemptCloseDocModal);
         if (dom.docModalCancel) dom.docModalCancel.addEventListener("click", attemptCloseDocModal);

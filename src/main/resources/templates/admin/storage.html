@@ -20,8 +20,15 @@
         /* dept(벡터DB) 탭 — 관리자 테마 */
         .partition-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
         .partition-bar .cb-label { font-size: 0.85rem; font-weight: 700; color: var(--text-mid, #555); }
-        .partition-bar .search-select { min-width: 200px; }
         .partition-bar .cb-empty { font-size: 0.85rem; color: var(--text-light, #999); }
+        /* 파티션 선택 칩 — config 화면(설정 대상 칩)과 동일 룩앤필 */
+        .partition-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+        .partition-chip { padding: 7px 16px; border-radius: 20px; cursor: pointer;
+            font-size: 0.8125rem; font-weight: 600; color: var(--color-text-light);
+            background: var(--base-dark); border: 1px solid var(--color-border);
+            transition: all var(--transition-fast); }
+        .partition-chip:hover { color: var(--color-primary); border-color: var(--color-primary); }
+        .partition-chip.active { color: #fff; background: var(--color-primary); border-color: var(--color-primary); }
         .dept-tabs { display: flex; gap: 2px; margin-bottom: 18px; border-bottom: 1px solid var(--color-border); }
         .dept-tab { position: relative; padding: 11px 24px; border: none; background: none; cursor: pointer;
             font-size: 0.9375rem; font-weight: 600; color: var(--color-text-light);
@@ -178,10 +185,10 @@
             <main class="page-body">
                 <div class="dept-tabs" id="deptTabs"></div>
 
-                <!-- 파티션 선택: 선택 파티션 기준으로 목록/검색/등록/삭제 -->
+                <!-- 파티션 선택: 선택 파티션 기준으로 목록/검색/등록/삭제 (칩 버튼) -->
                 <div class="partition-bar" id="partitionBar">
                     <span class="cb-label">파티션</span>
-                    <select class="search-select" id="partitionSelect"></select>
+                    <div class="partition-chips" id="partitionChips"></div>
                     <span class="cb-empty" id="partitionEmpty" style="display:none;">
                         파티션이 없습니다. 'AI 벡터DB 권한' 화면에서 먼저 생성하세요.</span>
                 </div>
