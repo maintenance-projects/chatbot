@@ -159,13 +159,16 @@ document.addEventListener("DOMContentLoaded", () => {
         // 인사 말풍선의 '전자법규집'을 파티션 표시명으로 치환(미설정 시 원문 유지). AI 어시스턴트 인사 1건만 해당.
         const GREET_TOKEN = "전자법규집";
         let greetEl = null, greetTemplate = "";
-        (function initGreet() {
-            const pres = document.querySelectorAll(".cb-bubble__text [data-rawtext]");
+        // 챗봇 대화영역(#cbBody)에서 인사 말풍선(토큰 포함)을 재조회. 대화창 스왑 후 참조 갱신용.
+        function resolveGreetEl() {
+            greetEl = null; greetTemplate = "";
+            const pres = bodyChat.querySelectorAll(".cb-bubble__text [data-rawtext]");
             for (let i = 0; i < pres.length; i++) {
                 const rt = pres[i].getAttribute("data-rawtext") || "";
                 if (rt.indexOf(GREET_TOKEN) >= 0) { greetEl = pres[i]; greetTemplate = rt; break; }
             }
-        })();
+        }
+        resolveGreetEl();
         function applyGreetingPartition(label) {
             if (!greetEl) return;
             const name = (label && String(label).trim()) ? String(label).trim() : GREET_TOKEN;
@@ -176,10 +179,31 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // 선택된 파티션 표시명을 브랜드/인사말에 반영.
         function applyBrand(label) {
-            applyGreetingPartition(label); // 미설정이면 '전자법규집' 유지/복원
+            applyGreetingPartition(label); // 미설정이면 '전자법규집' 유지/복원(복원 대화창은 토큰이 없어 no-op)
             if (!label) return;
             if (brandTitle) brandTitle.textContent = label;
             if (brandLogo) brandLogo.textContent = String(label).trim().charAt(0).toUpperCase() || "A";
+        }
+
+        // ── 파티션별 대화창(메모리 저장) — 챗봇창이 열려있는 동안만 유지, 새로고침 시 초기화 ──
+        // AI챗봇 모드(#cbBody)에만 적용. 개인문서/첨부파일 검색은 파티션 스코프가 아니라 대상 아님.
+        const chatStore = {};                            // key: dept|name → bodyChat.innerHTML 스냅샷
+        const chatGreetingTemplate = bodyChat.innerHTML; // 최초 인사말(신규 파티션 진입 시 초기화 템플릿)
+        let currentPartKey = "";
+
+        // 파티션 전환: 현재 대화 저장 → 새 파티션 대화 복원(없으면 인사말 초기화).
+        // 스트리밍(전송) 중엔 노드 참조가 깨지므로 전환 차단 → false 반환(호출자가 선택 원복).
+        function switchChatPartition(newKey) {
+            if (newKey === currentPartKey) return true;
+            if (widget && widget.classList.contains("is-sending")) return false;
+            if (currentPartKey) chatStore[currentPartKey] = bodyChat.innerHTML;
+            bodyChat.innerHTML = Object.prototype.hasOwnProperty.call(chatStore, newKey)
+                ? chatStore[newKey]
+                : chatGreetingTemplate;              // 신규 파티션 → 인사말로 시작
+            resolveGreetEl();                        // 스왑으로 노드 교체됨 → 인사말 참조 재획득
+            currentPartKey = newKey;
+            if (typeof scrollToBottom === "function") scrollToBottom();
+            return true;
         }
 
         const uid = encodeURIComponent(window.sessionId || "");
@@ -190,6 +214,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 const cur = (d && d.current) || null;
                 // 단일/자동 파티션도 명칭은 항상 반영
                 if (cur && cur.label) applyBrand(cur.label);
+                if (cur && cur.dept && cur.name) currentPartKey = cur.dept + "|" + cur.name;
 
                 if (!sel || parts.length <= 1) return;
                 sel.innerHTML = "";
@@ -201,10 +226,19 @@ document.addEventListener("DOMContentLoaded", () => {
                     sel.appendChild(o);
                 });
                 sel.hidden = false;
+                let prevSelValue = sel.value;             // 스트리밍 중 전환 차단 시 원복용
                 sel.addEventListener("change", () => {
-                    const sep = sel.value.indexOf("|");
-                    const dept = sel.value.slice(0, sep);
-                    const name = sel.value.slice(sep + 1);
+                    const newKey = sel.value;
+                    // 대화창 스왑(스트리밍 중이면 차단 → 선택 원복 후 안내)
+                    if (!switchChatPartition(newKey)) {
+                        sel.value = prevSelValue;
+                        return;
+                    }
+                    prevSelValue = newKey;
+
+                    const sep = newKey.indexOf("|");
+                    const dept = newKey.slice(0, sep);
+                    const name = newKey.slice(sep + 1);
                     const opt = sel.options[sel.selectedIndex];
                     applyBrand(opt ? opt.textContent : "");
                     const fd = new FormData();
