@@ -54,18 +54,18 @@ public class AdminConfigService {
     }
 
     /**
-     * 콜렉션별 설정 조회 — 게이트웨이 GET /{dept}/admin/partitions/{collection}/settings.
-     * dept는 URL prefix(콜렉션 API와 동일), 응답은 {@code {temperature, system_prompt, partition}}.
-     * 콜렉션에 설정이 없으면 게이트웨이가 파티션(dept) 설정으로 폴백한다.
+     * 파티션별 설정 조회 — 게이트웨이 GET /{dept}/admin/partitions/{partition}/settings.
+     * dept(벡터DB)는 URL prefix, 응답은 {@code {temperature, system_prompt, partition}}.
+     * 파티션에 설정이 없으면 게이트웨이가 벡터DB(dept) 설정으로 폴백한다.
      */
-    public ResponseEntity<String> getCollectionSettings(String dept, String collection) {
-        return gateway.get(dept, "/admin/partitions/" + enc(collection) + "/settings");
+    public ResponseEntity<String> getPartitionSettings(String dept, String partition) {
+        return gateway.get(dept, "/admin/partitions/" + enc(partition) + "/settings");
     }
 
-    /** 콜렉션별 설정 저장 — POST /{dept}/admin/partitions/{collection}/settings. temperature·system_prompt만 허용. */
-    public ResponseEntity<String> saveCollectionSettings(String dept, String collection, String jsonBody) {
+    /** 파티션별 설정 저장 — POST /{dept}/admin/partitions/{partition}/settings. temperature·system_prompt만 허용. */
+    public ResponseEntity<String> savePartitionSettings(String dept, String partition, String jsonBody) {
         String body = filterSettingKeys(jsonBody);
-        return gateway.postJson(dept, "/admin/partitions/" + enc(collection) + "/settings", body);
+        return gateway.postJson(dept, "/admin/partitions/" + enc(partition) + "/settings", body);
     }
 
     private static String enc(String s) {

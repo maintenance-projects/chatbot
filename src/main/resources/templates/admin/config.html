@@ -10,11 +10,11 @@
     <link rel="stylesheet" th:href="@{/css/admin/master.css}" href="/css/admin/master.css" />
     <link rel="stylesheet" th:href="@{/css/admin/config.css}" href="/css/admin/config.css" />
     <script th:inline="javascript">
-        // 환경설정: temperature/프롬프트는 파티션별. 기본 dept(보관기간 전역 저장/조회 기준) 노출.
+        // 환경설정: temperature/프롬프트는 벡터DB별. 기본 dept(보관기간 전역 저장/조회 기준) 노출.
         window.CONFIG_DEFAULT_DEPT = /*[[${defaultDept}]]*/ "";
     </script>
     <style>
-        /* 설정 대상 칩 (파티션 전체 | 콜렉션별) */
+        /* 설정 대상 칩 (벡터DB 전체 | 파티션별) */
         .config-chips { display: flex; gap: 8px; flex-wrap: wrap; }
         .config-chip { padding: 7px 16px; border-radius: 20px; cursor: pointer;
             font-size: 0.8125rem; font-weight: 600; color: var(--color-text-light);
@@ -58,7 +58,7 @@
                         <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
                         <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                     </svg>
-                    AI 파티션 권한
+                    AI 벡터DB 권한
                 </a>
                 <a th:if="${statistics}" href="/at-i/statistics" class="nav-item" data-page="statistics">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -170,12 +170,12 @@
                         <div class="spinner"></div>
                     </div>
 
-                    <!-- 0. 파티션 선택 (2개 이상일 때만 노출) — 아래 Temperature·프롬프트에 적용 -->
+                    <!-- 0. 벡터DB 선택 (2개 이상일 때만 노출) — 아래 Temperature·프롬프트에 적용 -->
                     <div class="config-section" id="deptSelectSection"
                          th:if="${deptLabels != null and deptLabels.size() > 1}">
                         <div class="config-section-head">
-                            <h3 class="config-title">파티션 선택</h3>
-                            <p class="config-desc">아래 <b>Temperature·시스템 프롬프트</b>는 선택한 파티션에만 적용됩니다.
+                            <h3 class="config-title">벡터DB 선택</h3>
+                            <p class="config-desc">아래 <b>Temperature·시스템 프롬프트</b>는 선택한 벡터DB에만 적용됩니다.
                                 (개인문서 보관 기간은 전역 공통)</p>
                         </div>
                         <div class="config-inline">
@@ -187,18 +187,18 @@
                     </div>
                     <div class="config-divider" th:if="${deptLabels != null and deptLabels.size() > 1}"></div>
 
-                    <!-- 0.5 설정 대상: 파티션 전체 | 콜렉션별 (아래 Temperature·프롬프트에 적용) -->
+                    <!-- 0.5 설정 대상: 벡터DB 전체 | 파티션별 (아래 Temperature·프롬프트에 적용) -->
                     <div class="config-section" id="settingTargetSection">
                         <div class="config-section-head">
                             <h3 class="config-title">설정 대상</h3>
-                            <p class="config-desc">파티션 전체 또는 특정 콜렉션의 설정을 편집합니다.
-                                콜렉션에 설정이 없으면 <b>파티션 전체 설정</b>을 따릅니다.</p>
+                            <p class="config-desc">벡터DB 전체 또는 특정 파티션의 설정을 편집합니다.
+                                파티션에 설정이 없으면 <b>벡터DB 전체 설정</b>을 따릅니다.</p>
                         </div>
                         <div class="config-chips" id="settingTargetChips"></div>
                     </div>
                     <div class="config-divider"></div>
 
-                    <!-- 1. Temperature (파티션별) -->
+                    <!-- 1. Temperature (벡터DB별) -->
                     <div class="config-section">
                         <div class="config-section-head">
                             <h3 class="config-title">Temperature</h3>
@@ -232,14 +232,14 @@
                     </div>
                 </section>
 
-                <!-- 카드 2: 전역 설정 (모든 파티션 공통) — 파티션별 설정과 분리 -->
+                <!-- 카드 2: 전역 설정 (모든 벡터DB 공통) — 벡터DB별 설정과 분리 -->
                 <section class="config-card">
                     <!-- 개인문서 보관 기간 (전역, 게이트웨이 /admin/file-ttl) -->
                     <div class="config-section">
                         <div class="config-section-head">
                             <h3 class="config-title">개인문서 보관 기간 <span class="config-badge">전역</span></h3>
                             <p class="config-desc">개인문서 AI 분석 탭에서 사용자가 업로드한 파일의 보관 기간입니다.
-                                모든 파티션 공통으로 적용되며, 사용자 화면에도 안내됩니다.</p>
+                                모든 벡터DB 공통으로 적용되며, 사용자 화면에도 안내됩니다.</p>
                         </div>
                         <div class="config-inline">
                             <input type="number" id="docRetentionDays" class="config-number" min="1" max="365" value="7" />

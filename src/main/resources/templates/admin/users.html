@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>관리자 페이지 · AI 파티션 권한</title>
+    <title>관리자 페이지 · AI 벡터DB 권한</title>
     <link rel="stylesheet" th:href="@{/css/admin/base.css}" href="/css/admin/base.css" />
     <link rel="stylesheet" th:href="@{/css/admin/master.css}" href="/css/admin/master.css" />
     <script th:inline="javascript">
@@ -34,7 +34,7 @@
             background: var(--base-dark); padding: 3px 10px; border-radius: 20px; }
         .dle-hint { color: var(--color-text-muted); font-size: 0.8125rem; margin-left: auto; }
 
-        /* 콜렉션 관리 패널 */
+        /* 파티션 관리 패널 */
         .collection-panel { width: 700px; max-width: 100%; margin-left: 18px; margin-bottom: 18px;
             padding: 14px 16px; border-radius: var(--radius-md, 12px);
             background: rgba(var(--primary-rgb), 0.045); border: 1px solid var(--color-border); }
@@ -55,7 +55,7 @@
         .cp-item .cp-date { color: var(--color-text-muted); font-size: 0.8125rem; margin-left: auto; }
         .cp-item .cp-del { flex: 0 0 auto; }
 
-        /* 권한 대상 칩 (dept 전체 | 콜렉션별) */
+        /* 권한 대상 칩 (dept 전체 | 파티션별) */
         .grant-target { display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
             margin-left: 18px; margin-bottom: 14px; }
         .gt-cap { font-size: 0.8125rem; font-weight: 700; color: var(--color-primary-dark); }
@@ -158,7 +158,7 @@
                         <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
                         <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                     </svg>
-                    AI 파티션 권한
+                    AI 벡터DB 권한
                 </a>
                 <a th:if="${statistics}" href="/at-i/statistics" class="nav-item" data-page="statistics">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -249,7 +249,7 @@
                     <div class="breadcrumb">
                         <a href="#">홈</a>
                         <span class="breadcrumb-sep">›</span>
-                        <span class="breadcrumb-current">AI 파티션 권한</span>
+                        <span class="breadcrumb-current">AI 벡터DB 권한</span>
                     </div>
                 </div>
                 <div class="topbar-right">
@@ -278,22 +278,22 @@
                         <span class="dle-hint">챗봇 화면 상단에 이 명칭으로 표시됩니다.</span>
                     </div>
 
-                    <!-- 콜렉션 관리: 현재 파티션(dept) 하위 콜렉션 생성/삭제 -->
+                    <!-- 파티션 관리: 현재 벡터DB(dept) 하위 파티션 생성/삭제 -->
                     <div class="collection-panel">
                         <div class="cp-head">
-                            <span class="cp-cap">콜렉션</span>
+                            <span class="cp-cap">파티션</span>
                             <span class="cp-code" id="colDeptCode"></span>
-                            <span class="cp-hint">이 파티션 하위의 콜렉션을 생성·삭제합니다.</span>
+                            <span class="cp-hint">이 벡터DB 하위의 파티션을 생성·삭제합니다.</span>
                         </div>
                         <div class="cp-create">
                             <input type="text" class="search-input" id="colNameInput" maxlength="100"
-                                placeholder="콜렉션 이름 입력">
+                                placeholder="파티션 이름 입력">
                             <button class="btn btn-primary btn-sm" id="btnAddCollection" type="button">추가</button>
                         </div>
                         <div class="cp-list" id="colList"></div>
                     </div>
 
-                    <!-- 권한 대상: dept 전체 | 콜렉션별 — 선택에 따라 아래 트리 체크상태가 스왑됨 -->
+                    <!-- 권한 대상: dept 전체 | 파티션별 — 선택에 따라 아래 트리 체크상태가 스왑됨 -->
                     <div class="grant-target">
                         <span class="gt-cap">권한 대상</span>
                         <div class="gt-chips" id="grantTargetChips"></div>
@@ -351,11 +351,11 @@
         </div>
     </div>
 
-    <!-- 콜렉션 이름 변경 모달 -->
+    <!-- 파티션 이름 변경 모달 -->
     <div class="modal-overlay" id="colRenameModal">
         <div class="modal" style="max-width:420px;">
             <div class="modal-header">
-                <h3 class="modal-title">콜렉션 이름 변경</h3>
+                <h3 class="modal-title">파티션 이름 변경</h3>
                 <button class="modal-close" id="colRenameClose" type="button">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
                         stroke-linejoin="round">
@@ -368,7 +368,7 @@
                 <div class="form-group">
                     <label class="form-label">새 이름 <span class="required">*</span></label>
                     <input type="text" class="form-input" id="colRenameInput" maxlength="100"
-                        placeholder="새 콜렉션 이름을 입력하세요">
+                        placeholder="새 파티션 이름을 입력하세요">
                 </div>
                 <div class="pw-error" id="colRenameError" style="display:none;"></div>
             </div>

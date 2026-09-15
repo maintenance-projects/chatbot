@@ -1,5 +1,5 @@
 /**
- * 관리자 · AI 파티션 권한 (dept 탭 + 조직도 트리 + 접근 권한)
+ * 관리자 · AI 벡터DB 권한 (dept 탭 + 조직도 트리 + 접근 권한)
  * - 상단 탭: dept-a/dept-b (ultari.dept.codes)
  * - 트리: 인사DB msg_part(조직) + msg_user(사용자). 조직/사용자 체크로 해당 dept 권한 부여
  * - 조직 부여는 하위 상속, 사용자 체크 해제 시 상속분은 예외(DENY) 처리
@@ -35,7 +35,7 @@
         btnSaveLabel: document.getElementById("btnSaveDeptLabel"),
         colDeptCode: document.getElementById("colDeptCode"),
         colNameInput: document.getElementById("colNameInput"),
-        btnAddCollection: document.getElementById("btnAddCollection"),
+        btnAddPartition: document.getElementById("btnAddPartition"),
         colList: document.getElementById("colList"),
         targetChips: document.getElementById("grantTargetChips"),
         treeHint: document.getElementById("treeHint"),
@@ -47,10 +47,10 @@
         renameSave: document.getElementById("colRenameSave"),
     };
 
-    // 권한 대상: "" = dept 전체(AI_DEPT_GRANT), 콜렉션 name = 그 콜렉션(AI_COLLECTION_GRANT)
+    // 권한 대상: "" = 벡터DB 전체(AI_DEPT_GRANT), 파티션 name = 그 파티션(AI_PARTITION_GRANT)
     var currentTarget = "";
-    var collections = [];
-    var renameTargetName = "";   // 이름변경 모달이 편집 중인 콜렉션 식별자(name)
+    var partitions = [];
+    var renameTargetName = "";   // 이름변경 모달이 편집 중인 파티션 식별자(name)
 
     // 트리/권한 상태
     var partsById = {}, childrenOf = {}, usersByPart = {}, userParts = {}, roots = [];
@@ -83,10 +83,10 @@
             b.textContent = labelOf(code);
             b.addEventListener("click", function () {
                 currentDept = String(code);
-                currentTarget = "";           // loadCollections가 그 dept의 첫 콜렉션으로 채움
+                currentTarget = "";           // loadPartitions가 그 dept의 첫 파티션으로 채움
                 renderTabs();
                 syncLabelEditor();
-                loadCollections();            // 콜렉션 로드 → 첫 콜렉션 선택 → 트리 로드
+                loadPartitions();            // 파티션 로드 → 첫 파티션 선택 → 트리 로드
             });
             dom.tabs.appendChild(b);
         });
@@ -118,45 +118,45 @@
             .finally(function () { showLoading(false); });
     }
 
-    // ── 콜렉션(파티션 하위) 관리 ──────────────────────────────
+    // ── 파티션(벡터DB 하위) 관리 ──────────────────────────────
     // 게이트웨이 GET/POST/DELETE /{dept}/admin/partitions 프록시. 응답 봉투 {code,message,partitions}.
-    function loadCollections() {
+    function loadPartitions() {
         if (!currentDept) return;
         if (dom.colDeptCode) dom.colDeptCode.textContent = currentDept;
         postForm("/at-i/partitions/list", { adminId: adminId(), dept: currentDept })
             .then(function (r) { return r.json(); })
             .then(function (res) {
-                collections = (res && String(res.code) === "0000") ? (res.partitions || []) : [];
+                partitions = (res && String(res.code) === "0000") ? (res.partitions || []) : [];
                 // seq(채번 순번) 오름차순 정렬 — 목록/칩/첫 선택 순서를 일관되게
-                collections.sort(function (a, b) { return (a.seq || 0) - (b.seq || 0); });
-                renderCollections(collections);
-                // 권한 대상은 콜렉션만. 현재 선택이 목록에 없으면 첫 콜렉션(없으면 빈값)으로.
-                if (!collections.some(function (x) { return String(x.name) === currentTarget; })) {
-                    currentTarget = collections.length ? String(collections[0].name) : "";
+                partitions.sort(function (a, b) { return (a.seq || 0) - (b.seq || 0); });
+                renderPartitions(partitions);
+                // 권한 대상은 파티션만. 현재 선택이 목록에 없으면 첫 파티션(없으면 빈값)으로.
+                if (!partitions.some(function (x) { return String(x.name) === currentTarget; })) {
+                    currentTarget = partitions.length ? String(partitions[0].name) : "";
                 }
                 renderTargetChips();
                 updateTreeHint();
                 loadTree();
             })
             .catch(function () {
-                collections = []; currentTarget = "";
-                renderCollections([]); renderTargetChips(); updateTreeHint(); loadTree();
-                notify("콜렉션을 불러오지 못했습니다.", "error");
+                partitions = []; currentTarget = "";
+                renderPartitions([]); renderTargetChips(); updateTreeHint(); loadTree();
+                notify("파티션을 불러오지 못했습니다.", "error");
             });
     }
 
-    // 권한 대상 칩(콜렉션별) 렌더. 클릭 시 대상 전환 → 트리 체크상태 스왑.
+    // 권한 대상 칩(파티션별) 렌더. 클릭 시 대상 전환 → 트리 체크상태 스왑.
     function renderTargetChips() {
         if (!dom.targetChips) return;
         dom.targetChips.innerHTML = "";
-        if (!collections.length) {
+        if (!partitions.length) {
             var e = document.createElement("span");
             e.className = "gt-empty";
-            e.textContent = "콜렉션을 먼저 생성하세요";
+            e.textContent = "파티션을 먼저 생성하세요";
             dom.targetChips.appendChild(e);
             return;
         }
-        collections.forEach(function (it) {
+        partitions.forEach(function (it) {
             var value = String(it.name);
             var b = document.createElement("button");
             b.type = "button";
@@ -177,17 +177,17 @@
     function updateTreeHint() {
         if (!dom.treeHint) return;
         dom.treeHint.textContent = currentTarget
-            ? "선택한 콜렉션에 접근할 조직·사용자에 체크하세요 · 조직 부여는 하위 상속"
-            : "콜렉션을 먼저 생성하면 접근 권한을 부여할 수 있습니다.";
+            ? "선택한 파티션에 접근할 조직·사용자에 체크하세요 · 조직 부여는 하위 상속"
+            : "파티션을 먼저 생성하면 접근 권한을 부여할 수 있습니다.";
     }
 
-    function renderCollections(items) {
+    function renderPartitions(items) {
         if (!dom.colList) return;
         dom.colList.innerHTML = "";
         if (!items.length) {
             var empty = document.createElement("div");
             empty.className = "cp-empty";
-            empty.textContent = "등록된 콜렉션이 없습니다.";
+            empty.textContent = "등록된 파티션이 없습니다.";
             dom.colList.appendChild(empty);
             return;
         }
@@ -203,30 +203,30 @@
             edit.type = "button";
             edit.className = "btn btn-outline btn-sm cp-edit";
             edit.textContent = "이름변경";
-            edit.addEventListener("click", function () { renameCollection(it.name, it.description || it.name); });
+            edit.addEventListener("click", function () { renamePartition(it.name, it.description || it.name); });
             row.appendChild(edit);
             var del = document.createElement("button");
             del.type = "button";
             del.className = "btn btn-outline btn-sm cp-del";
             del.textContent = "삭제";
-            del.addEventListener("click", function () { deleteCollection(it.name, it.description || it.name); });
+            del.addEventListener("click", function () { deletePartition(it.name, it.description || it.name); });
             row.appendChild(del);
             dom.colList.appendChild(row);
         });
     }
 
-    function createCollection() {
+    function createPartition() {
         if (!currentDept) return;
         var name = (dom.colNameInput.value || "").trim();
-        if (!name) { notify("콜렉션 이름을 입력하세요.", "error"); return; }
+        if (!name) { notify("파티션 이름을 입력하세요.", "error"); return; }
         showLoading(true);
         postForm("/at-i/partitions/create", { adminId: adminId(), dept: currentDept, description: name })
             .then(function (r) { return r.json(); })
             .then(function (res) {
                 if (res && String(res.code) === "0000") {
                     dom.colNameInput.value = "";
-                    notify("콜렉션이 생성되었습니다.", "success");
-                    loadCollections();
+                    notify("파티션이 생성되었습니다.", "success");
+                    loadPartitions();
                 } else {
                     notify((res && res.message) ? res.message : "생성에 실패했습니다.", "error");
                 }
@@ -235,8 +235,8 @@
             .finally(function () { showLoading(false); });
     }
 
-    // 이름변경 모달 열기 — 대상 콜렉션 식별자(name)와 현재 표시명(current)을 채운다.
-    function renameCollection(name, current) {
+    // 이름변경 모달 열기 — 대상 파티션 식별자(name)와 현재 표시명(current)을 채운다.
+    function renamePartition(name, current) {
         renameTargetName = name;
         if (dom.renameInput) dom.renameInput.value = current || "";
         hideRenameError();
@@ -277,7 +277,7 @@
                 if (res && String(res.code) === "0000") {
                     closeRenameModal();
                     notify("이름이 변경되었습니다.", "success");
-                    loadCollections();           // 목록·칩 갱신(name은 유지, description만 변경)
+                    loadPartitions();           // 목록·칩 갱신(name은 유지, description만 변경)
                 } else {
                     showRenameError((res && res.message) ? res.message : "이름 변경에 실패했습니다.");
                 }
@@ -286,15 +286,15 @@
             .finally(function () { dom.renameSave.disabled = false; dom.renameSave.textContent = "변경"; });
     }
 
-    function deleteCollection(name, label) {
-        if (!window.confirm("콜렉션 '" + label + "'을(를) 삭제할까요?")) return;
+    function deletePartition(name, label) {
+        if (!window.confirm("파티션 '" + label + "'을(를) 삭제할까요?")) return;
         showLoading(true);
         postForm("/at-i/partitions/delete", { adminId: adminId(), dept: currentDept, name: name })
             .then(function (r) { return r.json(); })
             .then(function (res) {
                 if (res && String(res.code) === "0000") {
-                    notify("콜렉션이 삭제되었습니다.", "success");
-                    loadCollections();
+                    notify("파티션이 삭제되었습니다.", "success");
+                    loadPartitions();
                 } else {
                     notify((res && res.message) ? res.message : "삭제에 실패했습니다.", "error");
                 }
@@ -306,12 +306,12 @@
     // ── 데이터 로드 ───────────────────────────────────────────
     function loadTree() {
         if (!currentDept) return;
-        if (!currentTarget) {   // 선택된 콜렉션 없음(콜렉션 0개) → 트리 대신 안내
-            dom.tree.innerHTML = '<div class="cp-empty" style="padding:16px 4px;">먼저 콜렉션을 생성하세요.</div>';
+        if (!currentTarget) {   // 선택된 파티션 없음(파티션 0개) → 트리 대신 안내
+            dom.tree.innerHTML = '<div class="cp-empty" style="padding:16px 4px;">먼저 파티션을 생성하세요.</div>';
             return;
         }
         showLoading(true);
-        postForm("/at-i/users/tree", { adminId: adminId(), dept: currentDept, collection: currentTarget })
+        postForm("/at-i/users/tree", { adminId: adminId(), dept: currentDept, partition: currentTarget })
             .then(function (r) { return r.json(); })
             .then(function (data) { buildIndex(data); renderTree(); })
             .catch(function () { notify("트리를 불러오지 못했습니다.", "error"); dom.tree.innerHTML = ""; })
@@ -480,7 +480,7 @@
     function applyGrant(type, id, action) {
         mutateLocal(type, id, action);
         renderTree();
-        postForm("/at-i/users/grant", { adminId: adminId(), dept: currentDept, collection: currentTarget, targetType: type, targetId: id, action: action })
+        postForm("/at-i/users/grant", { adminId: adminId(), dept: currentDept, partition: currentTarget, targetType: type, targetId: id, action: action })
             .then(function (r) { return r.text(); })
             .then(function (t) {
                 if (String(t || "").trim() !== "ok") { notify("저장 실패 — 서버 상태로 되돌립니다.", "error"); loadTree(); }
@@ -534,9 +534,9 @@
     if (dom.labelInput) dom.labelInput.addEventListener("keydown", function (e) {
         if (e.key === "Enter") { e.preventDefault(); saveLabel(); }
     });
-    if (dom.btnAddCollection) dom.btnAddCollection.addEventListener("click", createCollection);
+    if (dom.btnAddPartition) dom.btnAddPartition.addEventListener("click", createPartition);
     if (dom.colNameInput) dom.colNameInput.addEventListener("keydown", function (e) {
-        if (e.key === "Enter") { e.preventDefault(); createCollection(); }
+        if (e.key === "Enter") { e.preventDefault(); createPartition(); }
     });
     // 이름변경 모달
     if (dom.renameClose) dom.renameClose.addEventListener("click", closeRenameModal);
@@ -555,5 +555,5 @@
     });
 
     renderTabs();
-    loadCollections();   // 콜렉션 로드 → 첫 콜렉션 자동 선택 → 트리 로드
+    loadPartitions();   // 파티션 로드 → 첫 파티션 자동 선택 → 트리 로드
 })();

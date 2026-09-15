@@ -23,7 +23,7 @@ public class AdminDocController {
     private final DeptProperties deptProperties;
     private final AdminDocService service;
 
-    /** 4.1 문서 등록 (key/adminName은 서버가 채움 — 프론트는 adminId+file만). partition=콜렉션명. */
+    /** 4.1 문서 등록 (key/adminName은 서버가 채움 — 프론트는 adminId+file만). partition=파티션명. */
     @PostMapping("/documents")
     public ResponseEntity<String> add(@RequestParam String adminId,
                                       @RequestParam(value = "dept", required = false) String dept,
@@ -32,7 +32,7 @@ public class AdminDocController {
         return GatewayForward.json(service.add(resolveDept(dept), adminId, partition, file));
     }
 
-    /** 4.2 문서 삭제. partition=콜렉션명. */
+    /** 4.2 문서 삭제. partition=파티션명. */
     @DeleteMapping("/documents/{key}")
     public ResponseEntity<String> delete(@PathVariable String key, @RequestParam String adminId,
                                          @RequestParam(value = "dept", required = false) String dept,
@@ -40,7 +40,7 @@ public class AdminDocController {
         return GatewayForward.json(service.delete(resolveDept(dept), key, partition));
     }
 
-    /** 4.3 문서 목록 조회. partition=콜렉션명 필터. */
+    /** 4.3 문서 목록 조회. partition=파티션명 필터. */
     @GetMapping("/documents")
     public ResponseEntity<String> list(@RequestParam String adminId,
                                        @RequestParam(value = "dept", required = false) String dept,
@@ -52,7 +52,7 @@ public class AdminDocController {
         return GatewayForward.json(service.list(resolveDept(dept), page, size, orderType, order, partition));
     }
 
-    /** 4.4 문서 검색. partition=콜렉션명 필터. */
+    /** 4.4 문서 검색. partition=파티션명 필터. */
     @GetMapping("/documents/search")
     public ResponseEntity<String> search(@RequestParam String adminId,
                                          @RequestParam(value = "dept", required = false) String dept,
@@ -66,7 +66,7 @@ public class AdminDocController {
         return GatewayForward.json(service.search(resolveDept(dept), searchType, searchTerm, page, size, orderType, order, partition));
     }
 
-    /** 4.5 문서 사용여부 토글. partition=콜렉션명. */
+    /** 4.5 문서 사용여부 토글. partition=파티션명. */
     @PatchMapping("/documents/{key}/toggle")
     public ResponseEntity<String> toggle(@PathVariable String key, @RequestParam String adminId,
                                          @RequestParam(value = "dept", required = false) String dept,

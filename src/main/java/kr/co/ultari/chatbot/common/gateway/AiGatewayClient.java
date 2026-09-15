@@ -94,7 +94,7 @@ public class AiGatewayClient {
                 .block();
     }
 
-    /** multipart PATCH — 게이트웨이 상태코드·본문을 그대로 전달(예: 콜렉션 이름 변경). */
+    /** multipart PATCH — 게이트웨이 상태코드·본문을 그대로 전달(예: 파티션 이름 변경). */
     public ResponseEntity<String> patchMultipart(String dept, String path, MultipartBodyBuilder body) {
         String uri = url(dept, path);
         log.debug("gateway PATCH {}", uri);

@@ -8,15 +8,15 @@ import lombok.Setter;
 
 import java.io.Serializable;
 
-/** AiCollectionGrant 복합 PK (TARGET_TYPE, TARGET_ID, AI_DEPT, COLLECTION_NAME) */
+/** AiPartitionGrant 복합 PK (TARGET_TYPE, TARGET_ID, AI_DEPT, PARTITION_NAME) */
 @Getter
 @Setter
 @NoArgsConstructor
 @AllArgsConstructor
 @EqualsAndHashCode
-public class AiCollectionGrantId implements Serializable {
+public class AiPartitionGrantId implements Serializable {
     private String targetType;
     private String targetId;
     private String aiDept;
-    private String collectionName;
+    private String partitionName;
 }

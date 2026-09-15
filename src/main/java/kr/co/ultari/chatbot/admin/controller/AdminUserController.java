@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 /**
- * 사용자 부서 관리 API (관리자). 조직도 트리 조회 + dept별 접근 권한 부여.
+ * 사용자 권한 관리 API (관리자). 조직도 트리 조회 + 벡터DB(dept)/파티션별 접근 권한 부여.
  */
 @Slf4j
 @Controller
@@ -28,28 +28,28 @@ public class AdminUserController {
     private final DeptResolver deptResolver;
     private final HrPartParentCache hrPartParentCache;
 
-    /** 조직도 트리 + 부여 상태. collection이 있으면 콜렉션 권한, 없으면 dept 권한 기준. */
+    /** 조직도 트리 + 부여 상태. partition이 있으면 파티션 권한, 없으면 벡터DB 권한 기준. */
     @PostMapping("/tree")
     @ResponseBody
     public String tree(@RequestParam("adminId") String adminId,
                        @RequestParam("dept") String dept,
-                       @RequestParam(value = "collection", required = false) String collection) {
-        log.debug("[users tree] adminId={}, dept={}, collection={}", adminId, dept, collection);
-        return userService.tree(dept, collection).toString();
+                       @RequestParam(value = "partition", required = false) String partition) {
+        log.debug("[users tree] adminId={}, dept={}, partition={}", adminId, dept, partition);
+        return userService.tree(dept, partition).toString();
     }
 
-    /** 권한 부여 적용 (action: ALLOW | DENY | REMOVE). collection이 있으면 콜렉션 권한 대상. */
+    /** 권한 부여 적용 (action: ALLOW | DENY | REMOVE). partition이 있으면 파티션 권한 대상. */
     @PostMapping("/grant")
     @ResponseBody
     public String grant(@RequestParam("adminId") String adminId,
                         @RequestParam("dept") String dept,
-                        @RequestParam(value = "collection", required = false) String collection,
+                        @RequestParam(value = "partition", required = false) String partition,
                         @RequestParam("targetType") String targetType,
                         @RequestParam("targetId") String targetId,
                         @RequestParam("action") String action) {
-        log.debug("[users grant] adminId={}, dept={}, collection={}, {}:{} {}",
-                adminId, dept, collection, targetType, targetId, action);
-        return userService.applyGrant(dept, collection, targetType, targetId, action);
+        log.debug("[users grant] adminId={}, dept={}, partition={}, {}:{} {}",
+                adminId, dept, partition, targetType, targetId, action);
+        return userService.applyGrant(dept, partition, targetType, targetId, action);
     }
 
     /** dept 표시 명칭 저장(빈 값이면 코드 폴백) */

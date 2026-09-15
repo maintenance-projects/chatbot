@@ -17,11 +17,11 @@
         window.deptLabels = /*[[${deptLabels}]]*/ {};
     </script>
     <style>
-        /* dept(파티션) 탭 — 관리자 테마 */
-        .collection-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
-        .collection-bar .cb-label { font-size: 0.85rem; font-weight: 700; color: var(--text-mid, #555); }
-        .collection-bar .search-select { min-width: 200px; }
-        .collection-bar .cb-empty { font-size: 0.85rem; color: var(--text-light, #999); }
+        /* dept(벡터DB) 탭 — 관리자 테마 */
+        .partition-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
+        .partition-bar .cb-label { font-size: 0.85rem; font-weight: 700; color: var(--text-mid, #555); }
+        .partition-bar .search-select { min-width: 200px; }
+        .partition-bar .cb-empty { font-size: 0.85rem; color: var(--text-light, #999); }
         .dept-tabs { display: flex; gap: 2px; margin-bottom: 18px; border-bottom: 1px solid var(--color-border); }
         .dept-tab { position: relative; padding: 11px 24px; border: none; background: none; cursor: pointer;
             font-size: 0.9375rem; font-weight: 600; color: var(--color-text-light);
@@ -66,7 +66,7 @@
                         <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
                         <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                     </svg>
-                    AI 파티션 권한
+                    AI 벡터DB 권한
                 </a>
                 <a th:if="${statistics}" href="/at-i/statistics" class="nav-item" data-page="statistics">
                     <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
@@ -178,12 +178,12 @@
             <main class="page-body">
                 <div class="dept-tabs" id="deptTabs"></div>
 
-                <!-- 콜렉션 선택: 선택 콜렉션 기준으로 목록/검색/등록/삭제 -->
-                <div class="collection-bar" id="collectionBar">
-                    <span class="cb-label">콜렉션</span>
-                    <select class="search-select" id="collectionSelect"></select>
-                    <span class="cb-empty" id="collectionEmpty" style="display:none;">
-                        콜렉션이 없습니다. 'AI 파티션 권한' 화면에서 먼저 생성하세요.</span>
+                <!-- 파티션 선택: 선택 파티션 기준으로 목록/검색/등록/삭제 -->
+                <div class="partition-bar" id="partitionBar">
+                    <span class="cb-label">파티션</span>
+                    <select class="search-select" id="partitionSelect"></select>
+                    <span class="cb-empty" id="partitionEmpty" style="display:none;">
+                        파티션이 없습니다. 'AI 벡터DB 권한' 화면에서 먼저 생성하세요.</span>
                 </div>
 
                 <section class="stats-row">
@@ -355,7 +355,7 @@
                         <input type="text" class="form-input" id="docUploader" readonly disabled>
                     </div>
                     <div class="form-group">
-                        <label class="form-label">대상 콜렉션 <span class="required">*</span></label>
+                        <label class="form-label">대상 파티션 <span class="required">*</span></label>
                         <input type="text" class="form-input" id="docTargetCollection" readonly disabled>
                     </div>
                     <div class="form-group" id="fileUploadGroup">

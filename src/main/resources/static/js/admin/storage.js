@@ -91,9 +91,9 @@
         screenGuideDim: $("#screenGuideDim"),
         screenGuideClose: $("#btnCloseScreenGuide"),
         screenGuideLayer: $("#screenGuideHighlightLayer"),
-        collectionSelect: $("#collectionSelect"),
-        collectionEmpty: $("#collectionEmpty"),
-        docTargetCollection: $("#docTargetCollection")
+        partitionSelect: $("#partitionSelect"),
+        partitionEmpty: $("#partitionEmpty"),
+        docTargetPartition: $("#docTargetPartition")
     };
 
     var guideItems = [
@@ -128,7 +128,7 @@
         return adminId;
     }
 
-    // ── AI 파티션(dept) — 관리자는 전체 dept 접근 ────────────────
+    // ── AI 벡터DB(dept) — 관리자는 전체 dept 접근 ────────────────
     var deptCodes = Array.isArray(window.deptCodes) ? window.deptCodes.map(String) : [];
     var deptLabels = (window.deptLabels && typeof window.deptLabels === "object") ? window.deptLabels : {};
     var currentDept = deptCodes.length ? deptCodes[0] : "";
@@ -137,14 +137,14 @@
     // 모든 /at-i/documents* 호출에 붙일 dept 쿼리 조각
     function deptQS() { return currentDept ? "&dept=" + encodeURIComponent(currentDept) : ""; }
 
-    // ── 콜렉션(partition) — 선택 콜렉션 기준으로 목록/검색/등록/삭제 ──
-    var currentCollection = "";
-    var collections = [];
-    // 문서 API에 붙일 콜렉션(partition) 쿼리 조각
-    function collectionQS() { return currentCollection ? "&partition=" + encodeURIComponent(currentCollection) : ""; }
+    // ── 파티션(partition) — 선택 파티션 기준으로 목록/검색/등록/삭제 ──
+    var currentPartition = "";
+    var partitions = [];
+    // 문서 API에 붙일 파티션(partition) 쿼리 조각
+    function partitionQS() { return currentPartition ? "&partition=" + encodeURIComponent(currentPartition) : ""; }
 
-    // 현재 dept의 콜렉션 목록을 불러와 선택기를 갱신하고 첫 콜렉션을 선택한다.
-    function loadCollections(dept) {
+    // 현재 dept의 파티션 목록을 불러와 선택기를 갱신하고 첫 파티션을 선택한다.
+    function loadPartitions(dept) {
         return fetch("/at-i/partitions/list", {
             method: "POST",
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -152,44 +152,44 @@
         })
             .then(function (r) { return r.json(); })
             .then(function (res) {
-                collections = (res && String(res.code) === "0000") ? (res.partitions || []) : [];
-                collections.sort(function (a, b) { return (a.seq || 0) - (b.seq || 0); });
-                if (!collections.some(function (x) { return String(x.name) === currentCollection; })) {
-                    currentCollection = collections.length ? String(collections[0].name) : "";
+                partitions = (res && String(res.code) === "0000") ? (res.partitions || []) : [];
+                partitions.sort(function (a, b) { return (a.seq || 0) - (b.seq || 0); });
+                if (!partitions.some(function (x) { return String(x.name) === currentPartition; })) {
+                    currentPartition = partitions.length ? String(partitions[0].name) : "";
                 }
-                renderCollectionSelect();
+                renderPartitionSelect();
             })
-            .catch(function () { collections = []; currentCollection = ""; renderCollectionSelect(); });
+            .catch(function () { partitions = []; currentPartition = ""; renderPartitionSelect(); });
     }
 
-    function renderCollectionSelect() {
-        var sel = dom.collectionSelect;
+    function renderPartitionSelect() {
+        var sel = dom.partitionSelect;
         if (!sel) return;
-        if (!collections.length) {
+        if (!partitions.length) {
             sel.innerHTML = "";
             sel.style.display = "none";
-            if (dom.collectionEmpty) dom.collectionEmpty.style.display = "";
+            if (dom.partitionEmpty) dom.partitionEmpty.style.display = "";
             if (dom.btnAddDoc) dom.btnAddDoc.disabled = true;
             return;
         }
         sel.style.display = "";
-        if (dom.collectionEmpty) dom.collectionEmpty.style.display = "none";
+        if (dom.partitionEmpty) dom.partitionEmpty.style.display = "none";
         if (dom.btnAddDoc) dom.btnAddDoc.disabled = false;
         sel.innerHTML = "";
-        collections.forEach(function (it) {
+        partitions.forEach(function (it) {
             var opt = document.createElement("option");
             opt.value = String(it.name);
             opt.textContent = it.description || it.name;
-            if (String(it.name) === currentCollection) opt.selected = true;
+            if (String(it.name) === currentPartition) opt.selected = true;
             sel.appendChild(opt);
         });
     }
 
-    // 콜렉션 전환: 캐시/검색 초기화 후 해당 콜렉션의 목록만 재로딩.
-    // 요약 카드(count)는 파티션(dept) 단위이므로 콜렉션 전환 시 갱신하지 않는다.
-    function switchCollection(name) {
-        if (name === currentCollection) return;
-        currentCollection = name;
+    // 파티션 전환: 캐시/검색 초기화 후 해당 파티션의 목록만 재로딩.
+    // 요약 카드(count)는 벡터DB(dept) 단위이므로 파티션 전환 시 갱신하지 않는다.
+    function switchPartition(name) {
+        if (name === currentPartition) return;
+        currentPartition = name;
         isSearchMode = false;
         searchQuery = "";
         if (dom.searchInput) dom.searchInput.value = "";
@@ -215,11 +215,11 @@
         });
     }
 
-    // 파티션 전환: 콜렉션 재로드 후 첫 콜렉션 기준으로 목록·통계 재로딩(검색모드 해제)
+    // 벡터DB 전환: 파티션 재로드 후 첫 파티션 기준으로 목록·통계 재로딩(검색모드 해제)
     function switchDept(code) {
         if (code === currentDept) return;
         currentDept = code;
-        currentCollection = "";              // dept 바뀌면 그 dept의 첫 콜렉션으로
+        currentPartition = "";              // dept 바뀌면 그 dept의 첫 파티션으로
         renderDeptTabs();
         isSearchMode = false;
         searchQuery = "";
@@ -229,7 +229,7 @@
         resetPaging();
         ui.pageBlockStart = 1;
         currentPage = 1;
-        loadCollections(currentDept).then(function () {
+        loadPartitions(currentDept).then(function () {
             fetchListPage(1);
             fetchCount();
         });
@@ -980,8 +980,8 @@
         isSearchMode = false;
         searchQuery = "";
 
-        // 선택 콜렉션 없음(콜렉션 0개) → 빈 목록 표시
-        if (!currentCollection) {
+        // 선택 파티션 없음(파티션 0개) → 빈 목록 표시
+        if (!currentPartition) {
             documents = [];
             resetPaging();
             currentPage = 1;
@@ -1011,7 +1011,7 @@
             + "&size=" + encodeURIComponent(perPage)
             + "&orderType=" + encodeURIComponent(getOrderType())
             + "&order=" + encodeURIComponent(sortOrder)
-            + deptQS() + collectionQS();
+            + deptQS() + partitionQS();
 
         return fetch("/at-i/documents?" + qs)
             .then(function (res) {
@@ -1073,7 +1073,7 @@
             + "&size=" + encodeURIComponent(perPage)
             + "&orderType=" + encodeURIComponent(getOrderType())
             + "&order=" + encodeURIComponent(sortOrder)
-            + deptQS() + collectionQS();
+            + deptQS() + partitionQS();
 
         return fetch("/at-i/documents/search?" + qs)
             .then(function (res) {
@@ -1154,12 +1154,12 @@
     }
 
     function openDocModal() {
-        if (!currentCollection) { toast("먼저 콜렉션을 선택하세요.", "error"); return; }
+        if (!currentPartition) { toast("먼저 파티션을 선택하세요.", "error"); return; }
         dom.docModalTitle.textContent = "문서 추가";
         dom.docUploader.value = getAdminId();
-        if (dom.docTargetCollection) {
-            var col = collections.filter(function (x) { return String(x.name) === currentCollection; })[0];
-            dom.docTargetCollection.value = col ? (col.description || col.name) : currentCollection;
+        if (dom.docTargetPartition) {
+            var col = partitions.filter(function (x) { return String(x.name) === currentPartition; })[0];
+            dom.docTargetPartition.value = col ? (col.description || col.name) : currentPartition;
         }
         pendingFiles = [];
         fileStatus = [];
@@ -1350,7 +1350,7 @@
         var id = getAdminId();
 
         // 신규 토글은 isUse를 반전(값 미전달). PATCH /at-i/documents/{key}/toggle
-        fetch("/at-i/documents/" + encodeURIComponent(key) + "/toggle?adminId=" + encodeURIComponent(id) + deptQS() + collectionQS(), { method: "PATCH" })
+        fetch("/at-i/documents/" + encodeURIComponent(key) + "/toggle?adminId=" + encodeURIComponent(id) + deptQS() + partitionQS(), { method: "PATCH" })
             .then(function (res) {
                 return res.json().catch(function () { return {}; });
             })
@@ -1380,7 +1380,7 @@
             showLoading(true);
             var id = getAdminId();
 
-            fetch("/at-i/documents/" + encodeURIComponent(key) + "?adminId=" + encodeURIComponent(id) + deptQS() + collectionQS(), { method: "DELETE" })
+            fetch("/at-i/documents/" + encodeURIComponent(key) + "?adminId=" + encodeURIComponent(id) + deptQS() + partitionQS(), { method: "DELETE" })
                 .then(function (res) {
                     return res.json().catch(function () { return {}; });
                 })
@@ -1414,7 +1414,7 @@
         var formData = new FormData();
         formData.append("adminId", id);
         formData.append("dept", currentDept);
-        formData.append("partition", currentCollection);   // 등록 대상 콜렉션
+        formData.append("partition", currentPartition);   // 등록 대상 파티션
         formData.append("file", file);
         // key/adminName은 서버가 채움 (adminId+file만 전송)
 
@@ -1693,9 +1693,9 @@
         });
 
         if (dom.btnAddDoc) dom.btnAddDoc.addEventListener("click", openDocModal);
-        if (dom.collectionSelect) {
-            dom.collectionSelect.addEventListener("change", function () {
-                switchCollection(dom.collectionSelect.value);
+        if (dom.partitionSelect) {
+            dom.partitionSelect.addEventListener("change", function () {
+                switchPartition(dom.partitionSelect.value);
             });
         }
         if (dom.btnReloadProfanity) dom.btnReloadProfanity.addEventListener("click", reloadProfanity);
@@ -1816,8 +1816,8 @@
         resetPaging();
         clearAllCaches();
 
-        // 콜렉션 목록 먼저 로드 → 첫 콜렉션 기준으로 목록/통계 로드
-        loadCollections(currentDept).then(function () {
+        // 파티션 목록 먼저 로드 → 첫 파티션 기준으로 목록/통계 로드
+        loadPartitions(currentDept).then(function () {
             fetchListPage(1);
             fetchCount();
         });

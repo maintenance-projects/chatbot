@@ -30,7 +30,7 @@ public class AdminDocService {
     /**
      * 4.1 문서 등록. 명세서가 요구하는 key(고유)·adminName은 서버에서 채운다
      * (프론트는 adminId+file만 전송 — 기존 UX 유지). key는 서버 생성 UUID.
-     * partition(콜렉션명)이 있으면 등록 대상 콜렉션으로 함께 전송한다.
+     * partition(파티션명)이 있으면 등록 대상 파티션으로 함께 전송한다.
      */
     public ResponseEntity<String> add(String dept, String adminId, String partition, MultipartFile file) {
         String adminName = adminRepository.findById(adminId)
@@ -46,14 +46,14 @@ public class AdminDocService {
         return gateway.postMultipart(dept, "/admin/add_documents", b);
     }
 
-    /** 4.2 문서 삭제 — partition(콜렉션명)이 있으면 쿼리로 함께 전송. */
+    /** 4.2 문서 삭제 — partition(파티션명)이 있으면 쿼리로 함께 전송. */
     public ResponseEntity<String> delete(String dept, String key, String partition) {
         String path = "/admin/del_documents/" + seg(key);
         if (StringUtils.hasText(partition)) path += "?partition=" + q(partition);
         return gateway.delete(dept, path);
     }
 
-    /** 4.3 문서 목록 조회 — partition(콜렉션명)으로 필터. */
+    /** 4.3 문서 목록 조회 — partition(파티션명)으로 필터. */
     public ResponseEntity<String> list(String dept, int page, int size, String orderType, String order, String partition) {
         String path = "/admin/get_documents?page=" + page + "&size=" + size
                 + "&orderType=" + q(orderType) + "&order=" + q(order);
@@ -61,7 +61,7 @@ public class AdminDocService {
         return gateway.get(dept, path);
     }
 
-    /** 4.4 문서 검색 — partition(콜렉션명)으로 필터. */
+    /** 4.4 문서 검색 — partition(파티션명)으로 필터. */
     public ResponseEntity<String> search(String dept, String searchType, String searchTerm,
                                          int page, int size, String orderType, String order, String partition) {
         String path = "/admin/documents/search?searchType=" + q(searchType)
@@ -72,7 +72,7 @@ public class AdminDocService {
         return gateway.get(dept, path);
     }
 
-    /** 4.5 문서 사용여부 토글(isUse 반전) — partition(콜렉션명)이 있으면 쿼리로 함께 전송. */
+    /** 4.5 문서 사용여부 토글(isUse 반전) — partition(파티션명)이 있으면 쿼리로 함께 전송. */
     public ResponseEntity<String> toggle(String dept, String key, String partition) {
         String path = "/admin/documents/" + seg(key) + "/toggle";
         if (StringUtils.hasText(partition)) path += "?partition=" + q(partition);

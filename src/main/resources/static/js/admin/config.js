@@ -44,18 +44,18 @@
     }
 
     // 게이트웨이 계약: { file_ttl_days, temperature(소수), system_prompt }
-    // temperature/system_prompt는 파티션(dept)별, file_ttl_days(보관기간)는 전역(기본 dept 기준).
+    // temperature/system_prompt는 벡터DB(dept)별, file_ttl_days(보관기간)는 전역(기본 dept 기준).
     var defaultDept = window.CONFIG_DEFAULT_DEPT || "";
     var prevDept = "";                                  // dept 전환 취소 시 복원용
     var loaded = { temperature: null, system_prompt: null }; // 미저장 변경 감지용(선택 대상 기준)
-    var currentTarget = "";                             // "" = 파티션 전체(dept), name = 콜렉션
-    var collections = [];                               // 현재 dept의 콜렉션 목록
+    var currentTarget = "";                             // "" = 벡터DB 전체(dept), name = 파티션
+    var partitions = [];                               // 현재 dept의 파티션 목록
 
     function currentDept() {
         return (dom.deptSelect && dom.deptSelect.value) || defaultDept || "";
     }
 
-    // 파티션(dept) 전체 설정 — 게이트웨이 /admin/settings/{dept}
+    // 벡터DB(dept) 전체 설정 — 게이트웨이 /admin/settings/{dept}
     function fetchSettings(dept) {
         return fetch("/at-i/config/load?dept=" + encodeURIComponent(dept), { method: "POST" })
             .then(function (r) { if (!r.ok) throw new Error("load failed: " + r.status); return r.json(); });
@@ -68,23 +68,23 @@
         });
     }
 
-    // 콜렉션별 설정 — 게이트웨이 /{dept}/admin/partitions/{collection}/settings
-    function fetchCollectionSettings(dept, col) {
-        return fetch("/at-i/config/collection/load?dept=" + encodeURIComponent(dept)
-            + "&collection=" + encodeURIComponent(col), { method: "POST" })
+    // 파티션별 설정 — 게이트웨이 /{dept}/admin/partitions/{partition}/settings
+    function fetchPartitionSettings(dept, col) {
+        return fetch("/at-i/config/partition/load?dept=" + encodeURIComponent(dept)
+            + "&partition=" + encodeURIComponent(col), { method: "POST" })
             .then(function (r) { if (!r.ok) throw new Error("col load: " + r.status); return r.json(); });
     }
-    function postCollectionSettings(dept, col, payload) {
-        return fetch("/at-i/config/collection/save?dept=" + encodeURIComponent(dept)
-            + "&collection=" + encodeURIComponent(col), {
+    function postPartitionSettings(dept, col, payload) {
+        return fetch("/at-i/config/partition/save?dept=" + encodeURIComponent(dept)
+            + "&partition=" + encodeURIComponent(col), {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload),
         });
     }
 
-    // 현재 dept의 콜렉션 목록을 불러와 설정 대상 칩을 갱신
-    function loadCollectionsForConfig(dept) {
+    // 현재 dept의 파티션 목록을 불러와 설정 대상 칩을 갱신
+    function loadPartitionsForConfig(dept) {
         return fetch("/at-i/partitions/list", {
             method: "POST",
             headers: { "Content-Type": "application/x-www-form-urlencoded" },
@@ -92,18 +92,18 @@
         })
             .then(function (r) { return r.json(); })
             .then(function (res) {
-                collections = (res && String(res.code) === "0000") ? (res.partitions || []) : [];
-                collections.sort(function (a, b) { return (a.seq || 0) - (b.seq || 0); });
-                // 현재 대상이 목록에 없으면 파티션 전체로 되돌림
-                if (currentTarget && !collections.some(function (x) { return String(x.name) === currentTarget; })) {
+                partitions = (res && String(res.code) === "0000") ? (res.partitions || []) : [];
+                partitions.sort(function (a, b) { return (a.seq || 0) - (b.seq || 0); });
+                // 현재 대상이 목록에 없으면 벡터DB 전체로 되돌림
+                if (currentTarget && !partitions.some(function (x) { return String(x.name) === currentTarget; })) {
                     currentTarget = "";
                 }
                 renderTargetChips();
             })
-            .catch(function () { collections = []; renderTargetChips(); });
+            .catch(function () { partitions = []; renderTargetChips(); });
     }
 
-    // 설정 대상 칩(파티션 전체 + 콜렉션별) 렌더
+    // 설정 대상 칩(벡터DB 전체 + 파티션별) 렌더
     function renderTargetChips() {
         var box = dom.settingTargetChips;
         if (!box) return;
@@ -122,15 +122,15 @@
             });
             box.appendChild(b);
         }
-        chip("", "파티션 전체");
-        collections.forEach(function (it) { chip(String(it.name), it.description || it.name); });
+        chip("", "벡터DB 전체");
+        partitions.forEach(function (it) { chip(String(it.name), it.description || it.name); });
     }
 
-    // 현재 대상(파티션 전체/콜렉션)의 temperature·프롬프트 로드
+    // 현재 대상(벡터DB 전체/파티션)의 temperature·프롬프트 로드
     function loadTarget() {
         showLoading(true);
         var dept = currentDept();
-        var p = currentTarget ? fetchCollectionSettings(dept, currentTarget) : fetchSettings(dept);
+        var p = currentTarget ? fetchPartitionSettings(dept, currentTarget) : fetchSettings(dept);
         p.then(applyDeptFields)
             .catch(function () { toast("설정을 불러오지 못했습니다.", "error"); })
             .finally(function () { showLoading(false); });
@@ -153,12 +153,12 @@
         return dom.temperature.value !== loaded.temperature || dom.userPrompt.value !== loaded.system_prompt;
     }
 
-    // 초기 로드: 콜렉션 목록 → 현재 대상(파티션 전체)의 temperature/프롬프트 (보관기간은 전역이라 별도 로드)
+    // 초기 로드: 파티션 목록 → 현재 대상(벡터DB 전체)의 temperature/프롬프트 (보관기간은 전역이라 별도 로드)
     function loadConfig() {
         var dept = currentDept();
         prevDept = dept;
         currentTarget = "";
-        loadCollectionsForConfig(dept).then(loadTarget);
+        loadPartitionsForConfig(dept).then(loadTarget);
     }
 
     // 개인문서 보관기간(전역) — 게이트웨이 /admin/file-ttl
@@ -169,18 +169,18 @@
             .catch(function () { /* 보관기간 로드 실패는 조용히(기본값 유지) */ });
     }
 
-    // dept 전환: 콜렉션 목록 재로드 + 대상을 파티션 전체로 초기화하고 설정 로드
+    // dept 전환: 파티션 목록 재로드 + 대상을 벡터DB 전체로 초기화하고 설정 로드
     function onDeptChange() {
-        if (isDirty() && !confirm("저장하지 않은 변경이 있습니다. 파티션을 바꾸면 사라집니다. 계속할까요?")) {
+        if (isDirty() && !confirm("저장하지 않은 변경이 있습니다. 벡터DB을 바꾸면 사라집니다. 계속할까요?")) {
             dom.deptSelect.value = prevDept; // 취소 → 이전 선택 복원
             return;
         }
         prevDept = dom.deptSelect.value;
         currentTarget = "";
-        loadCollectionsForConfig(dom.deptSelect.value).then(loadTarget);
+        loadPartitionsForConfig(dom.deptSelect.value).then(loadTarget);
     }
 
-    // 저장: 선택 대상(파티션 전체/콜렉션)의 temperature/시스템 프롬프트만.
+    // 저장: 선택 대상(벡터DB 전체/파티션)의 temperature/시스템 프롬프트만.
     // (보관기간은 게이트웨이 per-dept 저장이 거부 → 전용 API로 별도 처리)
     function saveConfig() {
         var temp = parseFloat(dom.temperature.value);
@@ -190,7 +190,7 @@
         dom.btnSave.disabled = true;
         dom.btnSave.textContent = "저장 중...";
 
-        var save = currentTarget ? postCollectionSettings(dept, currentTarget, payload) : postSettings(dept, payload);
+        var save = currentTarget ? postPartitionSettings(dept, currentTarget, payload) : postSettings(dept, payload);
         save
             .then(function (res) {
                 if (res.ok) {

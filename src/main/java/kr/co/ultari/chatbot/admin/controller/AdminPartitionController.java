@@ -15,8 +15,8 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import java.nio.charset.StandardCharsets;
 
 /**
- * AI 콜렉션 관리 — 게이트웨이 {@code /{dept}/admin/partitions} 프록시(파티션 하위).
- * "AI 파티션 권한" 화면(users)의 콜렉션 섹션에서 호출한다.
+ * AI 파티션 관리 — 게이트웨이 {@code /{dept}/admin/partitions} 프록시(파티션 하위).
+ * "AI 파티션 권한" 화면(users)의 파티션 섹션에서 호출한다.
  * dept는 화이트리스트 검증(게이트웨이 경로 주입 방지), name은 식별자 문자만 허용한다.
  */
 @Slf4j
@@ -35,7 +35,7 @@ public class AdminPartitionController {
     /** application/json;charset=UTF-8 — 게이트웨이 응답에 charset이 없어 브라우저 오해석 방지. */
     private static final MediaType JSON_UTF8 = new MediaType(MediaType.APPLICATION_JSON, StandardCharsets.UTF_8);
 
-    /** 콜렉션 목록 조회 — 게이트웨이 응답 통과. */
+    /** 파티션 목록 조회 — 게이트웨이 응답 통과. */
     @PostMapping("/list")
     @ResponseBody
     public ResponseEntity<String> list(@RequestParam(value = "dept", required = false) String dept) {
@@ -44,7 +44,7 @@ public class AdminPartitionController {
         return withUtf8(partitionService.list(d));
     }
 
-    /** 콜렉션 생성 — description(사용자 입력 이름)만 전달. */
+    /** 파티션 생성 — description(사용자 입력 이름)만 전달. */
     @PostMapping("/create")
     @ResponseBody
     public ResponseEntity<String> create(@RequestParam(value = "dept", required = false) String dept,
@@ -57,7 +57,7 @@ public class AdminPartitionController {
         return withUtf8(partitionService.create(d, desc));
     }
 
-    /** 콜렉션 이름 변경 — name(식별자)은 유지, description(표시명)만 갱신. */
+    /** 파티션 이름 변경 — name(식별자)은 유지, description(표시명)만 갱신. */
     @PostMapping("/rename")
     @ResponseBody
     public ResponseEntity<String> rename(@RequestParam(value = "dept", required = false) String dept,
@@ -73,7 +73,7 @@ public class AdminPartitionController {
         return withUtf8(partitionService.rename(d, n, desc));
     }
 
-    /** 콜렉션 삭제 — 목록 응답의 name(식별자)을 경로로 전달. */
+    /** 파티션 삭제 — 목록 응답의 name(식별자)을 경로로 전달. */
     @PostMapping("/delete")
     @ResponseBody
     public ResponseEntity<String> delete(@RequestParam(value = "dept", required = false) String dept,
