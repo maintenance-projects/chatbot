@@ -90,7 +90,10 @@
         screenGuideOverlay: $("#screenGuideOverlay"),
         screenGuideDim: $("#screenGuideDim"),
         screenGuideClose: $("#btnCloseScreenGuide"),
-        screenGuideLayer: $("#screenGuideHighlightLayer")
+        screenGuideLayer: $("#screenGuideHighlightLayer"),
+        collectionSelect: $("#collectionSelect"),
+        collectionEmpty: $("#collectionEmpty"),
+        docTargetCollection: $("#docTargetCollection")
     };
 
     var guideItems = [
@@ -134,6 +137,69 @@
     // 모든 /at-i/documents* 호출에 붙일 dept 쿼리 조각
     function deptQS() { return currentDept ? "&dept=" + encodeURIComponent(currentDept) : ""; }
 
+    // ── 콜렉션(partition) — 선택 콜렉션 기준으로 목록/검색/등록/삭제 ──
+    var currentCollection = "";
+    var collections = [];
+    // 문서 API에 붙일 콜렉션(partition) 쿼리 조각
+    function collectionQS() { return currentCollection ? "&partition=" + encodeURIComponent(currentCollection) : ""; }
+
+    // 현재 dept의 콜렉션 목록을 불러와 선택기를 갱신하고 첫 콜렉션을 선택한다.
+    function loadCollections(dept) {
+        return fetch("/at-i/partitions/list", {
+            method: "POST",
+            headers: { "Content-Type": "application/x-www-form-urlencoded" },
+            body: "dept=" + encodeURIComponent(dept) + "&adminId=" + encodeURIComponent(getAdminId())
+        })
+            .then(function (r) { return r.json(); })
+            .then(function (res) {
+                collections = (res && String(res.code) === "0000") ? (res.partitions || []) : [];
+                collections.sort(function (a, b) { return (a.seq || 0) - (b.seq || 0); });
+                if (!collections.some(function (x) { return String(x.name) === currentCollection; })) {
+                    currentCollection = collections.length ? String(collections[0].name) : "";
+                }
+                renderCollectionSelect();
+            })
+            .catch(function () { collections = []; currentCollection = ""; renderCollectionSelect(); });
+    }
+
+    function renderCollectionSelect() {
+        var sel = dom.collectionSelect;
+        if (!sel) return;
+        if (!collections.length) {
+            sel.innerHTML = "";
+            sel.style.display = "none";
+            if (dom.collectionEmpty) dom.collectionEmpty.style.display = "";
+            if (dom.btnAddDoc) dom.btnAddDoc.disabled = true;
+            return;
+        }
+        sel.style.display = "";
+        if (dom.collectionEmpty) dom.collectionEmpty.style.display = "none";
+        if (dom.btnAddDoc) dom.btnAddDoc.disabled = false;
+        sel.innerHTML = "";
+        collections.forEach(function (it) {
+            var opt = document.createElement("option");
+            opt.value = String(it.name);
+            opt.textContent = it.description || it.name;
+            if (String(it.name) === currentCollection) opt.selected = true;
+            sel.appendChild(opt);
+        });
+    }
+
+    // 콜렉션 전환: 캐시/검색 초기화 후 해당 콜렉션의 목록만 재로딩.
+    // 요약 카드(count)는 파티션(dept) 단위이므로 콜렉션 전환 시 갱신하지 않는다.
+    function switchCollection(name) {
+        if (name === currentCollection) return;
+        currentCollection = name;
+        isSearchMode = false;
+        searchQuery = "";
+        if (dom.searchInput) dom.searchInput.value = "";
+        clearAllCaches();
+        resetPaging();
+        ui.pageBlockStart = 1;
+        currentPage = 1;
+        fetchListPage(1);
+    }
+
     function renderDeptTabs() {
         var box = document.getElementById("deptTabs");
         if (!box) return;
@@ -149,10 +215,11 @@
         });
     }
 
-    // 파티션 전환: 캐시/통계 초기화 후 해당 dept의 목록·통계 재로딩(검색모드 해제)
+    // 파티션 전환: 콜렉션 재로드 후 첫 콜렉션 기준으로 목록·통계 재로딩(검색모드 해제)
     function switchDept(code) {
         if (code === currentDept) return;
         currentDept = code;
+        currentCollection = "";              // dept 바뀌면 그 dept의 첫 콜렉션으로
         renderDeptTabs();
         isSearchMode = false;
         searchQuery = "";
@@ -162,8 +229,10 @@
         resetPaging();
         ui.pageBlockStart = 1;
         currentPage = 1;
-        fetchListPage(1);
-        fetchCount();
+        loadCollections(currentDept).then(function () {
+            fetchListPage(1);
+            fetchCount();
+        });
     }
 
     function pad2(n) {
@@ -911,6 +980,16 @@
         isSearchMode = false;
         searchQuery = "";
 
+        // 선택 콜렉션 없음(콜렉션 0개) → 빈 목록 표시
+        if (!currentCollection) {
+            documents = [];
+            resetPaging();
+            currentPage = 1;
+            renderTable();
+            showLoading(false);
+            return Promise.resolve();
+        }
+
         var cached = getCachedPage(page);
         if (cached) {
             documents = cached.data.slice();
@@ -932,7 +1011,7 @@
             + "&size=" + encodeURIComponent(perPage)
             + "&orderType=" + encodeURIComponent(getOrderType())
             + "&order=" + encodeURIComponent(sortOrder)
-            + deptQS();
+            + deptQS() + collectionQS();
 
         return fetch("/at-i/documents?" + qs)
             .then(function (res) {
@@ -994,7 +1073,7 @@
             + "&size=" + encodeURIComponent(perPage)
             + "&orderType=" + encodeURIComponent(getOrderType())
             + "&order=" + encodeURIComponent(sortOrder)
-            + deptQS();
+            + deptQS() + collectionQS();
 
         return fetch("/at-i/documents/search?" + qs)
             .then(function (res) {
@@ -1075,8 +1154,13 @@
     }
 
     function openDocModal() {
+        if (!currentCollection) { toast("먼저 콜렉션을 선택하세요.", "error"); return; }
         dom.docModalTitle.textContent = "문서 추가";
         dom.docUploader.value = getAdminId();
+        if (dom.docTargetCollection) {
+            var col = collections.filter(function (x) { return String(x.name) === currentCollection; })[0];
+            dom.docTargetCollection.value = col ? (col.description || col.name) : currentCollection;
+        }
         pendingFiles = [];
         fileStatus = [];
         dom.fileInput.value = "";
@@ -1266,7 +1350,7 @@
         var id = getAdminId();
 
         // 신규 토글은 isUse를 반전(값 미전달). PATCH /at-i/documents/{key}/toggle
-        fetch("/at-i/documents/" + encodeURIComponent(key) + "/toggle?adminId=" + encodeURIComponent(id) + deptQS(), { method: "PATCH" })
+        fetch("/at-i/documents/" + encodeURIComponent(key) + "/toggle?adminId=" + encodeURIComponent(id) + deptQS() + collectionQS(), { method: "PATCH" })
             .then(function (res) {
                 return res.json().catch(function () { return {}; });
             })
@@ -1296,7 +1380,7 @@
             showLoading(true);
             var id = getAdminId();
 
-            fetch("/at-i/documents/" + encodeURIComponent(key) + "?adminId=" + encodeURIComponent(id) + deptQS(), { method: "DELETE" })
+            fetch("/at-i/documents/" + encodeURIComponent(key) + "?adminId=" + encodeURIComponent(id) + deptQS() + collectionQS(), { method: "DELETE" })
                 .then(function (res) {
                     return res.json().catch(function () { return {}; });
                 })
@@ -1330,6 +1414,7 @@
         var formData = new FormData();
         formData.append("adminId", id);
         formData.append("dept", currentDept);
+        formData.append("partition", currentCollection);   // 등록 대상 콜렉션
         formData.append("file", file);
         // key/adminName은 서버가 채움 (adminId+file만 전송)
 
@@ -1608,6 +1693,11 @@
         });
 
         if (dom.btnAddDoc) dom.btnAddDoc.addEventListener("click", openDocModal);
+        if (dom.collectionSelect) {
+            dom.collectionSelect.addEventListener("change", function () {
+                switchCollection(dom.collectionSelect.value);
+            });
+        }
         if (dom.btnReloadProfanity) dom.btnReloadProfanity.addEventListener("click", reloadProfanity);
         if (dom.docModalClose) dom.docModalClose.addEventListener("click", attemptCloseDocModal);
         if (dom.docModalCancel) dom.docModalCancel.addEventListener("click", attemptCloseDocModal);
@@ -1726,8 +1816,11 @@
         resetPaging();
         clearAllCaches();
 
-        fetchListPage(1);
-        fetchCount();
+        // 콜렉션 목록 먼저 로드 → 첫 콜렉션 기준으로 목록/통계 로드
+        loadCollections(currentDept).then(function () {
+            fetchListPage(1);
+            fetchCount();
+        });
     }
 
     if (document.readyState === "loading") {

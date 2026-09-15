@@ -23,50 +23,55 @@ public class AdminDocController {
     private final DeptProperties deptProperties;
     private final AdminDocService service;
 
-    /** 4.1 문서 등록 (key/adminName은 서버가 채움 — 프론트는 adminId+file만) */
+    /** 4.1 문서 등록 (key/adminName은 서버가 채움 — 프론트는 adminId+file만). partition=콜렉션명. */
     @PostMapping("/documents")
     public ResponseEntity<String> add(@RequestParam String adminId,
                                       @RequestParam(value = "dept", required = false) String dept,
+                                      @RequestParam(value = "partition", required = false) String partition,
                                       @RequestParam("file") MultipartFile file) {
-        return GatewayForward.json(service.add(resolveDept(dept), adminId, file));
+        return GatewayForward.json(service.add(resolveDept(dept), adminId, partition, file));
     }
 
-    /** 4.2 문서 삭제 */
+    /** 4.2 문서 삭제. partition=콜렉션명. */
     @DeleteMapping("/documents/{key}")
     public ResponseEntity<String> delete(@PathVariable String key, @RequestParam String adminId,
-                                         @RequestParam(value = "dept", required = false) String dept) {
-        return GatewayForward.json(service.delete(resolveDept(dept), key));
+                                         @RequestParam(value = "dept", required = false) String dept,
+                                         @RequestParam(value = "partition", required = false) String partition) {
+        return GatewayForward.json(service.delete(resolveDept(dept), key, partition));
     }
 
-    /** 4.3 문서 목록 조회 */
+    /** 4.3 문서 목록 조회. partition=콜렉션명 필터. */
     @GetMapping("/documents")
     public ResponseEntity<String> list(@RequestParam String adminId,
                                        @RequestParam(value = "dept", required = false) String dept,
+                                       @RequestParam(value = "partition", required = false) String partition,
                                        @RequestParam(defaultValue = "1") int page,
                                        @RequestParam(defaultValue = "10") int size,
                                        @RequestParam(defaultValue = "registDate") String orderType,
                                        @RequestParam(defaultValue = "desc") String order) {
-        return GatewayForward.json(service.list(resolveDept(dept), page, size, orderType, order));
+        return GatewayForward.json(service.list(resolveDept(dept), page, size, orderType, order, partition));
     }
 
-    /** 4.4 문서 검색 */
+    /** 4.4 문서 검색. partition=콜렉션명 필터. */
     @GetMapping("/documents/search")
     public ResponseEntity<String> search(@RequestParam String adminId,
                                          @RequestParam(value = "dept", required = false) String dept,
+                                         @RequestParam(value = "partition", required = false) String partition,
                                          @RequestParam(defaultValue = "fileName") String searchType,
                                          @RequestParam(defaultValue = "") String searchTerm,
                                          @RequestParam(defaultValue = "1") int page,
                                          @RequestParam(defaultValue = "10") int size,
                                          @RequestParam(defaultValue = "registDate") String orderType,
                                          @RequestParam(defaultValue = "desc") String order) {
-        return GatewayForward.json(service.search(resolveDept(dept), searchType, searchTerm, page, size, orderType, order));
+        return GatewayForward.json(service.search(resolveDept(dept), searchType, searchTerm, page, size, orderType, order, partition));
     }
 
-    /** 4.5 문서 사용여부 토글 */
+    /** 4.5 문서 사용여부 토글. partition=콜렉션명. */
     @PatchMapping("/documents/{key}/toggle")
     public ResponseEntity<String> toggle(@PathVariable String key, @RequestParam String adminId,
-                                         @RequestParam(value = "dept", required = false) String dept) {
-        return GatewayForward.json(service.toggle(resolveDept(dept), key));
+                                         @RequestParam(value = "dept", required = false) String dept,
+                                         @RequestParam(value = "partition", required = false) String partition) {
+        return GatewayForward.json(service.toggle(resolveDept(dept), key, partition));
     }
 
     /** 4.6 문서 통계 조회 */
