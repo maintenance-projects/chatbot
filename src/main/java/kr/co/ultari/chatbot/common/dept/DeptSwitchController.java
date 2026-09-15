@@ -62,4 +62,57 @@ public class DeptSwitchController {
         o.put("current", deptContext.resolve(request));
         return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(o.toString());
     }
+
+    /**
+     * 접근 권한이 있는 파티션 목록 + 현재 선택. 사용자 화면 드롭다운용.
+     * 신원은 세션에서만 사용(user 파라미터 불신). 게이트웨이가 내려가 있으면 파티션 목록은 빈 배열.
+     */
+    @GetMapping("/me/partitions")
+    public ResponseEntity<String> listPartitions(
+            @RequestParam(value = "user", required = false) String user,
+            HttpServletRequest request) {
+        java.util.List<PartitionResolver.AccessiblePartition> parts = deptContext.accessiblePartitions(request);
+
+        JSONArray arr = new JSONArray();
+        for (PartitionResolver.AccessiblePartition p : parts) {
+            JSONObject po = new JSONObject();
+            po.put("dept", p.dept());
+            po.put("name", p.name());
+            po.put("label", p.label());
+            arr.put(po);
+        }
+
+        // 현재 선택: 세션값이 목록에 있으면 그것, 아니면 첫 항목(없으면 빈 객체)
+        String selDept = deptContext.selectedDept(request);
+        String selName = deptContext.selectedPartition(request);
+        PartitionResolver.AccessiblePartition chosen = null;
+        for (PartitionResolver.AccessiblePartition p : parts) {
+            if (p.dept().equals(selDept) && p.name().equals(selName)) { chosen = p; break; }
+        }
+        if (chosen == null && !parts.isEmpty()) chosen = parts.get(0);
+
+        JSONObject cur = new JSONObject();
+        if (chosen != null) {
+            cur.put("dept", chosen.dept());
+            cur.put("name", chosen.name());
+            cur.put("label", chosen.label());
+        }
+
+        JSONObject o = new JSONObject();
+        o.put("partitions", arr);
+        o.put("current", cur);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(o.toString());
+    }
+
+    /** 파티션 선택(접근 허용된 경우만 세션에 dept+partition 반영) */
+    @PostMapping("/me/partition")
+    public ResponseEntity<String> selectPartition(
+            @RequestParam("dept") String dept,
+            @RequestParam("partition") String partition,
+            HttpServletRequest request) {
+        boolean ok = deptContext.selectPartition(request, dept, partition);
+        JSONObject o = new JSONObject();
+        o.put("ok", ok);
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(o.toString());
+    }
 }

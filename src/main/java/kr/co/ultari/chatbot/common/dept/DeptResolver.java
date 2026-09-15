@@ -85,11 +85,7 @@ public class DeptResolver {
         Set<String> depts = new LinkedHashSet<>();
 
         // 1) 조직(PART) 상속 ALLOW — 사용자의 소속 부서 + 상위(조상) 부서까지 확장
-        //    소속부서는 인메모리 스냅샷에서(핫패스 DB-free). 미적재 시에만 원격 HR로 폴백.
-        List<String> directParts = hrDirectory.isLoaded()
-                ? hrDirectory.partIdsOf(userId)
-                : hrUserMapper.selectPartIdsByUser(userId);
-        Set<String> parts = expandAncestors(directParts);
+        Set<String> parts = userAncestorParts(userId);
         if (!parts.isEmpty()) {
             for (AiDeptGrant g : grantRepository.findByTargetTypeAndTargetIdInAndMode(
                     AiDeptGrant.TYPE_PART, parts, AiDeptGrant.MODE_ALLOW)) {
@@ -137,6 +133,19 @@ public class DeptResolver {
     /** 하위호환: 요청 dept 없이 단일 부서 결정. */
     public String resolve(String userId) {
         return resolve(userId, null);
+    }
+
+    /**
+     * 사용자의 소속 조직 + 상위(조상) 조직 집합.
+     * dept/파티션 권한 해석에서 공통으로 쓰는 "조직 상속 대상" 계산을 재사용하기 위해 공개.
+     * 소속부서는 인메모리 스냅샷에서(핫패스 DB-free), 미적재 시에만 원격 HR로 폴백.
+     */
+    public Set<String> userAncestorParts(String userId) {
+        if (!StringUtils.hasText(userId)) return Collections.emptySet();
+        List<String> directParts = hrDirectory.isLoaded()
+                ? hrDirectory.partIdsOf(userId)
+                : hrUserMapper.selectPartIdsByUser(userId);
+        return expandAncestors(directParts);
     }
 
     /** 부서 집합을 상위(조상) 부서까지 확장한다(하위 상속: 상위 조직 부여가 하위에 적용되도록). */

@@ -4,6 +4,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Component;
 
+import java.util.List;
 import java.util.Set;
 
 /**
@@ -19,8 +20,11 @@ public class DeptContext {
     public static final String SESSION_USER_ID = "chatbotUserId";
     /** 사용자가 선택한 dept를 세션에 보관하는 키 */
     public static final String SESSION_SELECTED_DEPT = "selectedDept";
+    /** 사용자가 선택한 파티션을 세션에 보관하는 키 */
+    public static final String SESSION_SELECTED_PARTITION = "selectedPartition";
 
     private final DeptResolver resolver;
+    private final PartitionResolver partitionResolver;
 
     /** 세션 사용자 + 선택된 dept로 라우팅 부서를 결정한다. */
     public String resolve(HttpServletRequest request) {
@@ -62,13 +66,39 @@ public class DeptContext {
         return false;
     }
 
-    private String sessionUserId(HttpServletRequest request) {
-        Object v = request.getSession().getAttribute(SESSION_USER_ID);
+    /** 세션 사용자가 접근 가능한 파티션 목록(벡터DB 코드·표시명 포함). */
+    public List<PartitionResolver.AccessiblePartition> accessiblePartitions(HttpServletRequest request) {
+        return partitionResolver.accessiblePartitions(sessionUserId(request));
+    }
+
+    /**
+     * 파티션 선택. 세션 사용자에게 접근 허용된 (dept, partition)이면 <b>dept·partition을 함께</b>
+     * 세션에 저장하고 true. dept를 함께 핀해 이후 요청의 벡터DB 라우팅이 선택 파티션과 일치하게 한다.
+     */
+    public boolean selectPartition(HttpServletRequest request, String dept, String partition) {
+        if (partitionResolver.isAccessible(sessionUserId(request), dept, partition)) {
+            var session = request.getSession();
+            session.setAttribute(SESSION_SELECTED_DEPT, dept);
+            session.setAttribute(SESSION_SELECTED_PARTITION, partition);
+            return true;
+        }
+        return false;
+    }
+
+    /** 현재 세션에 선택된 dept(미선택이면 null). */
+    public String selectedDept(HttpServletRequest request) {
+        Object v = request.getSession().getAttribute(SESSION_SELECTED_DEPT);
         return v == null ? null : v.toString();
     }
 
-    private String selectedDept(HttpServletRequest request) {
-        Object v = request.getSession().getAttribute(SESSION_SELECTED_DEPT);
+    /** 현재 세션에 선택된 파티션(미선택이면 null). */
+    public String selectedPartition(HttpServletRequest request) {
+        Object v = request.getSession().getAttribute(SESSION_SELECTED_PARTITION);
+        return v == null ? null : v.toString();
+    }
+
+    private String sessionUserId(HttpServletRequest request) {
+        Object v = request.getSession().getAttribute(SESSION_USER_ID);
         return v == null ? null : v.toString();
     }
 }

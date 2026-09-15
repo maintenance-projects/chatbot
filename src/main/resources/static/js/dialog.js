@@ -149,13 +149,12 @@ document.addEventListener("DOMContentLoaded", () => {
 
     const sessionId = window.sessionId || "";
 
-    // AI 파티션(dept) 스위처: 허용 dept가 2개 이상일 때만 노출. 선택은 세션에 저장되어 이후 요청에 적용.
-    (function initDeptSwitch() {
+    // AI 파티션 스위처: 사용자가 접근 권한을 가진 파티션 목록을 드롭다운으로 노출(2개 이상일 때).
+    // 선택은 세션에 저장(dept+partition 함께 핀)되어 이후 요청 라우팅에 적용.
+    (function initPartitionSwitch() {
         const sel = document.getElementById("cbDeptSwitch");
         const brandTitle = document.getElementById("cbBrandTitle");
-        const brandSub = document.getElementById("cbBrandSub");
         const brandLogo = document.getElementById("cbBrandLogo");
-        let labels = {};
 
         // 인사 말풍선의 '전자법규집'을 파티션 표시명으로 치환(미설정 시 원문 유지). AI 어시스턴트 인사 1건만 해당.
         const GREET_TOKEN = "전자법규집";
@@ -175,38 +174,43 @@ document.addEventListener("DOMContentLoaded", () => {
             greetEl.setAttribute("data-rawtext", text);
         }
 
-        // 선택된 dept의 친화 명칭만 브랜드에 반영. dept-a/dept-b 코드는 사용자에게 노출하지 않는다.
-        function applyBrand(code) {
-            if (!code) return;
-            const label = labels && labels[code];
-            applyGreetingPartition(label); // 인사 말풍선 파티션명 반영(미설정이면 '전자법규집' 유지/복원)
-            if (!label) return; // 명칭 미설정 시 코드 대신 기본 브랜드 유지
+        // 선택된 파티션 표시명을 브랜드/인사말에 반영.
+        function applyBrand(label) {
+            applyGreetingPartition(label); // 미설정이면 '전자법규집' 유지/복원
+            if (!label) return;
             if (brandTitle) brandTitle.textContent = label;
             if (brandLogo) brandLogo.textContent = String(label).trim().charAt(0).toUpperCase() || "A";
         }
 
         const uid = encodeURIComponent(window.sessionId || "");
-        fetch("/me/depts?user=" + uid, { credentials: "same-origin" })
+        fetch("/me/partitions?user=" + uid, { credentials: "same-origin" })
             .then((r) => r.json())
             .then((d) => {
-                labels = (d && d.labels) || {};
-                const depts = (d && d.depts) || [];
-                // 단일/자동 dept도 명칭은 항상 반영
-                applyBrand(d && d.current);
+                const parts = (d && d.partitions) || [];
+                const cur = (d && d.current) || null;
+                // 단일/자동 파티션도 명칭은 항상 반영
+                if (cur && cur.label) applyBrand(cur.label);
 
-                if (!sel || depts.length <= 1) return;
+                if (!sel || parts.length <= 1) return;
                 sel.innerHTML = "";
-                depts.forEach((c) => {
+                parts.forEach((p) => {
                     const o = document.createElement("option");
-                    o.value = c; o.textContent = labels[c] || c; o.style.color = "#333";
-                    if (c === d.current) o.selected = true;
+                    o.value = p.dept + "|" + p.name;      // dept 동반(선택 시 함께 세션에 핀)
+                    o.textContent = p.label || p.name; o.style.color = "#333";
+                    if (cur && p.dept === cur.dept && p.name === cur.name) o.selected = true;
                     sel.appendChild(o);
                 });
                 sel.hidden = false;
                 sel.addEventListener("change", () => {
-                    applyBrand(sel.value);
-                    const fd = new FormData(); fd.append("dept", sel.value); fd.append("user", window.sessionId || "");
-                    fetch("/me/depts", { method: "POST", body: fd, credentials: "same-origin" });
+                    const sep = sel.value.indexOf("|");
+                    const dept = sel.value.slice(0, sep);
+                    const name = sel.value.slice(sep + 1);
+                    const opt = sel.options[sel.selectedIndex];
+                    applyBrand(opt ? opt.textContent : "");
+                    const fd = new FormData();
+                    fd.append("dept", dept);
+                    fd.append("partition", name);
+                    fetch("/me/partition", { method: "POST", body: fd, credentials: "same-origin" });
                 });
             })
             .catch(() => {});
