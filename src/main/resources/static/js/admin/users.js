@@ -33,13 +33,10 @@
         labelInput: document.getElementById("deptLabelInput"),
         labelCode: document.getElementById("deptLabelCode"),
         btnSaveLabel: document.getElementById("btnSaveDeptLabel"),
-        colDeptCode: document.getElementById("colDeptCode"),
-        colNameInput: document.getElementById("colNameInput"),
-        btnAddPartition: document.getElementById("btnAddPartition"),
-        colList: document.getElementById("colList"),
-        targetChips: document.getElementById("grantTargetChips"),
+        partitionTabs: document.getElementById("partitionTabs"),
         treeHint: document.getElementById("treeHint"),
         renameModal: document.getElementById("colRenameModal"),
+        renameTitle: document.getElementById("colRenameTitle"),
         renameInput: document.getElementById("colRenameInput"),
         renameError: document.getElementById("colRenameError"),
         renameClose: document.getElementById("colRenameClose"),
@@ -47,10 +44,11 @@
         renameSave: document.getElementById("colRenameSave"),
     };
 
-    // 권한 대상: "" = 벡터DB 전체(AI_DEPT_GRANT), 파티션 name = 그 파티션(AI_PARTITION_GRANT)
+    // 권한 대상: 선택된 파티션 name(AI_PARTITION_GRANT). 파티션 0개면 "".
     var currentTarget = "";
     var partitions = [];
-    var renameTargetName = "";   // 이름변경 모달이 편집 중인 파티션 식별자(name)
+    var renameTargetName = "";   // 이름변경 모달이 편집 중인 파티션 식별자(name). 생성 모드면 미사용
+    var modalMode = "rename";    // "create" | "rename" — 생성/이름변경 모달 공용
 
     // 트리/권한 상태
     var partsById = {}, childrenOf = {}, usersByPart = {}, userParts = {}, roots = [];
@@ -125,55 +123,88 @@
     // 게이트웨이 GET/POST/DELETE /{dept}/admin/partitions 프록시. 응답 봉투 {code,message,partitions}.
     function loadPartitions() {
         if (!currentDept) return;
-        if (dom.colDeptCode) dom.colDeptCode.textContent = currentDept;
         postForm("/at-i/partitions/list", { adminId: adminId(), dept: currentDept })
             .then(function (r) { return r.json(); })
             .then(function (res) {
                 partitions = (res && String(res.code) === "0000") ? (res.partitions || []) : [];
-                // seq(채번 순번) 오름차순 정렬 — 목록/칩/첫 선택 순서를 일관되게
+                // seq(채번 순번) 오름차순 정렬 — 탭/첫 선택 순서를 일관되게
                 partitions.sort(function (a, b) { return (a.seq || 0) - (b.seq || 0); });
-                renderPartitions(partitions);
-                // 권한 대상은 파티션만. 현재 선택이 목록에 없으면 첫 파티션(없으면 빈값)으로.
+                // 현재 선택이 목록에 없으면 첫 파티션(없으면 빈값)으로.
                 if (!partitions.some(function (x) { return String(x.name) === currentTarget; })) {
                     currentTarget = partitions.length ? String(partitions[0].name) : "";
                 }
-                renderTargetChips();
+                renderPartitionTabs();
                 updateTreeHint();
                 loadTree();
             })
             .catch(function () {
                 partitions = []; currentTarget = "";
-                renderPartitions([]); renderTargetChips(); updateTreeHint(); loadTree();
+                renderPartitionTabs(); updateTreeHint(); loadTree();
                 notify("파티션을 불러오지 못했습니다.", "error");
             });
     }
 
-    // 권한 대상 칩(파티션별) 렌더. 클릭 시 대상 전환 → 트리 체크상태 스왑.
-    function renderTargetChips() {
-        if (!dom.targetChips) return;
-        dom.targetChips.innerHTML = "";
-        if (!partitions.length) {
-            var e = document.createElement("span");
-            e.className = "gt-empty";
-            e.textContent = "파티션을 먼저 생성하세요";
-            dom.targetChips.appendChild(e);
-            return;
-        }
+    // 파티션 탭 렌더. 탭 본문 클릭=대상 전환(트리 스왑), 연필=이름변경, x=삭제, +=생성.
+    var ICON_EDIT = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>';
+    var ICON_DEL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>';
+    var ICON_ADD = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>';
+
+    function renderPartitionTabs() {
+        if (!dom.partitionTabs) return;
+        dom.partitionTabs.innerHTML = "";
+
         partitions.forEach(function (it) {
             var value = String(it.name);
-            var b = document.createElement("button");
-            b.type = "button";
-            b.className = "gt-chip" + (value === currentTarget ? " active" : "");
-            b.textContent = it.description || it.name;
-            b.addEventListener("click", function () {
+            var label = it.description || it.name;
+            var tab = document.createElement("div");
+            tab.className = "partition-tab" + (value === currentTarget ? " active" : "");
+            tab.addEventListener("click", function () {
                 if (currentTarget === value) return;
                 currentTarget = value;
-                renderTargetChips();
+                renderPartitionTabs();
                 updateTreeHint();
                 loadTree();
             });
-            dom.targetChips.appendChild(b);
+
+            var nm = document.createElement("span");
+            nm.className = "pt-name";
+            nm.textContent = label;
+            tab.appendChild(nm);
+
+            var edit = document.createElement("button");
+            edit.type = "button";
+            edit.className = "pt-act pt-edit";
+            edit.title = "이름 변경";
+            edit.innerHTML = ICON_EDIT;
+            edit.addEventListener("click", function (e) { e.stopPropagation(); renamePartition(value, label); });
+            tab.appendChild(edit);
+
+            var del = document.createElement("button");
+            del.type = "button";
+            del.className = "pt-act pt-del";
+            del.title = "삭제";
+            del.innerHTML = ICON_DEL;
+            del.addEventListener("click", function (e) { e.stopPropagation(); deletePartition(value, label); });
+            tab.appendChild(del);
+
+            dom.partitionTabs.appendChild(tab);
         });
+
+        // + 생성 버튼(항상 노출)
+        var add = document.createElement("button");
+        add.type = "button";
+        add.className = "pt-add";
+        add.title = "파티션 추가";
+        add.innerHTML = ICON_ADD + '<span>파티션 추가</span>';
+        add.addEventListener("click", openCreateModal);
+        dom.partitionTabs.appendChild(add);
+
+        if (!partitions.length) {
+            var e = document.createElement("span");
+            e.className = "pt-empty";
+            e.textContent = "‘파티션 추가’로 첫 파티션을 만드세요.";
+            dom.partitionTabs.appendChild(e);
+        }
     }
 
     // 트리 힌트 문구를 현재 권한 대상에 맞게 갱신
@@ -184,63 +215,27 @@
             : "파티션을 먼저 생성하면 접근 권한을 부여할 수 있습니다.";
     }
 
-    function renderPartitions(items) {
-        if (!dom.colList) return;
-        dom.colList.innerHTML = "";
-        if (!items.length) {
-            var empty = document.createElement("div");
-            empty.className = "cp-empty";
-            empty.textContent = "등록된 파티션이 없습니다.";
-            dom.colList.appendChild(empty);
-            return;
-        }
-        items.forEach(function (it) {
-            var row = document.createElement("div");
-            row.className = "cp-item";
-            var created = it.created_at ? String(it.created_at).slice(0, 10) : "";
-            row.innerHTML =
-                '<span class="cp-name">' + esc(it.description || it.name) + '</span>' +
-                '<span class="cp-id">' + esc(it.name) + '</span>' +
-                (created ? '<span class="cp-date">' + esc(created) + '</span>' : '');
-            var edit = document.createElement("button");
-            edit.type = "button";
-            edit.className = "btn btn-outline btn-sm cp-edit";
-            edit.textContent = "이름변경";
-            edit.addEventListener("click", function () { renamePartition(it.name, it.description || it.name); });
-            row.appendChild(edit);
-            var del = document.createElement("button");
-            del.type = "button";
-            del.className = "btn btn-outline btn-sm cp-del";
-            del.textContent = "삭제";
-            del.addEventListener("click", function () { deletePartition(it.name, it.description || it.name); });
-            row.appendChild(del);
-            dom.colList.appendChild(row);
-        });
-    }
-
-    function createPartition() {
+    // 생성 모달 열기 — 빈 입력, 저장 시 createPartition 경로로 처리.
+    function openCreateModal() {
         if (!currentDept) return;
-        var name = (dom.colNameInput.value || "").trim();
-        if (!name) { notify("파티션 이름을 입력하세요.", "error"); return; }
-        showLoading(true);
-        postForm("/at-i/partitions/create", { adminId: adminId(), dept: currentDept, description: name })
-            .then(function (r) { return r.json(); })
-            .then(function (res) {
-                if (res && String(res.code) === "0000") {
-                    dom.colNameInput.value = "";
-                    notify("파티션이 생성되었습니다.", "success");
-                    loadPartitions();
-                } else {
-                    notify((res && res.message) ? res.message : "생성에 실패했습니다.", "error");
-                }
-            })
-            .catch(function () { notify("생성 중 오류가 발생했습니다.", "error"); })
-            .finally(function () { showLoading(false); });
+        modalMode = "create";
+        renameTargetName = "";
+        if (dom.renameTitle) dom.renameTitle.textContent = "파티션 추가";
+        if (dom.renameInput) dom.renameInput.value = "";
+        if (dom.renameSave) dom.renameSave.textContent = "생성";
+        hideRenameError();
+        if (dom.renameModal) {
+            dom.renameModal.classList.add("show");
+            setTimeout(function () { if (dom.renameInput) dom.renameInput.focus(); }, 200);
+        }
     }
 
     // 이름변경 모달 열기 — 대상 파티션 식별자(name)와 현재 표시명(current)을 채운다.
     function renamePartition(name, current) {
+        modalMode = "rename";
         renameTargetName = name;
+        if (dom.renameTitle) dom.renameTitle.textContent = "파티션 이름 변경";
+        if (dom.renameSave) dom.renameSave.textContent = "변경";
         if (dom.renameInput) dom.renameInput.value = current || "";
         hideRenameError();
         if (dom.renameModal) {
@@ -265,28 +260,37 @@
         dom.renameError.style.display = "none";
     }
 
-    // 이름변경 저장 — 게이트웨이 PATCH(multipart) 프록시 호출.
-    function saveRename() {
+    // 생성/이름변경 공용 저장 — modalMode에 따라 게이트웨이 create/rename 프록시 호출.
+    function saveModal() {
         hideRenameError();
-        var name = renameTargetName;
         var nv = (dom.renameInput.value || "").trim();
-        if (!name) { closeRenameModal(); return; }
-        if (!nv) { showRenameError("새 이름을 입력해주세요."); return; }
+        var isCreate = modalMode === "create";
+        if (!isCreate && !renameTargetName) { closeRenameModal(); return; }
+        if (!nv) { showRenameError(isCreate ? "파티션 이름을 입력해주세요." : "새 이름을 입력해주세요."); return; }
+
+        var url = isCreate ? "/at-i/partitions/create" : "/at-i/partitions/rename";
+        var params = isCreate
+            ? { adminId: adminId(), dept: currentDept, description: nv }
+            : { adminId: adminId(), dept: currentDept, name: renameTargetName, description: nv };
+
         dom.renameSave.disabled = true;
-        dom.renameSave.textContent = "변경 중...";
-        postForm("/at-i/partitions/rename", { adminId: adminId(), dept: currentDept, name: name, description: nv })
+        dom.renameSave.textContent = isCreate ? "생성 중..." : "변경 중...";
+        postForm(url, params)
             .then(function (r) { return r.json(); })
             .then(function (res) {
                 if (res && String(res.code) === "0000") {
+                    // 생성 시 새 파티션을 바로 선택하도록 currentTarget 갱신 후 재로딩
+                    if (isCreate) currentTarget = "";  // loadPartitions가 첫/신규 파티션으로 채움
                     closeRenameModal();
-                    notify("이름이 변경되었습니다.", "success");
-                    loadPartitions();           // 목록·칩 갱신(name은 유지, description만 변경)
+                    notify(isCreate ? "파티션이 생성되었습니다." : "이름이 변경되었습니다.", "success");
+                    loadPartitions();
                 } else {
-                    showRenameError((res && res.message) ? res.message : "이름 변경에 실패했습니다.");
+                    showRenameError((res && res.message) ? res.message
+                        : (isCreate ? "생성에 실패했습니다." : "이름 변경에 실패했습니다."));
                 }
             })
-            .catch(function () { showRenameError("이름 변경 중 오류가 발생했습니다."); })
-            .finally(function () { dom.renameSave.disabled = false; dom.renameSave.textContent = "변경"; });
+            .catch(function () { showRenameError(isCreate ? "생성 중 오류가 발생했습니다." : "이름 변경 중 오류가 발생했습니다."); })
+            .finally(function () { dom.renameSave.disabled = false; dom.renameSave.textContent = isCreate ? "생성" : "변경"; });
     }
 
     function deletePartition(name, label) {
@@ -537,16 +541,12 @@
     if (dom.labelInput) dom.labelInput.addEventListener("keydown", function (e) {
         if (e.key === "Enter") { e.preventDefault(); saveLabel(); }
     });
-    if (dom.btnAddPartition) dom.btnAddPartition.addEventListener("click", createPartition);
-    if (dom.colNameInput) dom.colNameInput.addEventListener("keydown", function (e) {
-        if (e.key === "Enter") { e.preventDefault(); createPartition(); }
-    });
-    // 이름변경 모달
+    // 파티션 생성/이름변경 공용 모달 ( + 버튼·연필은 renderPartitionTabs에서 바인딩)
     if (dom.renameClose) dom.renameClose.addEventListener("click", closeRenameModal);
     if (dom.renameCancel) dom.renameCancel.addEventListener("click", closeRenameModal);
-    if (dom.renameSave) dom.renameSave.addEventListener("click", saveRename);
+    if (dom.renameSave) dom.renameSave.addEventListener("click", saveModal);
     if (dom.renameInput) dom.renameInput.addEventListener("keydown", function (e) {
-        if (e.key === "Enter") { e.preventDefault(); saveRename(); }
+        if (e.key === "Enter") { e.preventDefault(); saveModal(); }
     });
     if (dom.renameModal) dom.renameModal.addEventListener("click", function (e) {
         if (e.target === dom.renameModal) closeRenameModal();
