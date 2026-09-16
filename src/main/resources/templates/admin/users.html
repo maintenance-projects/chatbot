@@ -246,13 +246,13 @@
             </header>
 
             <main class="page-body">
+                <div class="dept-tabs" id="deptTabs"></div>
+
+                <!-- 파티션 탭: +로 생성, 연필로 이름변경, x로 삭제. 탭 선택 시 아래 카드(트리)가 그 파티션 권한으로 스왑 -->
+                <div class="partition-tabs" id="partitionTabs"></div>
+
                 <section class="table-card" style="position:relative;">
                     <div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div></div>
-
-                    <div class="dept-tabs" id="deptTabs"></div>
-
-                    <!-- 파티션 탭: +로 생성, 연필로 이름변경, x로 삭제. 탭 선택 시 아래 트리가 그 파티션 권한으로 스왑 -->
-                    <div class="partition-tabs" id="partitionTabs"></div>
 
                     <div class="tree-toolbar">
                         <input type="text" class="search-input" id="treeSearch" placeholder="이름 / 아이디 검색…">
