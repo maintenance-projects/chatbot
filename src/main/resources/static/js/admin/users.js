@@ -26,6 +26,7 @@
         tree: document.getElementById("treeRoot"),
         loading: document.getElementById("loadingOverlay"),
         search: document.getElementById("treeSearch"),
+        btnTreeSearch: document.getElementById("btnTreeSearch"),
         btnExpand: document.getElementById("btnExpandAll"),
         btnCollapse: document.getElementById("btnCollapseAll"),
         btnHrRefresh: document.getElementById("btnHrRefresh"),
@@ -503,6 +504,7 @@
 
     // ── 바인딩 ────────────────────────────────────────────────
     if (dom.search) dom.search.addEventListener("input", applySearch);
+    if (dom.btnTreeSearch) dom.btnTreeSearch.addEventListener("click", applySearch);
     if (dom.btnExpand) dom.btnExpand.addEventListener("click", expandAll);
     if (dom.btnCollapse) dom.btnCollapse.addEventListener("click", collapseAll);
     if (dom.btnHrRefresh) dom.btnHrRefresh.addEventListener("click", hrRefresh);

@@ -50,9 +50,16 @@
         .pt-add svg { width: 14px; height: 14px; }
         .pt-empty { padding: 10px 6px; color: var(--color-text-muted); font-size: 0.875rem; }
 
-        /* 툴바 */
-        .tree-toolbar { display: flex; gap: 10px; align-items: center; margin-bottom: 8px; flex-wrap: wrap; }
-        .tree-toolbar .search-input { max-width: 280px; }
+        /* 검색/도구 바 — 문서관리(search-group) 스타일 재사용(master.css) */
+        .tree-toolbar { display: flex; gap: 10px; align-items: center; flex-wrap: wrap;
+            padding: 10px; border-bottom: 1px solid var(--color-border); margin-bottom: 12px; }
+        .tree-toolbar .search-input { min-width: 220px; }
+        .tree-actions { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+        .tree-actions .btn { display: inline-flex; align-items: center; gap: 6px; }
+        .tree-actions .btn svg { width: 14px; height: 14px; }
+        /* 안내 캡션(박스 없이 연한 한 줄) */
+        .tree-hintbar { display: flex; align-items: center; gap: 6px; margin: 3px 2px 14px; }
+        .tree-hintbar svg { width: 14px; height: 14px; color: var(--color-text-muted); flex: 0 0 auto; opacity: .8; }
         .tsub { color: var(--color-text-muted); font-size: 0.8125rem; }
 
         /* 조직도 트리 */
@@ -255,11 +262,44 @@
                     <div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div></div>
 
                     <div class="tree-toolbar">
-                        <input type="text" class="search-input" id="treeSearch" placeholder="이름 / 아이디 검색…">
-                        <button class="btn btn-outline btn-sm" id="btnExpandAll" type="button">모두 펼치기</button>
-                        <button class="btn btn-outline btn-sm" id="btnCollapseAll" type="button">모두 접기</button>
-                        <button class="btn btn-outline btn-sm" id="btnHrRefresh" type="button"
-                            title="인사(HR) 사용자·부서를 메모리에 다시 불러옵니다(신규자 즉시 반영)">사용자 새로고침</button>
+                        <div class="search-group">
+                            <input type="text" class="search-input" id="treeSearch" placeholder="이름 / 아이디 검색…">
+                            <button class="btn-search" id="btnTreeSearch" type="button" title="검색">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round">
+                                    <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+                                </svg>
+                            </button>
+                        </div>
+                        <div class="tree-actions">
+                            <button class="btn btn-outline btn-sm" id="btnExpandAll" type="button">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="7 13 12 18 17 13" /><polyline points="7 6 12 11 17 6" />
+                                </svg>모두 펼치기
+                            </button>
+                            <button class="btn btn-outline btn-sm" id="btnCollapseAll" type="button">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="17 11 12 6 7 11" /><polyline points="17 18 12 13 7 18" />
+                                </svg>모두 접기
+                            </button>
+                            <button class="btn btn-outline btn-sm" id="btnHrRefresh" type="button"
+                                title="인사(HR) 사용자·부서를 메모리에 다시 불러옵니다(신규자 즉시 반영)">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="23 4 23 10 17 10" /><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10" />
+                                </svg>사용자 새로고침
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="tree-hintbar">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <circle cx="12" cy="12" r="10" /><line x1="12" y1="16" x2="12" y2="12" />
+                            <line x1="12" y1="8" x2="12.01" y2="8" />
+                        </svg>
                         <span class="tsub" id="treeHint">조직·사용자에 체크하면 접근 권한이 부여됩니다 · 조직 부여는 하위 상속</span>
                     </div>
 
