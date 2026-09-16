@@ -91,7 +91,7 @@
         screenGuideDim: $("#screenGuideDim"),
         screenGuideClose: $("#btnCloseScreenGuide"),
         screenGuideLayer: $("#screenGuideHighlightLayer"),
-        partitionChips: $("#partitionChips"),
+        partitionTabs: $("#partitionTabs"),
         partitionEmpty: $("#partitionEmpty"),
         docTargetPartition: $("#docTargetPartition")
     };
@@ -162,9 +162,9 @@
             .catch(function () { partitions = []; currentPartition = ""; renderPartitionSelect(); });
     }
 
-    // 파티션 선택기를 칩 버튼으로 렌더(다른 관리자 화면의 대상 칩과 동일 UX).
+    // 파티션 선택기를 탭 버튼으로 렌더(기존 벡터DB 탭과 동일 룩앤필).
     function renderPartitionSelect() {
-        var box = dom.partitionChips;
+        var box = dom.partitionTabs;
         if (!box) return;
         if (!partitions.length) {
             box.innerHTML = "";
@@ -181,7 +181,7 @@
             var name = String(it.name);
             var b = document.createElement("button");
             b.type = "button";
-            b.className = "partition-chip" + (name === currentPartition ? " active" : "");
+            b.className = "partition-tab" + (name === currentPartition ? " active" : "");
             b.textContent = it.description || it.name;
             b.addEventListener("click", function () { switchPartition(name); });
             box.appendChild(b);
