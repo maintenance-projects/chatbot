@@ -23,17 +23,6 @@
         .dept-tab.active::after { content: ''; position: absolute; left: 14px; right: 14px; bottom: -1px;
             height: 2.5px; background: var(--color-primary); border-radius: 3px; }
 
-        /* dept 표시 명칭 편집기 */
-        .dept-label-editor { display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-            width: 700px; max-width: 100%; margin-left: 18px; margin-bottom: 18px;
-            padding: 13px 16px; border-radius: var(--radius-md, 12px);
-            background: rgba(var(--primary-rgb), 0.045); border: 1px solid var(--color-border); }
-        .dle-cap { font-size: 0.8125rem; font-weight: 700; color: var(--color-primary-dark); }
-        .dept-label-editor .search-input { max-width: 240px; }
-        .dle-code { font-size: 0.75rem; font-weight: 600; color: var(--color-text-muted);
-            background: var(--base-dark); padding: 3px 10px; border-radius: 20px; }
-        .dle-hint { color: var(--color-text-muted); font-size: 0.8125rem; margin-left: auto; }
-
         /* 파티션 탭 — 각 파티션이 탭. 본문 클릭=권한 대상 선택, 연필=이름변경, x=삭제, +=생성 */
         .partition-tabs { display: flex; align-items: flex-end; gap: 2px; flex-wrap: wrap;
             margin-bottom: 16px; border-bottom: 1px solid var(--color-border); }
@@ -261,15 +250,6 @@
                     <div class="loading-overlay" id="loadingOverlay"><div class="spinner"></div></div>
 
                     <div class="dept-tabs" id="deptTabs"></div>
-
-                    <div class="dept-label-editor">
-                        <span class="dle-cap">표시 명칭</span>
-                        <input type="text" class="search-input" id="deptLabelInput" maxlength="30"
-                            placeholder="예) 영업본부">
-                        <span class="dle-code" id="deptLabelCode"></span>
-                        <button class="btn btn-primary btn-sm" id="btnSaveDeptLabel" type="button">저장</button>
-                        <span class="dle-hint">챗봇 화면 상단에 이 명칭으로 표시됩니다.</span>
-                    </div>
 
                     <!-- 파티션 탭: +로 생성, 연필로 이름변경, x로 삭제. 탭 선택 시 아래 트리가 그 파티션 권한으로 스왑 -->
                     <div class="partition-tabs" id="partitionTabs"></div>

@@ -30,9 +30,6 @@
         btnCollapse: document.getElementById("btnCollapseAll"),
         btnHrRefresh: document.getElementById("btnHrRefresh"),
         btnLogout: document.getElementById("btnLogout"),
-        labelInput: document.getElementById("deptLabelInput"),
-        labelCode: document.getElementById("deptLabelCode"),
-        btnSaveLabel: document.getElementById("btnSaveDeptLabel"),
         partitionTabs: document.getElementById("partitionTabs"),
         treeHint: document.getElementById("treeHint"),
         renameModal: document.getElementById("colRenameModal"),
@@ -86,37 +83,10 @@
                 currentDept = String(code);
                 currentTarget = "";           // loadPartitions가 그 dept의 첫 파티션으로 채움
                 renderTabs();
-                syncLabelEditor();
                 loadPartitions();            // 파티션 로드 → 첫 파티션 선택 → 트리 로드
             });
             dom.tabs.appendChild(b);
         });
-        syncLabelEditor();
-    }
-
-    // ── dept 표시 명칭 편집 ────────────────────────────────────
-    function syncLabelEditor() {
-        if (!dom.labelInput) return;
-        var l = deptLabels[currentDept];
-        // 폴백(코드==명칭)이면 미설정으로 간주해 빈칸
-        dom.labelInput.value = (l && String(l) !== String(currentDept)) ? String(l) : "";
-        if (dom.labelCode) dom.labelCode.textContent = currentDept;
-    }
-    function saveLabel() {
-        if (!currentDept) return;
-        var label = (dom.labelInput.value || "").trim();
-        showLoading(true);
-        postForm("/at-i/users/dept-label", { adminId: adminId(), dept: currentDept, label: label })
-            .then(function (r) { return r.text(); })
-            .then(function (t) {
-                if (String(t || "").trim() === "ok") {
-                    deptLabels[currentDept] = label || currentDept;
-                    renderTabs();
-                    notify("명칭이 저장되었습니다.", "success");
-                } else { notify("명칭 저장 실패", "error"); }
-            })
-            .catch(function () { notify("명칭 저장 중 오류", "error"); })
-            .finally(function () { showLoading(false); });
     }
 
     // ── 파티션(벡터DB 하위) 관리 ──────────────────────────────
@@ -537,10 +507,6 @@
     if (dom.btnCollapse) dom.btnCollapse.addEventListener("click", collapseAll);
     if (dom.btnHrRefresh) dom.btnHrRefresh.addEventListener("click", hrRefresh);
     if (dom.btnLogout) dom.btnLogout.addEventListener("click", logout);
-    if (dom.btnSaveLabel) dom.btnSaveLabel.addEventListener("click", saveLabel);
-    if (dom.labelInput) dom.labelInput.addEventListener("keydown", function (e) {
-        if (e.key === "Enter") { e.preventDefault(); saveLabel(); }
-    });
     // 파티션 생성/이름변경 공용 모달 ( + 버튼·연필은 renderPartitionTabs에서 바인딩)
     if (dom.renameClose) dom.renameClose.addEventListener("click", closeRenameModal);
     if (dom.renameCancel) dom.renameCancel.addEventListener("click", closeRenameModal);
