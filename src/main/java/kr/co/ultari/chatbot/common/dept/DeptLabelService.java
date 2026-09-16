@@ -21,7 +21,11 @@ public class DeptLabelService {
     private final DeptProperties deptProperties;
     private final AiDeptLabelRepository repository;
 
-    /** 설정된 모든 dept 코드의 표시명(설정 순서 유지, 미지정은 코드 자체). */
+    /**
+     * 설정된 dept 코드({@code ultari.dept.codes})의 표시명만 반환(설정 순서 유지, 미지정은 코드 자체).
+     * <p>벡터DB는 dept-a 단일 고정이므로, codes 밖에 저장된 과거 라벨(dept-b 등)은 포함하지 않는다
+     * (그러지 않으면 관리자 dept 선택 UI가 잔여 라벨 때문에 되살아난다).
+     */
     @Transactional(readOnly = true)
     public Map<String, String> labels() {
         Map<String, String> saved = new HashMap<>();
@@ -31,8 +35,6 @@ public class DeptLabelService {
         for (String code : deptProperties.getCodes()) {
             out.put(code, display(code, saved.get(code)));
         }
-        // 설정 목록 밖(default 등)이라도 저장돼 있으면 포함
-        saved.forEach((code, label) -> out.putIfAbsent(code, display(code, label)));
         return out;
     }
 

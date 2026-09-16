@@ -56,16 +56,18 @@ public class DeptResolver {
         log.info("[dept] allowedDepts 캐시 {} (TTL {}s)", ttl > 0 ? "활성" : "비활성", ttl);
     }
 
-    /** 사용자가 접근 가능한 부서 집합. TTL 캐시 적용(관리자 권한 변경 시 무효화). */
+    /**
+     * 사용자가 접근 가능한 벡터DB(dept) 집합.
+     * <p>벡터DB는 <b>dept-a 단일 고정</b>이며 dept 단위 접근 게이트({@code AI_DEPT_GRANT})는 제거(dormant)됐다.
+     * 로그인 신원이 있으면 항상 {@code defaultDept(dept-a)}를 반환하고, 실제 접근 통제는
+     * 파티션 권한({@code AI_PARTITION_GRANT}, 기본 폐쇄)이 담당한다({@link PartitionResolver}).
+     * <p>{@link #computeAllowedDepts}/캐시는 dept 다축 복원 대비 dormant로 남겨둔다(현재 미사용).
+     */
     public Set<String> allowedDepts(String userId) {
         if (!StringUtils.hasText(userId)) {
             return Collections.emptySet();
         }
-        Cache<String, Set<String>> c = grantCache;
-        if (c == null) {
-            return computeAllowedDepts(userId);
-        }
-        return c.get(userId, this::computeAllowedDepts);
+        return Collections.singleton(props.getDefaultDept());
     }
 
     /** 권한 전체 캐시 무효화. 관리자 AI 파티션 권한 부여/회수 후 호출. */

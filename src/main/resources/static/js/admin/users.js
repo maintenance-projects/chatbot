@@ -76,6 +76,9 @@
     // ── 탭 ────────────────────────────────────────────────────
     function renderTabs() {
         dom.tabs.innerHTML = "";
+        // 벡터DB(dept)는 dept-a 단일 고정 → 탭 숨김(다축 아님). currentDept는 유지되어 파티션 로드는 정상.
+        if (deptCodes.length <= 1) { dom.tabs.style.display = "none"; return; }
+        dom.tabs.style.display = "";
         deptCodes.forEach(function (code) {
             var b = document.createElement("button");
             b.type = "button";
