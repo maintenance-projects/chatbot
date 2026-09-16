@@ -147,12 +147,8 @@ public class ChatService {
         if (!names.isEmpty()) {
             return messagePrivate(dept, userId, invokeId, message, names, translateTo);
         }
-        aiUsageService.increase(userId, invokeId, "CHAT");
-        MultipartBodyBuilder b = new MultipartBodyBuilder();
-        b.part("message", message);
-        if (StringUtils.hasText(translateTo)) b.part("translate_to", translateTo);
-        if (StringUtils.hasText(partition)) b.part("partition", partition);  // 선택 파티션으로 open RAG 스코프
-        return sseRelay.relay(() -> gateway.stream(dept, "/message/" + invokeId, b));
+        // 첨부 없는 일반 질문 = open RAG. 게이트웨이 /message/open/{invokeId}로 선택 파티션 스코프하여 릴레이.
+        return messageOpen(dept, userId, invokeId, message, translateTo, partition);
     }
 
     /**
