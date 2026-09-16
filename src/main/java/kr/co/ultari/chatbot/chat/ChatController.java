@@ -43,7 +43,7 @@ public class ChatController {
                               HttpServletRequest request) {
         String uid = userId(request);
         if (uid == null || uid.isBlank()) return forbiddenSse();
-        return chatService.message(dept(request), uid, uid, message, targetFilenames(request), translateTo);
+        return chatService.message(dept(request), uid, uid, message, targetFilenames(request), translateTo, partition(request));
     }
 
     /** 2.2 Private 대화 — target_filename 다중 지원 */
@@ -63,7 +63,7 @@ public class ChatController {
                                   HttpServletRequest request) {
         String uid = userId(request);
         if (uid == null || uid.isBlank()) return forbiddenSse();
-        return chatService.messageOpen(dept(request), uid, uid, message, translateTo);
+        return chatService.messageOpen(dept(request), uid, uid, message, translateTo, partition(request));
     }
 
     /** 2.6 문서 체계적 요약 — target_filename 다중(통합 요약) 지원 */
@@ -106,6 +106,11 @@ public class ChatController {
     // --- helpers ---
     private String dept(HttpServletRequest request) {
         return deptContext.resolve(request);
+    }
+
+    /** 현재 세션에 선택된 파티션(오픈 RAG 질의를 해당 파티션으로 스코프). 미선택이면 null. */
+    private String partition(HttpServletRequest request) {
+        return deptContext.selectedPartition(request);
     }
 
     /**

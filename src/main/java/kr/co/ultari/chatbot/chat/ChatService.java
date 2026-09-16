@@ -139,8 +139,8 @@ public class ChatService {
         }
     }
 
-    /** 3.1 통합 챗봇 — target_filename(다중) 유무로 private/open 라우팅 (SSE) */
-    public SseEmitter message(String dept, String userId, String invokeId, String message, java.util.List<String> targetFilenames, String translateTo) {
+    /** 3.1 통합 챗봇 — target_filename(다중) 유무로 private/open 라우팅 (SSE). open은 선택 파티션으로 스코프. */
+    public SseEmitter message(String dept, String userId, String invokeId, String message, java.util.List<String> targetFilenames, String translateTo, String partition) {
         // 개인 업로드 문서 질문(target_filename 있음)은 파티션 무관 private로 라우팅해야 한다.
         // (업로드가 dept-less /upload에 저장되므로 dept-scoped /message로 물으면 파일을 못 찾음)
         java.util.List<String> names = cleanNames(targetFilenames);
@@ -151,6 +151,7 @@ public class ChatService {
         MultipartBodyBuilder b = new MultipartBodyBuilder();
         b.part("message", message);
         if (StringUtils.hasText(translateTo)) b.part("translate_to", translateTo);
+        if (StringUtils.hasText(partition)) b.part("partition", partition);  // 선택 파티션으로 open RAG 스코프
         return sseRelay.relay(() -> gateway.stream(dept, "/message/" + invokeId, b));
     }
 
@@ -173,12 +174,13 @@ public class ChatService {
         return sseRelay.relay(() -> gateway.streamJson(null, "/message/private/" + invokeId, json));
     }
 
-    /** 2.3 Open 대화 — 전체 문서 검색 (SSE) */
-    public SseEmitter messageOpen(String dept, String userId, String invokeId, String message, String translateTo) {
+    /** 2.3 Open 대화 — 전체 문서 검색 (SSE). 선택 파티션으로 스코프. */
+    public SseEmitter messageOpen(String dept, String userId, String invokeId, String message, String translateTo, String partition) {
         aiUsageService.increase(userId, invokeId, "CHAT");
         MultipartBodyBuilder b = new MultipartBodyBuilder();
         b.part("message", message);
         if (StringUtils.hasText(translateTo)) b.part("translate_to", translateTo);
+        if (StringUtils.hasText(partition)) b.part("partition", partition);  // 선택 파티션으로 open RAG 스코프
         return sseRelay.relay(() -> gateway.stream(dept, "/message/open/" + invokeId, b));
     }
 

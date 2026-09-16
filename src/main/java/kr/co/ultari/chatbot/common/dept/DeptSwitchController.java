@@ -91,6 +91,12 @@ public class DeptSwitchController {
         }
         if (chosen == null && !parts.isEmpty()) chosen = parts.get(0);
 
+        // 세션에 선택 파티션이 아직 없으면 현재(기본) 파티션으로 초기화 — 드롭다운을 안 거치는
+        // 단일 파티션 사용자도 이후 질의가 파티션 스코프(partition=name)로 나가도록 보장.
+        if (chosen != null && (selName == null || selName.isBlank())) {
+            deptContext.selectPartition(request, chosen.dept(), chosen.name());
+        }
+
         JSONObject cur = new JSONObject();
         if (chosen != null) {
             cur.put("dept", chosen.dept());
