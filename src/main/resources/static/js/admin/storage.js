@@ -180,6 +180,7 @@
         box.style.display = "";
         if (dom.partitionEmpty) dom.partitionEmpty.style.display = "none";
         if (dom.btnAddDoc) dom.btnAddDoc.disabled = false;
+        var prevScroll = box.scrollLeft;   // 재렌더로 가로 스크롤이 0으로 튀지 않게 위치 보존
         box.innerHTML = "";
         partitions.forEach(function (it) {
             var name = String(it.name);
@@ -190,6 +191,7 @@
             b.addEventListener("click", function () { switchPartition(name); });
             box.appendChild(b);
         });
+        box.scrollLeft = prevScroll;
     }
 
     // 파티션 전환: 캐시/검색 초기화 후 해당 파티션의 목록만 재로딩.

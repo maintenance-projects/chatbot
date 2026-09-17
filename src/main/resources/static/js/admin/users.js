@@ -135,6 +135,7 @@
 
     function renderPartitionTabs() {
         if (!dom.partitionTabs) return;
+        var prevScroll = dom.partitionTabs.scrollLeft;   // 재렌더로 가로 스크롤이 0으로 튀지 않게 위치 보존
         dom.partitionTabs.innerHTML = "";
 
         partitions.forEach(function (it) {
@@ -181,6 +182,7 @@
             e.textContent = "‘파티션 추가’로 첫 파티션을 만드세요.";
             dom.partitionTabs.appendChild(e);
         }
+        dom.partitionTabs.scrollLeft = prevScroll;
     }
 
     // 트리 힌트 문구를 현재 권한 대상에 맞게 갱신

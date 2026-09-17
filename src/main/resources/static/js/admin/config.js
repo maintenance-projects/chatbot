@@ -128,6 +128,9 @@
     function renderTargetChips() {
         var box = dom.settingTargetChips;
         if (!box) return;
+        // 재렌더로 파티션 칩 가로 스크롤이 0으로 튀지 않게 위치 보존(파티션별 그룹의 스크롤 컨테이너)
+        var oldG = box.querySelector(".tgt-group--grow .tgt-gchips");
+        var prevScroll = oldG ? oldG.scrollLeft : 0;
         box.innerHTML = "";
 
         function makeChip(value, label, isAll) {
@@ -190,6 +193,8 @@
             empty.textContent = "파티션 없음";
             partChips.appendChild(empty);
         }
+        var newG = box.querySelector(".tgt-group--grow .tgt-gchips");
+        if (newG) newG.scrollLeft = prevScroll;
         updateResetBtn();
     }
 
