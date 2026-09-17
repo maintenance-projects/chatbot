@@ -106,8 +106,8 @@
     // ── 파티션(벡터DB 하위) 관리 ──────────────────────────────
     // 게이트웨이 GET/POST/DELETE /{dept}/admin/partitions 프록시. 응답 봉투 {code,message,partitions}.
     function loadPartitions() {
-        if (!currentDept) return;
-        postForm("/at-i/partitions/list", { adminId: adminId(), dept: currentDept })
+        if (!currentDept) return Promise.resolve();
+        return postForm("/at-i/partitions/list", { adminId: adminId(), dept: currentDept })
             .then(function (r) { return r.json(); })
             .then(function (res) {
                 partitions = (res && String(res.code) === "0000") ? (res.partitions || []) : [];
@@ -255,6 +255,7 @@
         var params = isCreate
             ? { adminId: adminId(), dept: currentDept, description: nv }
             : { adminId: adminId(), dept: currentDept, name: renameTargetName, description: nv };
+        var beforeNames = partitions.map(function (p) { return String(p.name); }); // 생성 전 이름 목록(신규 판별용)
 
         dom.renameSave.disabled = true;
         dom.renameSave.textContent = isCreate ? "생성 중..." : "변경 중...";
@@ -262,11 +263,11 @@
             .then(function (r) { return r.json(); })
             .then(function (res) {
                 if (res && String(res.code) === "0000") {
-                    // 생성 시 새 파티션을 바로 선택하도록 currentTarget 갱신 후 재로딩
-                    if (isCreate) currentTarget = "";  // loadPartitions가 첫/신규 파티션으로 채움
+                    if (isCreate) currentTarget = "";
                     closeRenameModal();
                     notify(isCreate ? "파티션이 생성되었습니다." : "이름이 변경되었습니다.", "success");
-                    loadPartitions();
+                    if (isCreate) reloadAndMoveNewToEnd(beforeNames);  // 신규 파티션은 순서 맨 뒤로
+                    else loadPartitions();
                 } else {
                     showRenameError((res && res.message) ? res.message
                         : (isCreate ? "생성에 실패했습니다." : "이름 변경에 실패했습니다."));
@@ -376,6 +377,24 @@
             })
             .catch(function () { notify("순서 변경 중 오류가 발생했습니다.", "error"); })
             .finally(function () { if (dom.reorderSave) { dom.reorderSave.disabled = false; dom.reorderSave.textContent = "저장"; } });
+    }
+
+    // 생성 후: 신규 파티션을 순서 맨 뒤로 배치(기본 순서=맨 뒤). beforeNames=생성 전 name 목록.
+    function reloadAndMoveNewToEnd(beforeNames) {
+        var before = beforeNames || [];
+        loadPartitions().then(function () {
+            var added = partitions.filter(function (p) { return before.indexOf(String(p.name)) < 0; });
+            if (!added.length || partitions.length < 2) return;   // 신규 없음/단일 → 그대로
+            var existing = partitions.filter(function (p) { return before.indexOf(String(p.name)) >= 0; });
+            var ordered = existing.concat(added);                 // 기존(현재 순서) + 신규(맨 뒤)
+            var payload = ordered.map(function (p, i) { return { name: String(p.name), order: i + 1 }; });
+            fetch("/at-i/partitions/reorder?dept=" + encodeURIComponent(currentDept), {
+                method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload)
+            })
+                .then(function (r) { return r.json().catch(function () { return {}; }); })
+                .then(function (rr) { if (rr && String(rr.code) === "0000") loadPartitions(); })
+                .catch(function () { /* 순서 반영 실패는 조용히(생성 자체는 성공) */ });
+        });
     }
 
     // ── 데이터 로드 ───────────────────────────────────────────
