@@ -165,8 +165,11 @@
                         <ul>
                             <li><a href="#guide-session" data-scroll>로그인 · 세션 유지</a></li>
                             <li><a href="#guide-storage" data-scroll>문서 관리</a></li>
+                            <li><a href="#guide-partition" data-scroll>AI 파티션 권한</a></li>
                             <li><a href="#guide-statistics" data-scroll>통계 보기</a></li>
+                            <li><a href="#guide-gpu" data-scroll>GPU 모니터링</a></li>
                             <li><a href="#guide-master" data-scroll>계정 관리</a></li>
+                            <li><a href="#guide-config" data-scroll>환경설정</a></li>
                             <li><a href="#guide-support" data-scroll>비밀번호/로그아웃</a></li>
                             <li><a href="#guide-troubleshoot" data-scroll>문제 해결</a></li>
                         </ul>
@@ -229,9 +232,44 @@
                     </div>
                 </section>
 
-                <section id="guide-statistics" class="guide-section">
+                <section id="guide-partition" class="guide-section">
                     <div class="section-header">
                         <div class="section-eyebrow">03</div>
+                        <h2>AI 파티션 권한 (/at-i/users)</h2>
+                    </div>
+                    <div class="section-body grid">
+                        <div class="guide-card">
+                            <h3>파티션 관리</h3>
+                            <ul class="bullet-list">
+                                <li>상단 “파티션 추가”로 새 파티션을 만듭니다(이름 중복은 자동 차단).</li>
+                                <li>탭의 연필로 이름 변경, ×로 삭제, “순서 변경”으로 노출 순서를 조정합니다.</li>
+                            </ul>
+                        </div>
+                        <div class="guide-card">
+                            <h3>권한 부여</h3>
+                            <ol class="step-list">
+                                <li>권한을 설정할 파티션 탭을 선택합니다.</li>
+                                <li>조직도 트리에서 조직·사용자에 체크하면 접근 권한이 부여됩니다.</li>
+                                <li>조직에 부여하면 하위 조직·사용자까지 상속됩니다.</li>
+                            </ol>
+                        </div>
+                        <div class="guide-card">
+                            <h3>검색 · 새로고침</h3>
+                            <ul class="bullet-list">
+                                <li>이름/아이디로 조직·사용자를 빠르게 찾습니다.</li>
+                                <li>인사(HR) 정보가 바뀌면 “사용자 새로고침”으로 즉시 반영합니다.</li>
+                            </ul>
+                        </div>
+                        <div class="guide-card highlight">
+                            <h3>TIP</h3>
+                            <p>파티션이 많으면 탭이 가로로 스크롤됩니다. 자주 쓰는 파티션을 “순서 변경”으로 앞쪽에 두세요.</p>
+                        </div>
+                    </div>
+                </section>
+
+                <section id="guide-statistics" class="guide-section">
+                    <div class="section-header">
+                        <div class="section-eyebrow">04</div>
                         <h2>통계 (/at-i/statistics)</h2>
                     </div>
                     <div class="section-body grid">
@@ -264,9 +302,33 @@
                     </div>
                 </section>
 
+                <section id="guide-gpu" class="guide-section">
+                    <div class="section-header">
+                        <div class="section-eyebrow">05</div>
+                        <h2>GPU 모니터링 (/at-i/gpu)</h2>
+                    </div>
+                    <div class="section-body grid">
+                        <div class="guide-card">
+                            <h3>실시간 상태</h3>
+                            <p>GPU 사용률·메모리·전력·온도를 실시간으로 확인합니다. GPU가 없는 서버는 자동으로 “미탐지”로 표시됩니다.</p>
+                        </div>
+                        <div class="guide-card">
+                            <h3>이력 추이</h3>
+                            <ul class="bullet-list">
+                                <li>분 단위로 집계된 사용률·메모리 추이를 차트로 확인합니다.</li>
+                                <li>증설 판단이나 피크 시간대 파악에 활용합니다.</li>
+                            </ul>
+                        </div>
+                        <div class="guide-card highlight">
+                            <h3>임계 경고</h3>
+                            <p>메모리·전력이 임계치를 넘으면 화면 배너와 서버 로그로 경고합니다.</p>
+                        </div>
+                    </div>
+                </section>
+
                 <section id="guide-master" class="guide-section">
                     <div class="section-header">
-                        <div class="section-eyebrow">04</div>
+                        <div class="section-eyebrow">06</div>
                         <h2>계정 관리 (/at-i/master)</h2>
                     </div>
                     <div class="section-body grid">
@@ -292,9 +354,40 @@
                     </div>
                 </section>
 
+                <section id="guide-config" class="guide-section">
+                    <div class="section-header">
+                        <div class="section-eyebrow">07</div>
+                        <h2>환경설정 (/at-i/config)</h2>
+                    </div>
+                    <div class="section-body grid">
+                        <div class="guide-card">
+                            <h3>설정 대상 선택</h3>
+                            <ul class="bullet-list">
+                                <li>“전체(기본)” 또는 특정 파티션을 골라 설정을 편집합니다.</li>
+                                <li>개별 설정이 있는 파티션은 칩에 ● 표시가 되고, 그 설정이 우선 적용됩니다.</li>
+                            </ul>
+                        </div>
+                        <div class="guide-card">
+                            <h3>Temperature · 시스템 프롬프트</h3>
+                            <ul class="bullet-list">
+                                <li>Temperature로 답변의 창의성/일관성 수준을 조절합니다.</li>
+                                <li>시스템 프롬프트로 AI의 역할·말투·답변 기준을 지정합니다.</li>
+                            </ul>
+                        </div>
+                        <div class="guide-card">
+                            <h3>파티션 설정 초기화</h3>
+                            <p>특정 파티션 선택 시 “파티션 설정 초기화”로 개별 설정을 지우고 전체 설정을 따르게 합니다.</p>
+                        </div>
+                        <div class="guide-card highlight">
+                            <h3>전역 설정</h3>
+                            <p>개인문서 보관 기간·업로드 개수 제한은 모든 파티션 공통(전역)이며, 사용자 화면에도 안내됩니다.</p>
+                        </div>
+                    </div>
+                </section>
+
                 <section id="guide-support" class="guide-section">
                     <div class="section-header">
-                        <div class="section-eyebrow">05</div>
+                        <div class="section-eyebrow">08</div>
                         <h2>비밀번호 변경 · 로그아웃</h2>
                     </div>
                     <div class="section-body">
@@ -315,7 +408,7 @@
 
                 <section id="guide-troubleshoot" class="guide-section">
                     <div class="section-header">
-                        <div class="section-eyebrow">06</div>
+                        <div class="section-eyebrow">09</div>
                         <h2>문제 해결 체크리스트</h2>
                     </div>
                     <div class="section-body grid">
