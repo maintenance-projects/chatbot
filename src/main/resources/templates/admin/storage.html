@@ -292,6 +292,15 @@
                             </div>
                         </div>
                         <div class="toolbar-right">
+                            <button class="btn btn-danger" id="btnBulkDelete" type="button" disabled
+                                style="background:var(--danger);color:#fff;border-color:var(--danger);">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                                    stroke-linecap="round" stroke-linejoin="round">
+                                    <polyline points="3 6 5 6 21 6" />
+                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                </svg>
+                                <span id="bulkDeleteLabel">선택 삭제</span>
+                            </button>
                             <button class="btn btn-outline" id="btnReloadProfanity" type="button" title="금칙어 목록 재로드" hidden style="display:none">
                                 <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                                     stroke-linecap="round" stroke-linejoin="round">
@@ -315,6 +324,9 @@
                         <table>
                             <thead>
                                 <tr>
+                                    <th style="width:44px;" class="center">
+                                        <input type="checkbox" id="checkAllDocs" title="현재 페이지 전체 선택">
+                                    </th>
                                     <th style="width:80px;" class="center">No</th>
                                     <th class="center">문서명</th>
                                     <th style="width:120px;" class="center">파일형식</th>

@@ -17,6 +17,7 @@
     var uploadFail = 0;
     var uploadPos = 0;         // 순차 업로드 커서
     var confirmCallback = null;
+    var selectedKeys = {};     // 현재 페이지 다중 선택된 문서 key 집합(체크박스 삭제용)
     var isSearchMode = false;
     var activeStatusPopup = null;
     var adminId = "";
@@ -62,6 +63,9 @@
         sortIconSvg: $("#sortIconSvg"),
         sortLabel: $("#sortLabel"),
         btnAddDoc: $("#btnAddDoc"),
+        btnBulkDelete: $("#btnBulkDelete"),
+        bulkDeleteLabel: $("#bulkDeleteLabel"),
+        checkAllDocs: $("#checkAllDocs"),
         btnReloadProfanity: $("#btnReloadProfanity"),
         tableBody: $("#docTableBody"),
         tableInfo: $("#tableInfo"),
@@ -703,13 +707,14 @@
 
     function renderTable() {
         closeStatusPopup();
+        selectedKeys = {};   // 페이지/목록 재렌더 시 선택 초기화(선택은 현재 페이지 한정)
 
         var pageData = documents.slice();
         pageData = sortDocuments(pageData);
 
         if (pageData.length === 0) {
             dom.tableBody.innerHTML =
-                '<tr><td colspan="8">' +
+                '<tr><td colspan="9">' +
                 '<div class="empty-state">' +
                 '<div class="empty-state-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg></div>' +
                 '<div class="empty-state-title">문서가 없습니다</div>' +
@@ -733,6 +738,9 @@
                     '<tr data-key="' +
                     escapeHtml(doc.key) +
                     '">' +
+                    '<td class="center"><input type="checkbox" class="doc-check" data-key="' +
+                    escapeHtml(doc.key) +
+                    '"' + (selectedKeys[doc.key] ? " checked" : "") + "></td>" +
                     '<td class="center" style="color:var(--text-light);font-size:0.82rem;">' +
                     rowNum +
                     "</td>" +
@@ -788,6 +796,57 @@
         renderTableInfo();
         renderPagination();
         computeStatsFromVisible();
+        syncSelectionUI();
+    }
+
+    // ── 다중 선택 삭제 ────────────────────────────────────────
+    function selectedKeyList() { return Object.keys(selectedKeys); }
+
+    function updateBulkDeleteBtn() {
+        var n = selectedKeyList().length;
+        if (dom.btnBulkDelete) dom.btnBulkDelete.disabled = n === 0;
+        if (dom.bulkDeleteLabel) dom.bulkDeleteLabel.textContent = n > 0 ? ("선택 삭제 (" + n + ")") : "선택 삭제";
+    }
+
+    // 현재 페이지 체크박스 상태 → 전체선택 체크박스/버튼 동기화
+    function syncSelectionUI() {
+        var boxes = dom.tableBody ? dom.tableBody.querySelectorAll(".doc-check") : [];
+        if (dom.checkAllDocs) {
+            var total = boxes.length, checked = 0;
+            boxes.forEach(function (b) { if (b.checked) checked++; });
+            dom.checkAllDocs.checked = total > 0 && checked === total;
+            dom.checkAllDocs.indeterminate = checked > 0 && checked < total;
+            dom.checkAllDocs.disabled = total === 0;
+        }
+        updateBulkDeleteBtn();
+    }
+
+    function bulkDelete() {
+        var keys = selectedKeyList();
+        if (!keys.length) return;
+        openConfirm("문서를 삭제하시겠습니까?", "선택한 " + keys.length + "개 문서를 삭제하면 복구할 수 없습니다.", function () {
+            showLoading(true);
+            var id = getAdminId();
+            var ok = 0, fail = 0;
+            var chain = Promise.resolve();
+            keys.forEach(function (key) {
+                chain = chain.then(function () {
+                    return fetch("/at-i/documents/" + encodeURIComponent(key) + "?adminId=" + encodeURIComponent(id) + deptQS() + partitionQS(), { method: "DELETE" })
+                        .then(function (res) { return res.json().catch(function () { return {}; }); })
+                        .then(function (data) { if (data && data.code === "0000") ok++; else fail++; })
+                        .catch(function () { fail++; });
+                });
+            });
+            chain.then(function () {
+                closeConfirm();
+                toast(fail === 0 ? (ok + "개 문서를 삭제했습니다.") : (ok + "개 삭제, " + fail + "개 실패"), fail === 0 ? "success" : "error");
+                resetPaging();
+                clearAllCaches();
+                ui.pageBlockStart = 1;
+                currentPage = 1;
+                if (isSearchMode) fetchSearchPage(1); else fetchListPage(1);
+            });
+        });
     }
 
     function renderTableInfo() {
@@ -1699,6 +1758,26 @@
         if (dom.btnAddDoc) dom.btnAddDoc.addEventListener("click", openDocModal);
         // 파티션 선택은 칩 버튼(renderPartitionSelect에서 각 칩에 click 바인딩)으로 처리
         if (dom.btnReloadProfanity) dom.btnReloadProfanity.addEventListener("click", reloadProfanity);
+
+        // 다중 선택 삭제: 행 체크박스(위임)·전체선택·선택 삭제 버튼
+        if (dom.btnBulkDelete) dom.btnBulkDelete.addEventListener("click", bulkDelete);
+        if (dom.tableBody) dom.tableBody.addEventListener("change", function (e) {
+            var cb = e.target && e.target.classList && e.target.classList.contains("doc-check") ? e.target : null;
+            if (!cb) return;
+            var key = cb.getAttribute("data-key");
+            if (cb.checked) selectedKeys[key] = true; else delete selectedKeys[key];
+            syncSelectionUI();
+        });
+        if (dom.checkAllDocs) dom.checkAllDocs.addEventListener("change", function () {
+            var on = dom.checkAllDocs.checked;
+            var boxes = dom.tableBody ? dom.tableBody.querySelectorAll(".doc-check") : [];
+            boxes.forEach(function (b) {
+                b.checked = on;
+                var key = b.getAttribute("data-key");
+                if (on) selectedKeys[key] = true; else delete selectedKeys[key];
+            });
+            syncSelectionUI();
+        });
         if (dom.docModalClose) dom.docModalClose.addEventListener("click", attemptCloseDocModal);
         if (dom.docModalCancel) dom.docModalCancel.addEventListener("click", attemptCloseDocModal);
 
