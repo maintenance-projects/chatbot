@@ -40,6 +40,10 @@
         renameClose: document.getElementById("colRenameClose"),
         renameCancel: document.getElementById("colRenameCancel"),
         renameSave: document.getElementById("colRenameSave"),
+        delConfirmModal: document.getElementById("delConfirmModal"),
+        delConfirmMsg: document.getElementById("delConfirmMsg"),
+        delConfirmCancel: document.getElementById("delConfirmCancel"),
+        delConfirmOk: document.getElementById("delConfirmOk"),
     };
 
     // 권한 대상: 선택된 파티션 name(AI_PARTITION_GRANT). 파티션 0개면 "".
@@ -47,6 +51,7 @@
     var partitions = [];
     var renameTargetName = "";   // 이름변경 모달이 편집 중인 파티션 식별자(name). 생성 모드면 미사용
     var modalMode = "rename";    // "create" | "rename" — 생성/이름변경 모달 공용
+    var pendingDeleteName = "";  // 삭제 확인 모달에서 대기 중인 파티션 식별자(name)
 
     // 트리/권한 상태
     var partsById = {}, childrenOf = {}, usersByPart = {}, userParts = {}, roots = [];
@@ -264,8 +269,25 @@
             .finally(function () { dom.renameSave.disabled = false; dom.renameSave.textContent = isCreate ? "생성" : "변경"; });
     }
 
+    // 삭제 확인 모달 열기 — 대상 파티션을 대기시키고 안내 문구만 갱신(native confirm 대체).
     function deletePartition(name, label) {
-        if (!window.confirm("파티션 '" + label + "'을(를) 삭제할까요?")) return;
+        pendingDeleteName = name;
+        if (dom.delConfirmMsg) {
+            dom.delConfirmMsg.textContent = "‘" + (label || name) + "’ 파티션을 삭제하면 복구할 수 없습니다.";
+        }
+        if (dom.delConfirmModal) dom.delConfirmModal.classList.add("show");
+    }
+
+    function closeDelConfirm() {
+        if (dom.delConfirmModal) dom.delConfirmModal.classList.remove("show");
+        pendingDeleteName = "";
+    }
+
+    // 실제 삭제 수행(모달 '삭제' 확정 시).
+    function doDeletePartition() {
+        var name = pendingDeleteName;
+        if (!name) { closeDelConfirm(); return; }
+        closeDelConfirm();
         showLoading(true);
         postForm("/at-i/partitions/delete", { adminId: adminId(), dept: currentDept, name: name })
             .then(function (r) { return r.json(); })
@@ -519,10 +541,18 @@
     if (dom.renameModal) dom.renameModal.addEventListener("click", function (e) {
         if (e.target === dom.renameModal) closeRenameModal();
     });
+
+    // 파티션 삭제 확인 모달
+    if (dom.delConfirmCancel) dom.delConfirmCancel.addEventListener("click", closeDelConfirm);
+    if (dom.delConfirmOk) dom.delConfirmOk.addEventListener("click", doDeletePartition);
+    if (dom.delConfirmModal) dom.delConfirmModal.addEventListener("click", function (e) {
+        if (e.target === dom.delConfirmModal) closeDelConfirm();
+    });
+
     document.addEventListener("keydown", function (e) {
-        if (e.key === "Escape" && dom.renameModal && dom.renameModal.classList.contains("show")) {
-            closeRenameModal();
-        }
+        if (e.key !== "Escape") return;
+        if (dom.renameModal && dom.renameModal.classList.contains("show")) closeRenameModal();
+        if (dom.delConfirmModal && dom.delConfirmModal.classList.contains("show")) closeDelConfirm();
     });
 
     renderTabs();
