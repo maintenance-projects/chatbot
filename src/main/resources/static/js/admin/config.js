@@ -50,6 +50,7 @@
     var loaded = { temperature: null, system_prompt: null }; // 미저장 변경 감지용(선택 대상 기준)
     var currentTarget = "";                             // "" = 파티션 전체(dept), name = 파티션
     var partitions = [];                               // 현재 dept의 파티션 목록
+    var overriddenPartitions = new Set();              // 개별 설정(override)을 가진 파티션 name 집합
 
     function currentDept() {
         return (dom.deptSelect && dom.deptSelect.value) || defaultDept || "";
@@ -119,7 +120,13 @@
                 b.innerHTML = ICON_ALL + "<span></span>";
                 b.querySelector("span").textContent = label;
             } else {
-                b.textContent = label;
+                b.appendChild(document.createTextNode(label));
+                if (overriddenPartitions.has(value)) {
+                    b.title = "이 파티션은 개별 설정이 적용됩니다";
+                    var dot = document.createElement("span");
+                    dot.className = "chip-dot";
+                    b.appendChild(dot);
+                }
             }
             b.addEventListener("click", function () {
                 if (currentTarget === value) return;
@@ -168,6 +175,26 @@
         }
     }
 
+    // 파티션 설정 응답에 개별 오버라이드가 있는지(temperature 지정 또는 system_prompt 비어있지 않음).
+    function hasOverride(c) {
+        if (!c) return false;
+        if (c.temperature != null) return true;
+        return !!(c.system_prompt && String(c.system_prompt).trim() !== "");
+    }
+
+    // 각 파티션의 설정을 병렬 조회해 override 여부를 판정하고 칩 배지를 갱신.
+    function refreshOverrideMarks() {
+        var dept = currentDept();
+        var names = partitions.map(function (it) { return String(it.name); });
+        overriddenPartitions = new Set();
+        if (!names.length) { renderTargetChips(); return; }
+        Promise.all(names.map(function (name) {
+            return fetchPartitionSettings(dept, name)
+                .then(function (c) { if (hasOverride(c)) overriddenPartitions.add(name); })
+                .catch(function () { /* 개별 조회 실패는 무시(배지만 미표시) */ });
+        })).then(function () { renderTargetChips(); });
+    }
+
     // 현재 대상(파티션 전체/파티션)의 temperature·프롬프트 로드
     function loadTarget() {
         showLoading(true);
@@ -200,7 +227,7 @@
         var dept = currentDept();
         prevDept = dept;
         currentTarget = "";
-        loadPartitionsForConfig(dept).then(loadTarget);
+        loadPartitionsForConfig(dept).then(function () { loadTarget(); refreshOverrideMarks(); });
     }
 
     // 개인문서 보관기간(전역) — 게이트웨이 /admin/file-ttl
@@ -219,7 +246,7 @@
         }
         prevDept = dom.deptSelect.value;
         currentTarget = "";
-        loadPartitionsForConfig(dom.deptSelect.value).then(loadTarget);
+        loadPartitionsForConfig(dom.deptSelect.value).then(function () { loadTarget(); refreshOverrideMarks(); });
     }
 
     // 저장: 선택 대상(파티션 전체/파티션)의 temperature/시스템 프롬프트만.
@@ -239,6 +266,8 @@
                     toast("설정이 저장되었습니다.", "success");
                     loaded.temperature = dom.temperature.value;
                     loaded.system_prompt = dom.userPrompt.value;
+                    // 파티션 개별 저장 시 그 파티션은 이제 개별 설정 보유 → 배지 갱신
+                    if (currentTarget) { overriddenPartitions.add(currentTarget); renderTargetChips(); }
                 } else {
                     toast("저장에 실패했습니다.", "error");
                 }
