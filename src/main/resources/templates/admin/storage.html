@@ -21,10 +21,14 @@
         .partition-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 18px; flex-wrap: wrap; }
         .partition-bar .cb-label { font-size: 0.85rem; font-weight: 700; color: var(--text-mid, #555); }
         .partition-bar .cb-empty { font-size: 0.85rem; color: var(--text-light, #999); }
-        /* 파티션 선택 탭 — 기존 벡터DB(dept) 탭과 동일 룩앤필(밑줄형) */
-        .partition-tabs { display: flex; gap: 2px; flex-wrap: wrap; flex: 1 1 100%;
+        /* 파티션 선택 탭 — 기존 벡터DB(dept) 탭과 동일 룩앤필(밑줄형). 많으면 가로 스크롤 */
+        .partition-tabs { display: flex; gap: 2px; flex-wrap: nowrap; flex: 1 1 100%;
+            min-width: 0; max-width: 100%; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin;
             border-bottom: 1px solid var(--color-border); }
-        .partition-tab { position: relative; padding: 11px 22px; border: none; background: none; cursor: pointer;
+        .partition-tabs::-webkit-scrollbar { height: 6px; }
+        .partition-tabs::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
+        .partition-tab { position: relative; flex: 0 0 auto; white-space: nowrap;
+            padding: 11px 22px; border: none; background: none; cursor: pointer;
             font-size: 0.9375rem; font-weight: 600; color: var(--color-text-light);
             transition: color var(--transition-fast); }
         .partition-tab:hover { color: var(--color-primary); }

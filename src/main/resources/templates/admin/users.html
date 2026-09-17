@@ -24,8 +24,12 @@
             height: 2.5px; background: var(--color-primary); border-radius: 3px; }
 
         /* 파티션 탭 — 각 파티션이 탭. 본문 클릭=권한 대상 선택, 연필=이름변경, x=삭제, +=생성 */
-        .partition-tabs { display: flex; align-items: flex-end; gap: 2px; flex-wrap: wrap;
+        .partition-tabs { display: flex; align-items: flex-end; gap: 2px; flex-wrap: nowrap;
+            min-width: 0; max-width: 100%; overflow-x: auto; overflow-y: hidden; scrollbar-width: thin;
             margin-bottom: 16px; border-bottom: 1px solid var(--color-border); }
+        .partition-tabs::-webkit-scrollbar { height: 6px; }
+        .partition-tabs::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
+        .partition-tab, .pt-add { flex: 0 0 auto; }
         .partition-tab { position: relative; display: inline-flex; align-items: center; gap: 6px;
             padding: 10px 14px 10px 16px; border: none; background: none; cursor: pointer;
             font-size: 0.9375rem; font-weight: 600; color: var(--color-text-light);
