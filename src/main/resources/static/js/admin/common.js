@@ -270,4 +270,116 @@
     }
 
     window.checkSession = checkSession;
+
+    /**
+     * 관리자 화면 가이드 공용 초기화. 페이지에 아래 마크업이 있어야 동작한다:
+     *  - 버튼 #btnScreenGuide, 오버레이 #screenGuideOverlay(> #screenGuideDim, #screenGuideHighlightLayer), 닫기 #btnCloseScreenGuide
+     * guideItems: [{ selector, title, text }, ...] (하이라이트할 요소·설명)
+     * 스타일은 master.css의 .screen-guide-* 재사용.
+     */
+    function initAdminScreenGuide(guideItems) {
+        var btn = document.getElementById("btnScreenGuide");
+        var overlay = document.getElementById("screenGuideOverlay");
+        var dim = document.getElementById("screenGuideDim");
+        var closeBtn = document.getElementById("btnCloseScreenGuide");
+        var layer = document.getElementById("screenGuideHighlightLayer");
+        if (!btn || !overlay || !layer || !Array.isArray(guideItems)) return;
+        var isOpen = false;
+
+        function clearHighlights() { layer.innerHTML = ""; }
+
+        function render() {
+            clearHighlights();
+            var occupied = [];
+            function overlapArea(a, b) {
+                var x = Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left));
+                var y = Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
+                return x * y;
+            }
+            function intersectsAny(rect) {
+                for (var i = 0; i < occupied.length; i++) { if (overlapArea(rect, occupied[i]) > 0) return true; }
+                return false;
+            }
+            function clampRect(rect, width, height) {
+                var m = 8;
+                var left = Math.max(m, Math.min(rect.left, window.innerWidth - width - m));
+                var top = Math.max(m, Math.min(rect.top, window.innerHeight - height - m));
+                return { left: left, top: top, right: left + width, bottom: top + height };
+            }
+            guideItems.forEach(function (item, idx) {
+                var target = document.querySelector(item.selector);
+                if (!target) return;
+                var rect = target.getBoundingClientRect();
+                if (!rect.width || !rect.height) return;
+
+                var pad = 6;
+                var box = document.createElement("div");
+                box.className = "screen-guide-highlight";
+                box.style.top = Math.max(rect.top - pad, 6) + "px";
+                box.style.left = Math.max(rect.left - pad, 6) + "px";
+                box.style.width = Math.min(rect.width + pad * 2, window.innerWidth - 12) + "px";
+                box.style.height = rect.height + pad * 2 + "px";
+
+                var badge = document.createElement("div");
+                badge.className = "screen-guide-badge";
+                badge.textContent = String(idx + 1);
+                badge.style.top = Math.max(rect.top - 16, 4) + "px";
+                badge.style.left = Math.max(rect.left - 4, 4) + "px";
+
+                var tooltip = document.createElement("div");
+                tooltip.className = "screen-guide-tooltip";
+                tooltip.innerHTML = '<div class="screen-guide-tooltip-title"><span class="guide-item-no"></span><span class="gt-title"></span></div><p class="screen-guide-tooltip-text"></p>';
+                tooltip.querySelector(".guide-item-no").textContent = String(idx + 1);
+                tooltip.querySelector(".gt-title").textContent = item.title || "";
+                tooltip.querySelector(".screen-guide-tooltip-text").textContent = item.text || "";
+                tooltip.style.left = "-9999px";
+                tooltip.style.top = "-9999px";
+                layer.appendChild(tooltip);
+
+                var tw = tooltip.offsetWidth || (window.innerWidth <= 768 ? 220 : 260);
+                var th = tooltip.offsetHeight || 96;
+                var candidates = [
+                    { left: rect.right + 10, top: rect.top },
+                    { left: rect.left - tw - 10, top: rect.top },
+                    { left: rect.right + 10, top: rect.bottom - th },
+                    { left: rect.left - tw - 10, top: rect.bottom - th },
+                    { left: rect.left, top: rect.bottom + 10 },
+                    { left: rect.left, top: rect.top - th - 10 }
+                ];
+                var best = null, bestScore = Number.MAX_SAFE_INTEGER;
+                for (var c = 0; c < candidates.length; c++) {
+                    var cr = clampRect({ left: candidates[c].left, top: candidates[c].top }, tw, th);
+                    if (!intersectsAny(cr)) { best = cr; break; }
+                    var score = 0;
+                    for (var o = 0; o < occupied.length; o++) score += overlapArea(cr, occupied[o]);
+                    if (score < bestScore) { bestScore = score; best = cr; }
+                }
+                var attempt = 0;
+                while (best && intersectsAny(best) && attempt < 20) {
+                    best = clampRect({ left: best.left, top: best.top + 14 + attempt }, tw, th);
+                    attempt += 1;
+                }
+                if (!best) best = clampRect({ left: rect.right + 10, top: rect.top }, tw, th);
+
+                tooltip.style.left = best.left + "px";
+                tooltip.style.top = best.top + "px";
+                occupied.push(best);
+                layer.appendChild(box);
+                layer.appendChild(badge);
+                layer.appendChild(tooltip);
+            });
+        }
+
+        function open() { render(); isOpen = true; overlay.classList.add("show"); overlay.setAttribute("aria-hidden", "false"); }
+        function close() { isOpen = false; overlay.classList.remove("show"); overlay.setAttribute("aria-hidden", "true"); clearHighlights(); }
+
+        btn.addEventListener("click", open);
+        if (closeBtn) closeBtn.addEventListener("click", close);
+        if (dim) dim.addEventListener("click", close);
+        window.addEventListener("resize", function () { if (isOpen) render(); });
+        window.addEventListener("scroll", function () { if (isOpen) render(); }, true);
+        document.addEventListener("keydown", function (e) { if (e.key === "Escape" && isOpen) close(); });
+    }
+
+    window.initAdminScreenGuide = initAdminScreenGuide;
 })();

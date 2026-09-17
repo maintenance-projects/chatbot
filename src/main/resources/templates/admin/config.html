@@ -165,6 +165,9 @@
                     </div>
                 </div>
                 <div class="topbar-right">
+                    <button type="button" class="btn btn-outline btn-sm btn-screen-guide" id="btnScreenGuide">
+                        화면 가이드
+                    </button>
                     <div class="session-timer">
                         <span class="session-timer-label">세션 만료까지</span>
                         <span class="session-timer-value" id="sessionTimer"
@@ -321,6 +324,14 @@
     </div>
 
     <div class="toast-container" id="toastContainer"></div>
+
+    <div class="screen-guide-overlay" id="screenGuideOverlay" aria-hidden="true">
+        <div class="screen-guide-dim" id="screenGuideDim"></div>
+        <div class="screen-guide-highlight-layer" id="screenGuideHighlightLayer"></div>
+        <button type="button" class="screen-guide-close-fab" id="btnCloseScreenGuide" aria-label="가이드 닫기">
+            닫기
+        </button>
+    </div>
 
     <script th:src="@{/js/admin/common.js}" src="/js/admin/common.js"></script>
     <script th:src="@{/js/admin/config.js}" src="/js/admin/config.js"></script>

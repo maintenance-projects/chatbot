@@ -380,5 +380,16 @@
         loadConfig();
         loadRetention();
         loadLocalConfig();
+
+        // 화면 가이드(공용 common.js)
+        if (typeof window.initAdminScreenGuide === "function") {
+            window.initAdminScreenGuide([
+                { selector: "#settingTargetSection", title: "설정 대상", text: "파티션 전체(기본) 또는 특정 파티션을 골라 편집합니다. ● 표시는 개별 설정이 있는 파티션입니다." },
+                { selector: ".slider-block", title: "Temperature", text: "답변의 창의성/일관성 수준을 조절합니다. 낮을수록 일관적, 높을수록 창의적." },
+                { selector: "#userPrompt", title: "시스템 프롬프트", text: "AI의 역할·말투·답변 기준을 지정합니다." },
+                { selector: "#btnSaveConfig", title: "설정 저장", text: "선택한 대상(전체/파티션)에 Temperature·프롬프트를 저장합니다." },
+                { selector: "#docRetentionDays", title: "전역 설정", text: "개인문서 보관 기간·업로드 개수 제한(모든 파티션 공통)을 관리합니다." }
+            ]);
+        }
     });
 })();

@@ -555,6 +555,16 @@
         if (dom.delConfirmModal && dom.delConfirmModal.classList.contains("show")) closeDelConfirm();
     });
 
+    // 화면 가이드(공용 common.js)
+    if (typeof window.initAdminScreenGuide === "function") {
+        window.initAdminScreenGuide([
+            { selector: "#partitionTabs", title: "파티션 탭", text: "권한을 설정할 파티션을 선택합니다. +로 생성, 연필로 이름변경, ×로 삭제합니다." },
+            { selector: ".search-group", title: "검색", text: "조직·사용자를 이름/아이디로 빠르게 찾습니다." },
+            { selector: ".tree-actions", title: "펼치기·접기·새로고침", text: "트리를 모두 펼치거나 접고, 인사(HR) 정보를 다시 불러옵니다." },
+            { selector: "#treeRoot", title: "권한 부여 트리", text: "조직·사용자에 체크하면 선택한 파티션 접근 권한이 부여됩니다(조직은 하위 상속)." }
+        ]);
+    }
+
     renderTabs();
     loadPartitions();   // 파티션 로드 → 첫 파티션 자동 선택 → 트리 로드
 })();
