@@ -306,11 +306,13 @@
                 var top = Math.max(m, Math.min(rect.top, window.innerHeight - height - m));
                 return { left: left, top: top, right: left + width, bottom: top + height };
             }
-            guideItems.forEach(function (item, idx) {
+            var shown = 0; // 실제 표시된 항목 순번(숨겨진/미존재 항목은 건너뛰어 번호가 비지 않도록)
+            guideItems.forEach(function (item) {
                 var target = document.querySelector(item.selector);
                 if (!target) return;
                 var rect = target.getBoundingClientRect();
                 if (!rect.width || !rect.height) return;
+                shown += 1;
 
                 var pad = 6;
                 var box = document.createElement("div");
@@ -322,14 +324,14 @@
 
                 var badge = document.createElement("div");
                 badge.className = "screen-guide-badge";
-                badge.textContent = String(idx + 1);
+                badge.textContent = String(shown);
                 badge.style.top = Math.max(rect.top - 16, 4) + "px";
                 badge.style.left = Math.max(rect.left - 4, 4) + "px";
 
                 var tooltip = document.createElement("div");
                 tooltip.className = "screen-guide-tooltip";
                 tooltip.innerHTML = '<div class="screen-guide-tooltip-title"><span class="guide-item-no"></span><span class="gt-title"></span></div><p class="screen-guide-tooltip-text"></p>';
-                tooltip.querySelector(".guide-item-no").textContent = String(idx + 1);
+                tooltip.querySelector(".guide-item-no").textContent = String(shown);
                 tooltip.querySelector(".gt-title").textContent = item.title || "";
                 tooltip.querySelector(".screen-guide-tooltip-text").textContent = item.text || "";
                 tooltip.style.left = "-9999px";
