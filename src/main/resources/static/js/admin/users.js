@@ -32,6 +32,13 @@
         btnHrRefresh: document.getElementById("btnHrRefresh"),
         btnLogout: document.getElementById("btnLogout"),
         partitionTabs: document.getElementById("partitionTabs"),
+        btnAddPartition: document.getElementById("btnAddPartition"),
+        btnReorder: document.getElementById("btnReorderPartition"),
+        reorderModal: document.getElementById("reorderModal"),
+        reorderList: document.getElementById("reorderList"),
+        reorderClose: document.getElementById("reorderClose"),
+        reorderCancel: document.getElementById("reorderCancel"),
+        reorderSave: document.getElementById("reorderSave"),
         treeHint: document.getElementById("treeHint"),
         renameModal: document.getElementById("colRenameModal"),
         renameTitle: document.getElementById("colRenameTitle"),
@@ -52,6 +59,7 @@
     var renameTargetName = "";   // 이름변경 모달이 편집 중인 파티션 식별자(name). 생성 모드면 미사용
     var modalMode = "rename";    // "create" | "rename" — 생성/이름변경 모달 공용
     var pendingDeleteName = "";  // 삭제 확인 모달에서 대기 중인 파티션 식별자(name)
+    var reorderWork = [];        // 순서 변경 모달의 작업 목록(파티션 객체 배열)
 
     // 트리/권한 상태
     var partsById = {}, childrenOf = {}, usersByPart = {}, userParts = {}, roots = [];
@@ -104,7 +112,7 @@
             .then(function (res) {
                 partitions = (res && String(res.code) === "0000") ? (res.partitions || []) : [];
                 // seq(채번 순번) 오름차순 정렬 — 탭/첫 선택 순서를 일관되게
-                partitions.sort(function (a, b) { return (a.seq || 0) - (b.seq || 0); });
+                partitions.sort(function (a, b) { return (a.order != null ? a.order : (a.seq || 0)) - (b.order != null ? b.order : (b.seq || 0)); });
                 // 현재 선택이 목록에 없으면 첫 파티션(없으면 빈값)으로.
                 if (!partitions.some(function (x) { return String(x.name) === currentTarget; })) {
                     currentTarget = partitions.length ? String(partitions[0].name) : "";
@@ -166,15 +174,7 @@
             dom.partitionTabs.appendChild(tab);
         });
 
-        // + 생성 버튼(항상 노출)
-        var add = document.createElement("button");
-        add.type = "button";
-        add.className = "pt-add";
-        add.title = "파티션 추가";
-        add.innerHTML = ICON_ADD + '<span>파티션 추가</span>';
-        add.addEventListener("click", openCreateModal);
-        dom.partitionTabs.appendChild(add);
-
+        // 생성(+)은 탭 목록 위 고정 버튼(#btnAddPartition). 파티션 0개면 안내만 표시.
         if (!partitions.length) {
             var e = document.createElement("span");
             e.className = "pt-empty";
@@ -243,6 +243,13 @@
         var isCreate = modalMode === "create";
         if (!isCreate && !renameTargetName) { closeRenameModal(); return; }
         if (!nv) { showRenameError(isCreate ? "파티션 이름을 입력해주세요." : "새 이름을 입력해주세요."); return; }
+        // 이름 중복 검사(대소문자 무시). 이름변경은 자기 자신 제외.
+        var dup = partitions.some(function (it) {
+            if (!isCreate && String(it.name) === renameTargetName) return false;
+            var label = String(it.description || it.name || "").trim();
+            return label.toLowerCase() === nv.toLowerCase();
+        });
+        if (dup) { showRenameError("중복된 이름의 파티션이 존재합니다."); return; }
 
         var url = isCreate ? "/at-i/partitions/create" : "/at-i/partitions/rename";
         var params = isCreate
@@ -301,6 +308,74 @@
             })
             .catch(function () { notify("삭제 중 오류가 발생했습니다.", "error"); })
             .finally(function () { showLoading(false); });
+    }
+
+    // ── 파티션 순서 변경 ──────────────────────────────────────
+    var ICON_UP = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="18 15 12 9 6 15"/></svg>';
+    var ICON_DOWN = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="6 9 12 15 18 9"/></svg>';
+
+    function openReorderModal() {
+        if (!partitions.length) { notify("변경할 파티션이 없습니다.", "error"); return; }
+        reorderWork = partitions.slice();       // seq 정렬된 현재 목록 복제
+        renderReorderList();
+        if (dom.reorderModal) dom.reorderModal.classList.add("show");
+    }
+    function closeReorder() {
+        if (dom.reorderModal) dom.reorderModal.classList.remove("show");
+        reorderWork = [];
+    }
+    function moveReorder(idx, delta) {
+        var j = idx + delta;
+        if (j < 0 || j >= reorderWork.length) return;
+        var tmp = reorderWork[idx]; reorderWork[idx] = reorderWork[j]; reorderWork[j] = tmp;
+        renderReorderList();
+    }
+    function renderReorderList() {
+        if (!dom.reorderList) return;
+        dom.reorderList.innerHTML = "";
+        reorderWork.forEach(function (it, idx) {
+            var row = document.createElement("div");
+            row.className = "reorder-item";
+            var no = document.createElement("span");
+            no.className = "ri-no"; no.textContent = String(idx + 1);
+            var nm = document.createElement("span");
+            nm.className = "ri-name"; nm.textContent = it.description || it.name;
+            var btns = document.createElement("div");
+            btns.className = "ri-btns";
+            var up = document.createElement("button");
+            up.type = "button"; up.className = "ri-btn"; up.title = "위로"; up.innerHTML = ICON_UP;
+            up.disabled = idx === 0;
+            up.addEventListener("click", function () { moveReorder(idx, -1); });
+            var down = document.createElement("button");
+            down.type = "button"; down.className = "ri-btn"; down.title = "아래로"; down.innerHTML = ICON_DOWN;
+            down.disabled = idx === reorderWork.length - 1;
+            down.addEventListener("click", function () { moveReorder(idx, 1); });
+            btns.appendChild(up); btns.appendChild(down);
+            row.appendChild(no); row.appendChild(nm); row.appendChild(btns);
+            dom.reorderList.appendChild(row);
+        });
+    }
+    function saveReorder() {
+        if (!reorderWork.length) { closeReorder(); return; }
+        var payload = reorderWork.map(function (it, idx) { return { name: String(it.name), order: idx + 1 }; });
+        if (dom.reorderSave) { dom.reorderSave.disabled = true; dom.reorderSave.textContent = "저장 중..."; }
+        fetch("/at-i/partitions/reorder?dept=" + encodeURIComponent(currentDept), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload)
+        })
+            .then(function (r) { return r.json().catch(function () { return {}; }); })
+            .then(function (res) {
+                if (res && String(res.code) === "0000") {
+                    notify("순서가 변경되었습니다.", "success");
+                    closeReorder();
+                    loadPartitions();       // seq 반영된 목록 재로드
+                } else {
+                    notify((res && res.message) ? res.message : "순서 변경에 실패했습니다.", "error");
+                }
+            })
+            .catch(function () { notify("순서 변경 중 오류가 발생했습니다.", "error"); })
+            .finally(function () { if (dom.reorderSave) { dom.reorderSave.disabled = false; dom.reorderSave.textContent = "저장"; } });
     }
 
     // ── 데이터 로드 ───────────────────────────────────────────
@@ -531,7 +606,15 @@
     if (dom.btnCollapse) dom.btnCollapse.addEventListener("click", collapseAll);
     if (dom.btnHrRefresh) dom.btnHrRefresh.addEventListener("click", hrRefresh);
     if (dom.btnLogout) dom.btnLogout.addEventListener("click", logout);
-    // 파티션 생성/이름변경 공용 모달 ( + 버튼·연필은 renderPartitionTabs에서 바인딩)
+    if (dom.btnAddPartition) dom.btnAddPartition.addEventListener("click", openCreateModal); // 탭 목록 위 생성 버튼
+    if (dom.btnReorder) dom.btnReorder.addEventListener("click", openReorderModal);
+    if (dom.reorderClose) dom.reorderClose.addEventListener("click", closeReorder);
+    if (dom.reorderCancel) dom.reorderCancel.addEventListener("click", closeReorder);
+    if (dom.reorderSave) dom.reorderSave.addEventListener("click", saveReorder);
+    if (dom.reorderModal) dom.reorderModal.addEventListener("click", function (e) {
+        if (e.target === dom.reorderModal) closeReorder();
+    });
+    // 파티션 생성/이름변경 공용 모달 (연필은 renderPartitionTabs에서 바인딩)
     if (dom.renameClose) dom.renameClose.addEventListener("click", closeRenameModal);
     if (dom.renameCancel) dom.renameCancel.addEventListener("click", closeRenameModal);
     if (dom.renameSave) dom.renameSave.addEventListener("click", saveModal);
@@ -553,6 +636,7 @@
         if (e.key !== "Escape") return;
         if (dom.renameModal && dom.renameModal.classList.contains("show")) closeRenameModal();
         if (dom.delConfirmModal && dom.delConfirmModal.classList.contains("show")) closeDelConfirm();
+        if (dom.reorderModal && dom.reorderModal.classList.contains("show")) closeReorder();
     });
 
     // 화면 가이드(공용 common.js)

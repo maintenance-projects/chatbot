@@ -46,10 +46,27 @@
         .partition-tab .pt-act:hover { opacity: 1; background: var(--base-dark); color: var(--color-primary); }
         .partition-tab .pt-act.pt-del:hover { color: var(--danger, #e5484d); }
         .partition-tab .pt-act svg { width: 13px; height: 13px; }
-        .pt-add { display: inline-flex; align-items: center; gap: 5px; margin: 0 0 2px 6px;
+        .partition-actions { display: flex; gap: 8px; margin-bottom: 10px; }
+        /* 순서 변경 모달 */
+        .reorder-hint { font-size: 0.82rem; color: var(--color-text-muted); margin: 0 0 12px; }
+        .reorder-list { display: flex; flex-direction: column; gap: 8px; max-height: 340px; overflow-y: auto; }
+        .reorder-item { display: flex; align-items: center; gap: 10px; padding: 9px 12px;
+            border: 1px solid var(--color-border); border-radius: 8px; background: var(--color-surface, #fff); }
+        .reorder-item .ri-no { width: 20px; text-align: center; font-size: 0.78rem; font-weight: 700; color: var(--color-text-muted); }
+        .reorder-item .ri-name { flex: 1; font-weight: 600; color: var(--color-text);
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .reorder-item .ri-btns { display: flex; gap: 4px; flex: 0 0 auto; }
+        .reorder-item .ri-btn { width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center;
+            border: 1px solid var(--color-border); border-radius: 6px; background: none; cursor: pointer;
+            color: var(--color-text-muted); transition: all var(--transition-fast); }
+        .reorder-item .ri-btn:hover:not(:disabled) { color: var(--color-primary); border-color: var(--color-primary); }
+        .reorder-item .ri-btn:disabled { opacity: .35; cursor: default; }
+        .reorder-item .ri-btn svg { width: 14px; height: 14px; }
+        .pt-add { display: inline-flex; align-items: center; gap: 5px;
             padding: 8px 14px; border: 1px dashed var(--color-border); background: none; cursor: pointer;
             border-radius: 8px; color: var(--color-text-light); font-size: 0.875rem; font-weight: 600;
             transition: all var(--transition-fast); }
+        .pt-add svg { width: 14px; height: 14px; }
         .pt-add:hover { color: var(--color-primary); border-color: var(--color-primary); }
         .pt-add svg { width: 14px; height: 14px; }
         .pt-empty { padding: 10px 6px; color: var(--color-text-muted); font-size: 0.875rem; }
@@ -262,7 +279,22 @@
             <main class="page-body">
                 <div class="dept-tabs" id="deptTabs"></div>
 
-                <!-- 파티션 탭: +로 생성, 연필로 이름변경, x로 삭제. 탭 선택 시 아래 카드(트리)가 그 파티션 권한으로 스왑 -->
+                <!-- 파티션: 추가 버튼(위) + 탭 목록. 탭 선택 시 아래 카드(트리)가 그 파티션 권한으로 스왑 -->
+                <div class="partition-actions">
+                    <button type="button" class="pt-add" id="btnAddPartition">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+                        </svg>파티션 추가
+                    </button>
+                    <button type="button" class="pt-add" id="btnReorderPartition">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                            stroke-linecap="round" stroke-linejoin="round">
+                            <polyline points="17 11 21 7 17 3" /><line x1="21" y1="7" x2="9" y2="7" />
+                            <polyline points="7 21 3 17 7 13" /><line x1="3" y1="17" x2="15" y2="17" />
+                        </svg>순서 변경
+                    </button>
+                </div>
                 <div class="partition-tabs" id="partitionTabs"></div>
 
                 <section class="table-card" style="position:relative;">
@@ -400,6 +432,29 @@
             <div class="modal-footer" style="justify-content:center;">
                 <button class="btn btn-outline" id="delConfirmCancel" type="button">취소</button>
                 <button class="btn btn-danger" id="delConfirmOk" type="button">삭제</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 파티션 순서 변경 모달 -->
+    <div class="modal-overlay" id="reorderModal">
+        <div class="modal" style="max-width:420px;">
+            <div class="modal-header">
+                <h3 class="modal-title">파티션 순서 변경</h3>
+                <button class="modal-close" id="reorderClose" type="button">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                    </svg>
+                </button>
+            </div>
+            <div class="modal-body">
+                <p class="reorder-hint">↑/↓ 로 순서를 바꾼 뒤 저장하세요.</p>
+                <div class="reorder-list" id="reorderList"></div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-outline" id="reorderCancel" type="button">취소</button>
+                <button class="btn btn-primary" id="reorderSave" type="button">저장</button>
             </div>
         </div>
     </div>

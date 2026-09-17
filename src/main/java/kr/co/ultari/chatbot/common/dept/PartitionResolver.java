@@ -103,9 +103,11 @@ public class PartitionResolver {
             for (int i = 0; i < arr.length(); i++) {
                 JSONObject o = arr.optJSONObject(i);
                 if (o == null) continue;
-                list.add(new GwPartition(o.optString("name"), o.optString("description"), o.optInt("seq", 0)));
+                // 정렬 기준: order 우선(없으면 seq 폴백). 관리자 순서변경(reorder) 결과를 사용자 목록에도 반영.
+                int ord = (o.has("order") && !o.isNull("order")) ? o.optInt("order") : o.optInt("seq", 0);
+                list.add(new GwPartition(o.optString("name"), o.optString("description"), ord));
             }
-            list.sort(Comparator.comparingInt(GwPartition::seq));
+            list.sort(Comparator.comparingInt(GwPartition::order));
             return list;
         } catch (Exception e) {
             log.debug("[partition] 게이트웨이 파티션 목록 조회 실패 dept={}: {}", dept, e.toString());
@@ -116,6 +118,6 @@ public class PartitionResolver {
     /** 사용자 노출용 접근 가능 파티션(벡터DB 코드 동반 — 선택 시 dept+partition 함께 세션에 핀). */
     public record AccessiblePartition(String dept, String name, String label) {}
 
-    /** 게이트웨이 파티션 원소(내부). */
-    private record GwPartition(String name, String description, int seq) {}
+    /** 게이트웨이 파티션 원소(내부). order=정렬순서(order 우선, 없으면 seq). */
+    private record GwPartition(String name, String description, int order) {}
 }

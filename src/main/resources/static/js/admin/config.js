@@ -112,7 +112,7 @@
             .then(function (r) { return r.json(); })
             .then(function (res) {
                 partitions = (res && String(res.code) === "0000") ? (res.partitions || []) : [];
-                partitions.sort(function (a, b) { return (a.seq || 0) - (b.seq || 0); });
+                partitions.sort(function (a, b) { return (a.order != null ? a.order : (a.seq || 0)) - (b.order != null ? b.order : (b.seq || 0)); });
                 // 현재 대상이 목록에 없으면 파티션 전체로 되돌림
                 if (currentTarget && !partitions.some(function (x) { return String(x.name) === currentTarget; })) {
                     currentTarget = "";

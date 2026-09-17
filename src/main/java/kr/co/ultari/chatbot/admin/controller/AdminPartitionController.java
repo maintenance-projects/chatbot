@@ -87,6 +87,18 @@ public class AdminPartitionController {
         return withUtf8(partitionService.delete(d, n));
     }
 
+    /** 파티션 순서 변경 — body=[{"name":"documents_1","order":1},...] JSON을 게이트웨이로 그대로 전달. */
+    @PostMapping("/reorder")
+    @ResponseBody
+    public ResponseEntity<String> reorder(@RequestParam(value = "dept", required = false) String dept,
+                                          @org.springframework.web.bind.annotation.RequestBody(required = false) String jsonBody) {
+        String d = resolveDept(dept);
+        if (d == null) return badRequest("invalid dept");
+        if (!StringUtils.hasText(jsonBody)) return badRequest("empty body");
+        log.debug("[partition reorder] dept={}, body={}", d, jsonBody);
+        return withUtf8(partitionService.reorder(d, jsonBody));
+    }
+
     /**
      * dept 화이트리스트 검증 — 설정된 코드 목록 또는 기본 dept만 허용(게이트웨이 경로 주입 방지).
      * 빈 값이면 기본 dept로 폴백. 미허용 코드는 null.

@@ -38,6 +38,11 @@ public class AdminPartitionService {
         return gateway.get(dept, "/admin/partitions");
     }
 
+    /** 파티션 순서 변경 — POST /{dept}/admin/partitions/reorder. body=[{name,order},...] JSON 그대로 전달. */
+    public ResponseEntity<String> reorder(String dept, String jsonBody) {
+        return gateway.postJson(dept, "/admin/partitions/reorder", jsonBody);
+    }
+
     /** 파티션 생성 — description(사용자 입력 이름)만 multipart로 전달, name은 게이트웨이가 채번. */
     public ResponseEntity<String> create(String dept, String description) {
         MultipartBodyBuilder body = new MultipartBodyBuilder();
