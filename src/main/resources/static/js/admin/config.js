@@ -103,16 +103,24 @@
             .catch(function () { partitions = []; renderTargetChips(); });
     }
 
-    // 설정 대상 칩(파티션 전체 + 파티션별) 렌더
+    var ICON_ALL = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9.5 12 3l9 6.5"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>';
+
+    // 설정 대상 칩 렌더 — '기본(전체)'과 '파티션별'을 그룹 라벨 + 세로 구분선으로 구분.
     function renderTargetChips() {
         var box = dom.settingTargetChips;
         if (!box) return;
         box.innerHTML = "";
-        function chip(value, label) {
+
+        function makeChip(value, label, isAll) {
             var b = document.createElement("button");
             b.type = "button";
-            b.className = "config-chip" + (value === currentTarget ? " active" : "");
-            b.textContent = label;
+            b.className = "config-chip" + (isAll ? " is-all" : "") + (value === currentTarget ? " active" : "");
+            if (isAll) {
+                b.innerHTML = ICON_ALL + "<span></span>";
+                b.querySelector("span").textContent = label;
+            } else {
+                b.textContent = label;
+            }
             b.addEventListener("click", function () {
                 if (currentTarget === value) return;
                 if (isDirty() && !confirm("저장하지 않은 변경이 있습니다. 대상을 바꾸면 사라집니다. 계속할까요?")) return;
@@ -120,10 +128,44 @@
                 renderTargetChips();
                 loadTarget();
             });
-            box.appendChild(b);
+            return b;
         }
-        chip("", "파티션 전체");
-        partitions.forEach(function (it) { chip(String(it.name), it.description || it.name); });
+
+        function group(labelText) {
+            var g = document.createElement("div");
+            g.className = "tgt-group";
+            var lab = document.createElement("div");
+            lab.className = "tgt-glabel";
+            lab.textContent = labelText;
+            var chips = document.createElement("div");
+            chips.className = "tgt-gchips";
+            g.appendChild(lab);
+            g.appendChild(chips);
+            box.appendChild(g);
+            return chips;
+        }
+
+        // 기본(전체) 그룹
+        var baseChips = group("기본");
+        baseChips.appendChild(makeChip("", "전체", true));
+
+        // 세로 구분선
+        var divider = document.createElement("div");
+        divider.className = "tgt-divider";
+        box.appendChild(divider);
+
+        // 파티션별 그룹
+        var partChips = group("파티션별");
+        if (partitions.length) {
+            partitions.forEach(function (it) {
+                partChips.appendChild(makeChip(String(it.name), it.description || it.name, false));
+            });
+        } else {
+            var empty = document.createElement("span");
+            empty.className = "tgt-empty";
+            empty.textContent = "파티션 없음";
+            partChips.appendChild(empty);
+        }
     }
 
     // 현재 대상(파티션 전체/파티션)의 temperature·프롬프트 로드

@@ -14,14 +14,22 @@
         window.CONFIG_DEFAULT_DEPT = /*[[${defaultDept}]]*/ "";
     </script>
     <style>
-        /* 설정 대상 칩 (파티션 전체 | 파티션별) */
-        .config-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+        /* 설정 대상 칩 (기본=전체 / 파티션별) */
+        .config-chips { display: flex; align-items: stretch; gap: 14px; flex-wrap: wrap; }
         .config-chip { padding: 7px 16px; border-radius: 20px; cursor: pointer;
             font-size: 0.8125rem; font-weight: 600; color: var(--color-text-light);
             background: var(--base-dark); border: 1px solid var(--color-border);
             transition: all var(--transition-fast); }
         .config-chip:hover { color: var(--color-primary); border-color: var(--color-primary); }
         .config-chip.active { color: #fff; background: var(--color-primary); border-color: var(--color-primary); }
+        /* 그룹(기본 / 파티션별) + 세로 구분선 */
+        .tgt-group { display: flex; flex-direction: column; gap: 7px; }
+        .tgt-glabel { font-size: 0.72rem; font-weight: 700; letter-spacing: .3px; color: var(--color-text-light); }
+        .tgt-gchips { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; min-height: 34px; }
+        .tgt-divider { width: 1px; align-self: stretch; background: var(--color-border); }
+        .tgt-empty { font-size: 0.8125rem; color: var(--color-text-muted); align-self: center; }
+        .config-chip.is-all { display: inline-flex; align-items: center; gap: 6px; }
+        .config-chip.is-all svg { width: 14px; height: 14px; }
     </style>
 </head>
 
