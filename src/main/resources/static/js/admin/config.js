@@ -155,9 +155,9 @@
             return b;
         }
 
-        function group(labelText) {
+        function group(labelText, grow) {
             var g = document.createElement("div");
-            g.className = "tgt-group";
+            g.className = "tgt-group" + (grow ? " tgt-group--grow" : "");
             var lab = document.createElement("div");
             lab.className = "tgt-glabel";
             lab.textContent = labelText;
@@ -169,8 +169,8 @@
             return chips;
         }
 
-        // 기본(전체) 그룹
-        var baseChips = group("기본");
+        // 기본(전체) 그룹 — 축소 안 됨(전체 칩 잘림 방지)
+        var baseChips = group("기본", false);
         baseChips.appendChild(makeChip("", "전체", true));
 
         // 세로 구분선
@@ -178,8 +178,8 @@
         divider.className = "tgt-divider";
         box.appendChild(divider);
 
-        // 파티션별 그룹
-        var partChips = group("파티션별");
+        // 파티션별 그룹 — 이 그룹만 축소·가로 스크롤
+        var partChips = group("파티션별", true);
         if (partitions.length) {
             partitions.forEach(function (it) {
                 partChips.appendChild(makeChip(String(it.name), it.description || it.name, false));
@@ -190,6 +190,39 @@
             empty.textContent = "파티션 없음";
             partChips.appendChild(empty);
         }
+        updateResetBtn();
+    }
+
+    // '파티션 설정 초기화' 버튼은 특정 파티션이 선택됐을 때만 노출(전체는 초기화 대상 아님).
+    function updateResetBtn() {
+        if (dom.btnReset) dom.btnReset.style.display = currentTarget ? "" : "none";
+    }
+
+    function openResetModal() {
+        if (!currentTarget) return;
+        if (dom.resetModal) dom.resetModal.classList.add("show");
+    }
+    function closeReset() {
+        if (dom.resetModal) dom.resetModal.classList.remove("show");
+    }
+    // 초기화: temperature·system_prompt를 null로 저장 → 게이트웨이가 개별 설정을 지우고 전체 설정을 따름.
+    function doResetConfig() {
+        var target = currentTarget;
+        if (!target) { closeReset(); return; }
+        if (dom.resetOk) { dom.resetOk.disabled = true; dom.resetOk.textContent = "초기화 중..."; }
+        postPartitionSettings(currentDept(), target, { temperature: null, system_prompt: null })
+            .then(function (res) {
+                if (res.ok) {
+                    toast("파티션 설정이 초기화되었습니다.", "success");
+                    closeReset();
+                    loadTarget();            // 초기화 후 전체 상속값으로 갱신
+                    refreshOverrideMarks();  // 개별설정 점 배지 갱신
+                } else {
+                    toast("초기화에 실패했습니다.", "error");
+                }
+            })
+            .catch(function () { toast("서버 오류가 발생했습니다.", "error"); })
+            .finally(function () { if (dom.resetOk) { dom.resetOk.disabled = false; dom.resetOk.textContent = "초기화"; } });
     }
 
     // 파티션 설정 응답에 개별 오버라이드가 있는지(temperature 지정 또는 system_prompt 비어있지 않음).
@@ -392,6 +425,10 @@
         dom.discardModal = $("#discardModal");
         dom.discardOk = $("#discardOk");
         dom.discardCancel = $("#discardCancel");
+        dom.btnReset = $("#btnResetConfig");
+        dom.resetModal = $("#resetModal");
+        dom.resetOk = $("#resetOk");
+        dom.resetCancel = $("#resetCancel");
 
         if (dom.temperature) dom.temperature.addEventListener("input", syncSliderReadout);
         if (dom.deptSelect) dom.deptSelect.addEventListener("change", onDeptChange);
@@ -402,8 +439,16 @@
         if (dom.discardModal) dom.discardModal.addEventListener("click", function (e) {
             if (e.target === dom.discardModal) closeDiscard(true);
         });
+        if (dom.btnReset) dom.btnReset.addEventListener("click", openResetModal);
+        if (dom.resetOk) dom.resetOk.addEventListener("click", doResetConfig);
+        if (dom.resetCancel) dom.resetCancel.addEventListener("click", closeReset);
+        if (dom.resetModal) dom.resetModal.addEventListener("click", function (e) {
+            if (e.target === dom.resetModal) closeReset();
+        });
         document.addEventListener("keydown", function (e) {
-            if (e.key === "Escape" && dom.discardModal && dom.discardModal.classList.contains("show")) closeDiscard(true);
+            if (e.key !== "Escape") return;
+            if (dom.discardModal && dom.discardModal.classList.contains("show")) closeDiscard(true);
+            if (dom.resetModal && dom.resetModal.classList.contains("show")) closeReset();
         });
 
         bindCommon();

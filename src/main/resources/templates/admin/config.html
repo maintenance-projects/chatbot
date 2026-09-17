@@ -23,11 +23,12 @@
             transition: all var(--transition-fast); }
         .config-chip:hover { color: var(--color-primary); border-color: var(--color-primary); }
         .config-chip.active { color: #fff; background: var(--color-primary); border-color: var(--color-primary); }
-        /* 그룹(기본 / 파티션별) + 세로 구분선. 파티션별 칩이 많으면 가로 스크롤 */
-        .tgt-group { display: flex; flex-direction: column; gap: 7px; min-width: 0; }
+        /* 그룹(기본 / 파티션별) + 세로 구분선. 파티션별만 축소·가로 스크롤(기본=전체 칩은 안 잘리게 고정) */
+        .tgt-group { display: flex; flex-direction: column; gap: 7px; flex: 0 0 auto; }
+        .tgt-group--grow { flex: 1 1 auto; min-width: 0; }
         .tgt-glabel { font-size: 0.72rem; font-weight: 700; letter-spacing: .3px; color: var(--color-text-light); }
-        .tgt-gchips { display: block; white-space: nowrap; min-height: 34px;
-            overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; padding-bottom: 2px; }
+        .tgt-gchips { display: block; white-space: nowrap; min-height: 34px; }
+        .tgt-group--grow .tgt-gchips { overflow-x: auto; overflow-y: hidden; scrollbar-width: thin; padding-bottom: 2px; }
         .tgt-gchips::-webkit-scrollbar { height: 6px; }
         .tgt-gchips::-webkit-scrollbar-thumb { background: var(--color-border); border-radius: 3px; }
         .tgt-divider { width: 1px; align-self: stretch; background: var(--color-border); }
@@ -247,6 +248,8 @@
                     </div>
 
                     <div class="config-actions">
+                        <button class="btn btn-outline" id="btnResetConfig" type="button" style="display:none;"
+                            title="이 파티션의 개별 설정을 지우고 전체 설정을 따르게 합니다">파티션 설정 초기화</button>
                         <button class="btn btn-primary" id="btnSaveConfig" type="button">저장</button>
                     </div>
                 </section>
@@ -347,6 +350,27 @@
             <div class="modal-footer" style="justify-content:center;">
                 <button class="btn btn-outline" id="discardCancel" type="button">취소</button>
                 <button class="btn btn-primary" id="discardOk" type="button">계속</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 파티션 설정 초기화 확인 모달 -->
+    <div class="modal-overlay" id="resetModal">
+        <div class="modal" style="max-width:400px;">
+            <div class="modal-body" style="padding:32px 24px;">
+                <div class="confirm-icon" style="background:#fef3c7;color:#d97706;">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"
+                        stroke-linejoin="round">
+                        <polyline points="1 4 1 10 7 10" />
+                        <path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10" />
+                    </svg>
+                </div>
+                <div class="confirm-title">파티션 설정을 초기화하시겠습니까?</div>
+                <div class="confirm-msg">이 파티션의 개별 설정이 삭제되고 <b>전체 설정</b>을 따르게 됩니다.</div>
+            </div>
+            <div class="modal-footer" style="justify-content:center;">
+                <button class="btn btn-outline" id="resetCancel" type="button">취소</button>
+                <button class="btn btn-primary" id="resetOk" type="button">초기화</button>
             </div>
         </div>
     </div>
