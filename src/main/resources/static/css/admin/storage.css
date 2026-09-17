@@ -196,6 +196,7 @@ body {
 
 .main-content {
     flex: 1;
+    min-width: 0; /* 플렉스 자식 기본 min-width:auto로 넓은 콘텐츠(파티션 탭 가로 스크롤)가 뷰포트를 넘겨 전체 스크롤 생기는 것 방지 */
     margin-left: 240px;
     display: flex;
     flex-direction: column;
