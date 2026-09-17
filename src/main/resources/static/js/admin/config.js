@@ -51,6 +51,24 @@
     var currentTarget = "";                             // "" = 파티션 전체(dept), name = 파티션
     var partitions = [];                               // 현재 dept의 파티션 목록
     var overriddenPartitions = new Set();              // 개별 설정(override)을 가진 파티션 name 집합
+    var pendingDiscard = null;                         // 저장 안 함 확인 모달 대기 액션 {onOk, onCancel}
+
+    // 저장하지 않은 변경 경고 모달. onOk=계속(변경 폐기 후 진행), onCancel=취소(원복 등).
+    function askDiscard(onOk, onCancel) {
+        if (!dom.discardModal) { if (onOk) onOk(); return; }   // 모달 없으면 그냥 진행(폴백)
+        pendingDiscard = { onOk: onOk, onCancel: onCancel || null };
+        dom.discardModal.classList.add("show");
+    }
+    function closeDiscard(runCancel) {
+        if (dom.discardModal) dom.discardModal.classList.remove("show");
+        var pd = pendingDiscard; pendingDiscard = null;
+        if (runCancel && pd && pd.onCancel) pd.onCancel();
+    }
+    function confirmDiscard() {
+        if (dom.discardModal) dom.discardModal.classList.remove("show");
+        var pd = pendingDiscard; pendingDiscard = null;
+        if (pd && pd.onOk) pd.onOk();
+    }
 
     function currentDept() {
         return (dom.deptSelect && dom.deptSelect.value) || defaultDept || "";
@@ -130,10 +148,9 @@
             }
             b.addEventListener("click", function () {
                 if (currentTarget === value) return;
-                if (isDirty() && !confirm("저장하지 않은 변경이 있습니다. 대상을 바꾸면 사라집니다. 계속할까요?")) return;
-                currentTarget = value;
-                renderTargetChips();
-                loadTarget();
+                var doSwitch = function () { currentTarget = value; renderTargetChips(); loadTarget(); };
+                if (isDirty()) askDiscard(doSwitch);
+                else doSwitch();
             });
             return b;
         }
@@ -240,13 +257,15 @@
 
     // dept 전환: 파티션 목록 재로드 + 대상을 파티션 전체로 초기화하고 설정 로드
     function onDeptChange() {
-        if (isDirty() && !confirm("저장하지 않은 변경이 있습니다. 파티션을 바꾸면 사라집니다. 계속할까요?")) {
-            dom.deptSelect.value = prevDept; // 취소 → 이전 선택 복원
-            return;
-        }
-        prevDept = dom.deptSelect.value;
-        currentTarget = "";
-        loadPartitionsForConfig(dom.deptSelect.value).then(function () { loadTarget(); refreshOverrideMarks(); });
+        var target = dom.deptSelect.value;
+        var doChange = function () {
+            prevDept = target;
+            currentTarget = "";
+            loadPartitionsForConfig(target).then(function () { loadTarget(); refreshOverrideMarks(); });
+        };
+        // 취소 시 select 값을 이전 선택으로 원복
+        if (isDirty()) askDiscard(doChange, function () { dom.deptSelect.value = prevDept; });
+        else doChange();
     }
 
     // 저장: 선택 대상(파티션 전체/파티션)의 temperature/시스템 프롬프트만.
@@ -370,11 +389,22 @@
         dom.btnSave = $("#btnSaveConfig");
         dom.btnSaveGlobal = $("#btnSaveGlobal");
         dom.loading = $("#loadingOverlay");
+        dom.discardModal = $("#discardModal");
+        dom.discardOk = $("#discardOk");
+        dom.discardCancel = $("#discardCancel");
 
         if (dom.temperature) dom.temperature.addEventListener("input", syncSliderReadout);
         if (dom.deptSelect) dom.deptSelect.addEventListener("change", onDeptChange);
         if (dom.btnSave) dom.btnSave.addEventListener("click", saveConfig);
         if (dom.btnSaveGlobal) dom.btnSaveGlobal.addEventListener("click", saveGlobalConfig);
+        if (dom.discardOk) dom.discardOk.addEventListener("click", confirmDiscard);
+        if (dom.discardCancel) dom.discardCancel.addEventListener("click", function () { closeDiscard(true); });
+        if (dom.discardModal) dom.discardModal.addEventListener("click", function (e) {
+            if (e.target === dom.discardModal) closeDiscard(true);
+        });
+        document.addEventListener("keydown", function (e) {
+            if (e.key === "Escape" && dom.discardModal && dom.discardModal.classList.contains("show")) closeDiscard(true);
+        });
 
         bindCommon();
         loadConfig();
