@@ -205,12 +205,13 @@
     function closeReset() {
         if (dom.resetModal) dom.resetModal.classList.remove("show");
     }
-    // 초기화: temperature·system_prompt를 null로 저장 → 게이트웨이가 개별 설정을 지우고 전체 설정을 따름.
+    // 초기화: DELETE /{dept}/admin/partitions/{partition}/settings → 개별 설정 삭제(전체 상속).
     function doResetConfig() {
         var target = currentTarget;
         if (!target) { closeReset(); return; }
         if (dom.resetOk) { dom.resetOk.disabled = true; dom.resetOk.textContent = "초기화 중..."; }
-        postPartitionSettings(currentDept(), target, { temperature: null, system_prompt: null })
+        fetch("/at-i/config/partition/settings?dept=" + encodeURIComponent(currentDept())
+            + "&partition=" + encodeURIComponent(target), { method: "DELETE" })
             .then(function (res) {
                 if (res.ok) {
                     toast("파티션 설정이 초기화되었습니다.", "success");
@@ -225,11 +226,19 @@
             .finally(function () { if (dom.resetOk) { dom.resetOk.disabled = false; dom.resetOk.textContent = "초기화"; } });
     }
 
-    // 파티션 설정 응답에 개별 오버라이드가 있는지(temperature 지정 또는 system_prompt 비어있지 않음).
-    function hasOverride(c) {
+    // 설정 필드({value, source} 객체 또는 구형 스칼라)에서 값/출처 추출.
+    function fieldValue(f, dflt) {
+        if (f && typeof f === "object") return (f.value != null ? f.value : dflt);
+        return (f != null ? f : dflt);
+    }
+    function fieldSource(f) {
+        return (f && typeof f === "object") ? f.source : null;
+    }
+    // 개별 오버라이드 여부: source가 벡터DB 키(dept)가 아니면 파티션 개별 설정.
+    function hasOverride(c, dept) {
         if (!c) return false;
-        if (c.temperature != null) return true;
-        return !!(c.system_prompt && String(c.system_prompt).trim() !== "");
+        var ts = fieldSource(c.temperature), ss = fieldSource(c.system_prompt);
+        return (ts != null && ts !== dept) || (ss != null && ss !== dept);
     }
 
     // 각 파티션의 설정을 병렬 조회해 override 여부를 판정하고 칩 배지를 갱신.
@@ -240,7 +249,7 @@
         if (!names.length) { renderTargetChips(); return; }
         Promise.all(names.map(function (name) {
             return fetchPartitionSettings(dept, name)
-                .then(function (c) { if (hasOverride(c)) overriddenPartitions.add(name); })
+                .then(function (c) { if (hasOverride(c, dept)) overriddenPartitions.add(name); })
                 .catch(function () { /* 개별 조회 실패는 무시(배지만 미표시) */ });
         })).then(function () { renderTargetChips(); });
     }
@@ -256,9 +265,10 @@
     }
 
     function applyDeptFields(c) {
-        if (dom.temperature) dom.temperature.value = (c.temperature != null ? c.temperature : 0.3);
+        // 신규 응답: temperature/system_prompt가 {value, source} 객체. 구형(스칼라)도 호환.
+        if (dom.temperature) dom.temperature.value = fieldValue(c.temperature, 0.3);
         syncSliderReadout();
-        if (dom.userPrompt) dom.userPrompt.value = c.system_prompt || "";
+        if (dom.userPrompt) dom.userPrompt.value = fieldValue(c.system_prompt, "");
         loaded.temperature = dom.temperature ? dom.temperature.value : null;
         loaded.system_prompt = dom.userPrompt ? dom.userPrompt.value : null;
     }

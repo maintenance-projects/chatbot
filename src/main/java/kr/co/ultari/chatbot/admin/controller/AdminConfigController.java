@@ -82,6 +82,17 @@ public class AdminConfigController {
         return withUtf8(configService.savePartitionSettings(d, partition.trim(), jsonBody));
     }
 
+    /** 파티션별 설정 초기화 — 게이트웨이 DELETE /{dept}/admin/partitions/{partition}/settings(개별 설정 삭제→전체 상속). */
+    @org.springframework.web.bind.annotation.DeleteMapping("/partition/settings")
+    @ResponseBody
+    public ResponseEntity<String> partitionReset(@RequestParam(value = "dept", required = false) String dept,
+                                                 @RequestParam(value = "partition", required = false) String partition) {
+        String d = resolveDept(dept);
+        if (d == null || !validPartition(partition)) return badRequest();
+        log.debug("[config partition reset] dept={}, partition={}", d, partition);
+        return withUtf8(configService.resetPartitionSettings(d, partition.trim()));
+    }
+
     /** 파티션 식별자(name) 검증 — 게이트웨이 경로 주입 방지(게이트웨이 채번: 예 documents_1). */
     private boolean validPartition(String partition) {
         return partition != null && partition.trim().matches("[A-Za-z0-9._-]+");

@@ -68,6 +68,11 @@ public class AdminConfigService {
         return gateway.postJson(dept, "/admin/partitions/" + enc(partition) + "/settings", body);
     }
 
+    /** 파티션별 설정 초기화 — DELETE /{dept}/admin/partitions/{partition}/settings. 개별 설정 삭제→전체(dept) 상속. */
+    public ResponseEntity<String> resetPartitionSettings(String dept, String partition) {
+        return gateway.delete(dept, "/admin/partitions/" + enc(partition) + "/settings");
+    }
+
     private static String enc(String s) {
         return URLEncoder.encode(s, StandardCharsets.UTF_8).replace("+", "%20");
     }
