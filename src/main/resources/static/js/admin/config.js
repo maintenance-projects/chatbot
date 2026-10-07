@@ -10,6 +10,7 @@
         temperature: null,
         temperatureValue: null,
         userPrompt: null,
+        partitionGuide: null,
         docRetentionDays: null,
         maxDocs: null,
         deptSelect: null,
@@ -47,7 +48,7 @@
     // temperature/system_prompt는 파티션(dept)별, file_ttl_days(보관기간)는 전역(기본 dept 기준).
     var defaultDept = window.CONFIG_DEFAULT_DEPT || "";
     var prevDept = "";                                  // dept 전환 취소 시 복원용
-    var loaded = { temperature: null, system_prompt: null }; // 미저장 변경 감지용(선택 대상 기준)
+    var loaded = { temperature: null, system_prompt: null, guide: null }; // 미저장 변경 감지용(선택 대상 기준)
     var currentTarget = "";                             // "" = 파티션 전체(dept), name = 파티션
     var partitions = [];                               // 현재 dept의 파티션 목록
     var overriddenPartitions = new Set();              // 개별 설정(override)을 가진 파티션 name 집합
@@ -99,6 +100,21 @@
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload),
+        });
+    }
+
+    // 파티션 안내문구(로컬, 게이트웨이 무관) — target 빈 값이면 기본값(__default__).
+    function fetchGuide(dept, target) {
+        return fetch("/at-i/config/partition-guide/load?dept=" + encodeURIComponent(dept)
+            + "&partition=" + encodeURIComponent(target || ""), { method: "POST" })
+            .then(function (r) { if (!r.ok) throw new Error("guide load " + r.status); return r.json(); });
+    }
+    function postGuide(dept, target, guide) {
+        return fetch("/at-i/config/partition-guide/save?dept=" + encodeURIComponent(dept)
+            + "&partition=" + encodeURIComponent(target || ""), {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ guide: guide || "" }),
         });
     }
 
@@ -259,12 +275,16 @@
         })).then(function () { renderTargetChips(); });
     }
 
-    // 현재 대상(파티션 전체/파티션)의 temperature·프롬프트 로드
+    // 현재 대상(파티션 전체/파티션)의 temperature·프롬프트(게이트웨이) + 안내문구(로컬) 로드
     function loadTarget() {
         showLoading(true);
         var dept = currentDept();
         var p = currentTarget ? fetchPartitionSettings(dept, currentTarget) : fetchSettings(dept);
-        p.then(applyDeptFields)
+        Promise.all([
+            p.then(applyDeptFields),
+            // 안내문구 로드 실패는 치명적이지 않음 — 빈 값으로 처리하고 전체 로드는 계속
+            fetchGuide(dept, currentTarget).then(applyGuide).catch(function () { applyGuide({ guide: "" }); })
+        ])
             .catch(function () { toast("설정을 불러오지 못했습니다.", "error"); })
             .finally(function () { showLoading(false); });
     }
@@ -277,6 +297,11 @@
         loaded.temperature = dom.temperature ? dom.temperature.value : null;
         loaded.system_prompt = dom.userPrompt ? dom.userPrompt.value : null;
     }
+    function applyGuide(g) {
+        var v = (g && g.guide != null) ? g.guide : "";
+        if (dom.partitionGuide) dom.partitionGuide.value = v;
+        loaded.guide = dom.partitionGuide ? dom.partitionGuide.value : null;
+    }
     function applyRetention(c) {
         if (!dom.docRetentionDays) return;
         var ttl = c.file_ttl_days != null ? Math.round(Number(c.file_ttl_days)) : 7;
@@ -284,7 +309,9 @@
     }
     function isDirty() {
         if (!dom.temperature || !dom.userPrompt) return false;
-        return dom.temperature.value !== loaded.temperature || dom.userPrompt.value !== loaded.system_prompt;
+        var changed = dom.temperature.value !== loaded.temperature || dom.userPrompt.value !== loaded.system_prompt;
+        if (dom.partitionGuide && dom.partitionGuide.value !== loaded.guide) changed = true;
+        return changed;
     }
 
     // 초기 로드: 파티션 목록 → 현재 대상(파티션 전체)의 temperature/프롬프트 (보관기간은 전역이라 별도 로드)
@@ -322,17 +349,21 @@
         var temp = parseFloat(dom.temperature.value);
         var dept = currentDept();
         var payload = { temperature: isNaN(temp) ? 0.3 : temp, system_prompt: dom.userPrompt.value || "" };
+        var guide = dom.partitionGuide ? dom.partitionGuide.value : "";
 
         dom.btnSave.disabled = true;
         dom.btnSave.textContent = "저장 중...";
 
-        var save = currentTarget ? postPartitionSettings(dept, currentTarget, payload) : postSettings(dept, payload);
-        save
-            .then(function (res) {
-                if (res.ok) {
+        var saveSettings = currentTarget ? postPartitionSettings(dept, currentTarget, payload) : postSettings(dept, payload);
+        var saveGuide = postGuide(dept, currentTarget, guide);  // 로컬 안내문구(게이트웨이와 독립)
+        Promise.all([saveSettings, saveGuide])
+            .then(function (results) {
+                var ok = results.every(function (r) { return r.ok; });
+                if (ok) {
                     toast("설정이 저장되었습니다.", "success");
                     loaded.temperature = dom.temperature.value;
                     loaded.system_prompt = dom.userPrompt.value;
+                    loaded.guide = guide;
                     // 파티션 개별 저장 시 그 파티션은 이제 개별 설정 보유 → 배지 갱신
                     if (currentTarget) { overriddenPartitions.add(currentTarget); renderTargetChips(); }
                 } else {
@@ -430,6 +461,7 @@
         dom.temperature = $("#temperature");
         dom.temperatureValue = $("#temperatureValue");
         dom.userPrompt = $("#userPrompt");
+        dom.partitionGuide = $("#partitionGuide");
         dom.docRetentionDays = $("#docRetentionDays");
         dom.maxDocs = $("#maxDocs");
         dom.deptSelect = $("#deptSelect");
@@ -477,6 +509,7 @@
                 { selector: "#settingTargetSection", title: "설정 대상", text: "파티션 전체(기본) 또는 특정 파티션을 골라 편집합니다. ● 표시는 개별 설정이 있는 파티션입니다." },
                 { selector: ".slider-block", title: "Temperature", text: "답변의 창의성/일관성 수준을 조절합니다. 낮을수록 일관적, 높을수록 창의적." },
                 { selector: "#userPrompt", title: "시스템 프롬프트", text: "AI의 역할·말투·답변 기준을 지정합니다." },
+                { selector: "#partitionGuide", title: "안내문구(인사말)", text: "사용자가 이 파티션을 선택했을 때 대화 시작 인사말로 표시됩니다. '전체'는 기본 인사말, 비우면 인사말 미표시." },
                 { selector: "#btnResetConfig", title: "파티션 설정 초기화", text: "선택한 파티션의 개별 설정을 지우고 전체 설정을 따르게 합니다. (특정 파티션 선택 시 노출)" },
                 { selector: "#btnSaveConfig", title: "설정 저장", text: "선택한 대상(전체/파티션)에 Temperature·프롬프트를 저장합니다." },
                 { selector: "#docRetentionDays", title: "개인문서 보관 기간", text: "업로드 파일의 보관 일수입니다. 모든 파티션 공통(전역)." },

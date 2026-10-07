@@ -156,30 +156,38 @@ document.addEventListener("DOMContentLoaded", () => {
         const brandTitle = document.getElementById("cbBrandTitle");
         const brandLogo = document.getElementById("cbBrandLogo");
 
-        // 인사 말풍선의 '전자법규집'을 파티션 표시명으로 치환(미설정 시 원문 유지). AI 어시스턴트 인사 1건만 해당.
-        const GREET_TOKEN = "전자법규집";
-        let greetEl = null, greetTemplate = "";
-        // 챗봇 대화영역(#cbBody)에서 인사 말풍선(토큰 포함)을 재조회. 대화창 스왑 후 참조 갱신용.
-        function resolveGreetEl() {
-            greetEl = null; greetTemplate = "";
-            const pres = bodyChat.querySelectorAll(".cb-bubble__text [data-rawtext]");
-            for (let i = 0; i < pres.length; i++) {
-                const rt = pres[i].getAttribute("data-rawtext") || "";
-                if (rt.indexOf(GREET_TOKEN) >= 0) { greetEl = pres[i]; greetTemplate = rt; break; }
-            }
+        // ── 파티션별 인사말(안내문구) ──
+        // 관리자 환경설정(APP_SETTING)에서 파티션별로 지정하고 /me/partitions로 해석값을 수신한다.
+        // 값이 빈 문자열이면 해당 파티션은 인사말 말풍선을 아예 띄우지 않는다(빈 대화로 시작).
+        const guideByKey = {};                        // key: dept|name → 안내문구(해석 완료값, ""=미표시)
+        // 인사말 말풍선 구조를 1회 캡처 후 제거 → 기본 본문(divider 등)만 남긴다. 이후 파티션별로 주입/생략.
+        let greetBubbleTpl = "";
+        const greetSeed = bodyChat.querySelector("[data-cb-greeting]");
+        if (greetSeed) { greetBubbleTpl = greetSeed.outerHTML; greetSeed.remove(); }
+        const chatBaseTemplate = bodyChat.innerHTML;  // 인사말 제거된 기본 본문(신규 파티션 진입 시 틀)
+
+        // 안내문구 텍스트를 인사말 말풍선 HTML로 생성. 빈 값이면 "" 반환(말풍선 없음).
+        function buildGreetingHtml(text) {
+            const t = (text == null) ? "" : String(text).trim();
+            if (!t || !greetBubbleTpl) return "";
+            const wrap = document.createElement("div");
+            wrap.innerHTML = greetBubbleTpl;
+            const bubble = wrap.firstElementChild;
+            if (!bubble) return "";
+            const pre = bubble.querySelector("[data-rawtext]");
+            if (pre) { pre.textContent = t; pre.setAttribute("data-rawtext", t); }
+            const meta = bubble.querySelector(".cb-meta");
+            if (meta && !meta.textContent && typeof formatTime === "function") meta.textContent = formatTime(new Date());
+            return bubble.outerHTML;
         }
-        resolveGreetEl();
-        function applyGreetingPartition(label) {
-            if (!greetEl) return;
-            const name = (label && String(label).trim()) ? String(label).trim() : GREET_TOKEN;
-            const text = greetTemplate.split(GREET_TOKEN).join(name); // 원본 템플릿에서 매번 재치환(전환 대응)
-            greetEl.textContent = text;
-            greetEl.setAttribute("data-rawtext", text);
+        // 신규 파티션 진입 시 본문 초기화: 기본 본문 + (설정 있으면)인사말.
+        function renderFreshChat(key) {
+            const guide = Object.prototype.hasOwnProperty.call(guideByKey, key) ? guideByKey[key] : "";
+            bodyChat.innerHTML = chatBaseTemplate + buildGreetingHtml(guide);
         }
 
-        // 선택된 파티션 표시명을 브랜드/인사말에 반영.
+        // 선택된 파티션 표시명을 브랜드에 반영(인사말 문구는 renderFreshChat가 담당).
         function applyBrand(label) {
-            applyGreetingPartition(label); // 미설정이면 '전자법규집' 유지/복원(복원 대화창은 토큰이 없어 no-op)
             if (!label) return;
             if (brandTitle) brandTitle.textContent = label;
             if (brandLogo) brandLogo.textContent = String(label).trim().charAt(0).toUpperCase() || "A";
@@ -187,20 +195,17 @@ document.addEventListener("DOMContentLoaded", () => {
 
         // ── 파티션별 대화창(메모리 저장) — 챗봇창이 열려있는 동안만 유지, 새로고침 시 초기화 ──
         // AI챗봇 모드(#cbBody)에만 적용. 개인문서/첨부파일 검색은 파티션 스코프가 아니라 대상 아님.
-        const chatStore = {};                            // key: dept|name → bodyChat.innerHTML 스냅샷
-        const chatGreetingTemplate = bodyChat.innerHTML; // 최초 인사말(신규 파티션 진입 시 초기화 템플릿)
+        const chatStore = {};                         // key: dept|name → bodyChat.innerHTML 스냅샷
         let currentPartKey = "";
 
-        // 파티션 전환: 현재 대화 저장 → 새 파티션 대화 복원(없으면 인사말 초기화).
+        // 파티션 전환: 현재 대화 저장 → 새 파티션 대화 복원(없으면 인사말로 초기화).
         // 스트리밍(전송) 중엔 노드 참조가 깨지므로 전환 차단 → false 반환(호출자가 선택 원복).
         function switchChatPartition(newKey) {
             if (newKey === currentPartKey) return true;
             if (widget && widget.classList.contains("is-sending")) return false;
             if (currentPartKey) chatStore[currentPartKey] = bodyChat.innerHTML;
-            bodyChat.innerHTML = Object.prototype.hasOwnProperty.call(chatStore, newKey)
-                ? chatStore[newKey]
-                : chatGreetingTemplate;              // 신규 파티션 → 인사말로 시작
-            resolveGreetEl();                        // 스왑으로 노드 교체됨 → 인사말 참조 재획득
+            if (Object.prototype.hasOwnProperty.call(chatStore, newKey)) bodyChat.innerHTML = chatStore[newKey];
+            else renderFreshChat(newKey);             // 신규 파티션 → 인사말(설정 없으면 빈 대화)
             currentPartKey = newKey;
             if (typeof scrollToBottom === "function") scrollToBottom();
             return true;
@@ -212,9 +217,16 @@ document.addEventListener("DOMContentLoaded", () => {
             .then((d) => {
                 const parts = (d && d.partitions) || [];
                 const cur = (d && d.current) || null;
-                // 단일/자동 파티션도 명칭은 항상 반영
+                // 파티션별 안내문구 맵 구성(전환 시 추가 호출 없이 즉시 사용)
+                parts.forEach((p) => { guideByKey[p.dept + "|" + p.name] = (p.guide != null ? p.guide : ""); });
+                // 단일/자동 파티션도 명칭·인사말은 항상 반영
+                if (cur && cur.dept && cur.name) {
+                    const curKey = cur.dept + "|" + cur.name;
+                    if (cur.guide != null) guideByKey[curKey] = cur.guide;
+                    currentPartKey = curKey;
+                    renderFreshChat(curKey);             // 초기 인사말 렌더(설정 없으면 미표시)
+                }
                 if (cur && cur.label) applyBrand(cur.label);
-                if (cur && cur.dept && cur.name) currentPartKey = cur.dept + "|" + cur.name;
 
                 if (!sel || parts.length <= 1) return;
                 sel.innerHTML = "";

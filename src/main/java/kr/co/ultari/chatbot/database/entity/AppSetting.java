@@ -20,7 +20,7 @@ public class AppSetting {
     @Column(name = "SETTING_KEY", length = 100)
     private String settingKey;
 
-    /** 설정 값(문자열 보관, 사용처에서 형변환) */
-    @Column(name = "SETTING_VALUE", length = 500)
+    /** 설정 값(문자열 보관, 사용처에서 형변환). 파티션 안내문구 등 장문 수용 위해 2000자. */
+    @Column(name = "SETTING_VALUE", length = 2000)
     private String settingValue;
 }

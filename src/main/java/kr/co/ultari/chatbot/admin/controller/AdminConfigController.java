@@ -146,6 +146,51 @@ public class AdminConfigController {
     }
 
     /**
+     * 파티션 안내문구 조회(로컬, 게이트웨이 무관). partition 비면 기본값(__default__) raw 반환.
+     * 사용자 화면 인사말로 쓰이는 문구를 관리자가 파티션별로 편집하기 위한 raw 조회(폴백 없음).
+     */
+    @PostMapping("/partition-guide/load")
+    @ResponseBody
+    public ResponseEntity<String> partitionGuideLoad(@RequestParam(value = "dept", required = false) String dept,
+                                                     @RequestParam(value = "partition", required = false) String partition) {
+        String d = resolveDept(dept);
+        if (d == null) return badRequest();
+        boolean isDefault = !StringUtils.hasText(partition);
+        if (!isDefault && !validPartition(partition)) return badRequest();
+        String guide = isDefault
+                ? appSettingService.getDefaultGuideRaw()
+                : appSettingService.getPartitionGuideRaw(d, partition.trim());
+        return ResponseEntity.ok().contentType(JSON_UTF8)
+                .body(new JSONObject().put("guide", guide).toString());
+    }
+
+    /**
+     * 파티션 안내문구 저장(로컬). partition 비면 기본값(__default__) 저장. 빈 guide=미설정으로 비움.
+     * 2000자 초과는 서비스에서 절단.
+     */
+    @PostMapping("/partition-guide/save")
+    @ResponseBody
+    public ResponseEntity<String> partitionGuideSave(@RequestParam(value = "dept", required = false) String dept,
+                                                     @RequestParam(value = "partition", required = false) String partition,
+                                                     @RequestBody(required = false) String jsonBody) {
+        String d = resolveDept(dept);
+        if (d == null) return badRequest();
+        boolean isDefault = !StringUtils.hasText(partition);
+        if (!isDefault && !validPartition(partition)) return badRequest();
+        String guide;
+        try {
+            guide = new JSONObject(jsonBody == null ? "{}" : jsonBody).optString("guide", "");
+        } catch (Exception e) {
+            return badRequest();
+        }
+        if (isDefault) appSettingService.setDefaultGuide(guide);
+        else appSettingService.setPartitionGuide(d, partition.trim(), guide);
+        log.debug("[config partition-guide save] dept={}, partition={}, len={}", d, partition,
+                guide == null ? 0 : guide.length());
+        return ResponseEntity.ok().contentType(JSON_UTF8).body("{\"ok\":true}");
+    }
+
+    /**
      * dept 화이트리스트 검증 — 설정된 코드 목록 또는 기본 dept만 허용(게이트웨이 경로 주입 방지).
      * 빈 값이면 기본 dept로 폴백. 미허용 코드는 null.
      */

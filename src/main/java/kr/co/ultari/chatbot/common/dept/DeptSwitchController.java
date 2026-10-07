@@ -79,6 +79,8 @@ public class DeptSwitchController {
             po.put("dept", p.dept());
             po.put("name", p.name());
             po.put("label", p.label());
+            // 파티션별 안내문구(인사말). 전용값→기본값→"" 해석. ""면 인사말 미표시.
+            po.put("guide", appSettingService.resolvePartitionGuide(p.dept(), p.name()));
             arr.put(po);
         }
 
@@ -102,6 +104,7 @@ public class DeptSwitchController {
             cur.put("dept", chosen.dept());
             cur.put("name", chosen.name());
             cur.put("label", chosen.label());
+            cur.put("guide", appSettingService.resolvePartitionGuide(chosen.dept(), chosen.name()));
         }
 
         JSONObject o = new JSONObject();
