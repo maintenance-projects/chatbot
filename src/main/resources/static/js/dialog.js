@@ -558,27 +558,16 @@ document.addEventListener("DOMContentLoaded", () => {
         return n.slice(i + 1);
     }
 
-    // 이미지 파일은 문서 업로드에서 차단(문서만 허용). 확장자 또는 MIME(image/*) 판별.
-    const IMAGE_EXTS = ["jpg", "jpeg", "png", "gif", "bmp", "webp", "svg", "tif", "tiff", "heic", "heif", "avif", "ico", "jfif"];
-    function isImageFile(file) {
-        if (!file) return false;
-        if (file.type && /^image\//i.test(file.type)) return true;
-        return IMAGE_EXTS.indexOf(getExt(file.name)) !== -1;
-    }
-
+    // 이미지 파일도 업로드 허용(AI 엔진 이미지 분석 지원). 이름 없는 항목만 제외.
     function isAllowedFile(file) {
         if (!file) return false;
         if (!file.name) return false;
-        if (isImageFile(file)) return false; // 이미지 파일 업로드 차단
         return true;
     }
 
-    // 업로드 대상만 추리고, 이미지가 걸러지면 안내(현재 무음 필터라 사용자 혼란 방지)
     function pickUploadable(files) {
         const list = Array.isArray(files) ? files : Array.prototype.slice.call(files || []);
-        const ok = list.filter(isAllowedFile);
-        if (ok.length < list.length) addBotMessage("이미지 파일은 업로드할 수 없습니다. 문서 파일을 올려주세요.");
-        return ok;
+        return list.filter(isAllowedFile);
     }
 
     function safeEncodePathSegment(value) {

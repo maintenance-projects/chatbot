@@ -47,11 +47,6 @@ public class ChatService {
         String filename = file.getOriginalFilename();
         String safeName = Paths.get(filename == null ? "file" : filename).getFileName().toString();
 
-        // 이미지 파일 업로드 차단(문서만 허용). 클라이언트 검증 우회 대비 서버 이중검증 → SSE error 반환.
-        if (isImageFile(safeName)) {
-            return sseError("이미지 파일은 업로드할 수 없습니다.");
-        }
-
         // 개인문서 업로드 개수 제한(로컬 설정, 0=무제한). 클라이언트 게이팅 우회 대비 서버 이중검증.
         int maxDocs = appSettingService.getPersonalDocMaxCount();
         if (maxDocs > 0 && countCurrentDocs(dept, invokeId) >= maxDocs) {
@@ -100,17 +95,6 @@ public class ChatService {
             log.warn("[upload] PDF 미리보기용 로컬 사본 저장 실패(원본 스트리밍으로 대체): {}", e.getMessage());
             return null;
         }
-    }
-
-    /** 이미지 확장자 목록(문서 업로드에서 차단). 클라이언트와 동일 기준. */
-    private static final java.util.Set<String> IMAGE_EXTS = java.util.Set.of(
-            "jpg", "jpeg", "png", "gif", "bmp", "webp", "svg", "tif", "tiff", "heic", "heif", "avif", "ico", "jfif");
-
-    private static boolean isImageFile(String name) {
-        if (name == null) return false;
-        int i = name.lastIndexOf('.');
-        if (i < 0 || i == name.length() - 1) return false;
-        return IMAGE_EXTS.contains(name.substring(i + 1).toLowerCase());
     }
 
     /** 즉시 종료되는 SSE error 이미터(업로드 거부 응답용). */
