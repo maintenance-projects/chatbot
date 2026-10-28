@@ -1390,9 +1390,19 @@
                 : "") +
             "</button>";
 
-        var cell = badgeEl.closest(".status-cell");
-        cell.appendChild(popup);
+        // 목록(.table-wrap overflow) 밖으로 나가도 잘리지 않도록 body에 붙이고 뷰포트 기준(fixed)으로 배치.
+        // 아래 공간이 부족하면 배지 위쪽으로 띄운다.
+        document.body.appendChild(popup);
         activeStatusPopup = popup;
+        var rect = badgeEl.getBoundingClientRect();
+        var gap = 6;
+        var h = popup.offsetHeight;
+        var top = rect.bottom + gap;
+        if (top + h > window.innerHeight - 8 && rect.top - gap - h >= 8) {
+            top = rect.top - gap - h;
+        }
+        popup.style.top = top + "px";
+        popup.style.left = (rect.left + rect.width / 2) + "px";
 
         requestAnimationFrame(function () {
             popup.classList.add("show");
@@ -1756,6 +1766,11 @@
                 closeStatusPopup();
             }
         });
+        // 팝업이 fixed 배치라 스크롤·리사이즈 시 배지와 어긋나므로 닫는다.
+        window.addEventListener("scroll", function (e) {
+            if (activeStatusPopup && !(e.target && e.target.closest && e.target.closest(".status-popup"))) closeStatusPopup();
+        }, true);
+        window.addEventListener("resize", closeStatusPopup);
 
         if (dom.btnAddDoc) dom.btnAddDoc.addEventListener("click", openDocModal);
         // 파티션 선택은 칩 버튼(renderPartitionSelect에서 각 칩에 click 바인딩)으로 처리

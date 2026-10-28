@@ -806,9 +806,7 @@ tbody td.center {
 }
 
 .status-popup {
-    position: absolute;
-    top: calc(100% + 6px);
-    left: 50%;
+    position: fixed; /* top/left는 storage.js showStatusPopup에서 배지 위치 기준으로 지정 */
     transform: translateX(-50%) translateY(4px);
     background: var(--white);
     border: 1px solid var(--border);
